@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="回响：破碎时间 - 一场穿越破碎时空的像素风在线冒险" />
+    <title>回响：破碎时间 | Echoes: Fractured Time</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: #0a0a14;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        overflow: hidden;
+        font-family: 'Courier New', monospace;
+      }
+      #game-container {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      canvas {
+        display: block;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+      }
+      #loading-screen {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #0a0a14;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 100;
+        color: #c8a96e;
+      }
+      #loading-title {
+        font-size: 2rem;
+        letter-spacing: 0.3em;
+        margin-bottom: 1rem;
+        text-shadow: 0 0 20px #c8a96e80;
+        animation: pulse 2s infinite;
+      }
+      #loading-subtitle {
+        font-size: 0.8rem;
+        color: #7090b0;
+        letter-spacing: 0.2em;
+        margin-bottom: 2rem;
+      }
+      #loading-bar-bg {
+        width: 300px;
+        height: 4px;
+        background: #1a1a2e;
+        border: 1px solid #c8a96e40;
+      }
+      #loading-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #c8a96e, #70c0ff);
+        width: 0%;
+        transition: width 0.3s ease;
+        box-shadow: 0 0 8px #c8a96e;
+      }
+      #loading-text {
+        font-size: 0.7rem;
+        color: #506080;
+        margin-top: 0.5rem;
+        letter-spacing: 0.1em;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <div id="loading-screen">
+        <div id="loading-title">回响：破碎时间</div>
+        <div id="loading-subtitle">ECHOES: FRACTURED TIME</div>
+        <div id="loading-bar-bg">
+          <div id="loading-bar"></div>
+        </div>
+        <div id="loading-text">正在加载时空碎片...</div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
