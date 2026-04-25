@@ -35,6 +35,7 @@ export class SanctuaryScene extends Phaser.Scene {
 
     const { width, height } = this.scale
     this.cameras.main.setBackgroundColor('#0b0d18')
+    audioManager.startMenuBgm()
 
     // 背景
     this.add.image(width / 2, height / 2, 'bg_sanctuary')

@@ -116,6 +116,7 @@ export class DiveScene extends Phaser.Scene {
 
     patchRuntimeState({ diveStartAt: Date.now() })
     this.emitHud('潜入进行中')
+    audioManager.startBattleBgm()
   }
 
   update(time: number) {
@@ -504,6 +505,7 @@ export class DiveScene extends Phaser.Scene {
     const b = this.physics.add.image(this.player.x, this.player.y, 'bullet')
     b.setScale(1.4)
     b.setData('damage', 12)
+    b.rotation = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY)
 
     const flash = this.add.image(this.player.x, this.player.y, 'effect_muzzle_flash').setScale(1.2)
     flash.rotation = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY)
@@ -588,6 +590,7 @@ export class DiveScene extends Phaser.Scene {
         const b = this.physics.add.image(this.player.x, this.player.y, texture)
         b.setScale(1.55)
         b.setData('damage', (def.damage || 22) * (isEcho ? 0.8 : 1))
+        b.rotation = Phaser.Math.Angle.Between(this.player.x, this.player.y, pointer.worldX, pointer.worldY)
         this.bullets.add(b)
         this.physics.moveTo(b, pointer.worldX, pointer.worldY, 600)
         this.time.delayedCall(1300, () => b.destroy())
@@ -821,6 +824,7 @@ export class DiveScene extends Phaser.Scene {
     const { width, height } = this.scale
     const isSuccess = result === 'success'
 
+    audioManager.stopBgm()
     if (isSuccess) audioManager.playExtract()
     else audioManager.playDeath()
 

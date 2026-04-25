@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { getRuntimeState } from '../state/gameState'
+import { audioManager } from '../systems/AudioManager'
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -9,6 +10,7 @@ export class MenuScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale
     const rt = getRuntimeState()
+    audioManager.startMenuBgm()
 
     this.cameras.main.setBackgroundColor('#080d18')
     this.add.image(width / 2, height / 2, 'bg_menu').setDisplaySize(width, height).setAlpha(0.96)

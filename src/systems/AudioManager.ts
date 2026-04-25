@@ -145,6 +145,85 @@ class AudioManager {
     this.tone(220, 0.3, 0.1, 'sine')
     this.tone(330, 0.3, 0.08, 'sine', 0.01, 0.2, 0.1)
   }
+
+  // ─────────────── BGM ───────────────
+
+  private bgmTimer: ReturnType<typeof setInterval> | null = null
+  private bgmStep = 0
+
+  stopBgm() {
+    if (this.bgmTimer !== null) {
+      clearInterval(this.bgmTimer)
+      this.bgmTimer = null
+    }
+    this.bgmStep = 0
+  }
+
+  /**
+   * 菜单/圣所背景音乐 — 缓慢流动的琶音，Am-F-C-G 循环
+   * 每 3 秒一个和弦
+   */
+  startMenuBgm() {
+    this.stopBgm()
+    const chords = [
+      [220, 261.6, 329.6],   // Am
+      [174.6, 220, 261.6],   // F
+      [130.8, 164.8, 196],   // C
+      [196, 246.9, 293.7],   // G
+    ]
+    const play = () => {
+      if (this.muted) return
+      const chord = chords[this.bgmStep % chords.length]
+      // 高音琶音
+      chord.forEach((f, i) => this.tone(f, 2.6, 0.025, 'sine', 0.15, 2.2, i * 0.18))
+      // 低音根音
+      this.tone(chord[0] / 2, 2.8, 0.045, 'sine', 0.12, 2.5)
+      // 高八度泛音
+      this.tone(chord[1] * 2, 1.8, 0.012, 'sine', 0.2, 1.4, 0.5)
+      this.bgmStep++
+    }
+    play()
+    this.bgmTimer = setInterval(play, 3000)
+  }
+
+  /**
+   * 战斗背景音乐 — 140 BPM 驱动节奏，配合旋律线
+   */
+  startBattleBgm() {
+    this.stopBgm()
+    const beatMs = 214   // 140 BPM 的 eighth-note = 214ms
+    // 低音线 (8拍循环)
+    const bassLine  = [110,   0, 110, 130.8,  0, 146.8, 130.8,  98]
+    // 旋律线 (8拍循环)
+    const melodyLine = [440,  0, 523.2,   0, 493.8, 440,   0, 392]
+    // 打击节奏 pattern：kick=1, snare=2, hihat=3
+    const drumPat   = [  1,  3,   2,   3,   1,   3,   2,   3]
+
+    const play = () => {
+      if (this.muted) return
+      const beat = this.bgmStep % 8
+
+      if (bassLine[beat] > 0)
+        this.tone(bassLine[beat], 0.17, 0.09, 'sawtooth', 0.008, 0.14)
+      if (melodyLine[beat] > 0)
+        this.tone(melodyLine[beat], 0.1, 0.038, 'square', 0.008, 0.09)
+
+      const drum = drumPat[beat]
+      if (drum === 1) {  // kick
+        this.tone(55, 0.14, 0.14, 'sine', 0.001, 0.12)
+        this.tone(80, 0.06, 0.08, 'sine', 0.001, 0.05)
+      } else if (drum === 2) {  // snare
+        this.noise(0.09, 0.09)
+        this.tone(180, 0.07, 0.05, 'triangle', 0.001, 0.06)
+      } else if (drum === 3) {  // hihat
+        this.noise(0.04, 0.03)
+      }
+
+      this.bgmStep++
+    }
+    play()
+    this.bgmTimer = setInterval(play, beatMs)
+  }
 }
 
 export const audioManager = new AudioManager()
