@@ -49,11 +49,22 @@ export class RoomRealtime {
   /** 步骤2：注册所有监听后再调用此方法完成订阅 */
   async subscribe(): Promise<void> {
     await new Promise<void>((resolve, reject) => {
-      this.channel!
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') resolve()
-          if (status === 'CHANNEL_ERROR') reject(new Error('Realtime 频道连接失败'))
-        })
+      // 10 秒超时兜底，防止 TIMED_OUT 时 Promise 永远挂起
+      const timer = window.setTimeout(() => {
+        reject(new Error('Realtime 订阅超时（10s）'))
+      }, 10000)
+
+      this.channel!.subscribe((status, err) => {
+        console.log('[Realtime] status:', status, err ?? '')
+        if (status === 'SUBSCRIBED') {
+          clearTimeout(timer)
+          resolve()
+        }
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          clearTimeout(timer)
+          reject(new Error(`Realtime 失败: ${status}${err ? ' - ' + err.message : ''}`))
+        }
+      })
     })
   }
 

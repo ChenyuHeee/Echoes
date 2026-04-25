@@ -1717,12 +1717,8 @@ export class DiveScene extends Phaser.Scene {
   private async setupRealtime() {
     this.roomRealtime = new RoomRealtime()
 
-    try {
-      // 步骤1：先创建 channel（不订阅）
-      this.roomRealtime.prepare(this.roomCode)
-
-      // 步骤2：注册所有监听（必须在 subscribe 之前）
-      this.roomRealtime.onRemoteMove((p) => {
+    const registerHandlers = () => {
+      this.roomRealtime!.onRemoteMove((p) => {
         const rt = getRuntimeState()
         if (p.id === rt.player.id) return
 
@@ -1749,7 +1745,7 @@ export class DiveScene extends Phaser.Scene {
         }
       })
 
-      this.roomRealtime.onRemoteSkill((evt) => {
+      this.roomRealtime!.onRemoteSkill((evt) => {
         const rt = getRuntimeState()
         if (evt.id === rt.player.id) return
         const pulse = this.add.circle(evt.x, evt.y, evt.isEcho ? 24 : 16, evt.isEcho ? 0x7fffd1 : 0xffcd8a, 0.35)
@@ -1759,15 +1755,14 @@ export class DiveScene extends Phaser.Scene {
         })
       })
 
-      this.roomRealtime.onEnemyDeath(({ enemyId, killerId }) => {
+      this.roomRealtime!.onEnemyDeath(({ enemyId, killerId }) => {
         const rt = getRuntimeState()
-        if (killerId === rt.player.id) return  // 自己杀的，已经处理
-        if (this.killedEnemyIds.has(enemyId)) return  // 已消灭
+        if (killerId === rt.player.id) return
+        if (this.killedEnemyIds.has(enemyId)) return
         this.killedEnemyIds.add(enemyId)
         this.enemies.children.each(child => {
           const e = child as EnemyBody
           if (e.active && (e.getData('enemyId') as number) === enemyId) {
-            // 显示死亡特效再销毁
             const fx = this.add.circle(e.x, e.y, 18, 0xff6040, 0.5)
             this.tweens.add({ targets: fx, alpha: 0, scaleX: 2.5, scaleY: 2.5, duration: 300, onComplete: () => fx.destroy() })
             e.destroy()
@@ -1777,21 +1772,34 @@ export class DiveScene extends Phaser.Scene {
         })
       })
 
-      this.roomRealtime.onDiveResult((res) => {
+      this.roomRealtime!.onDiveResult((res) => {
         const rt = getRuntimeState()
         if (res.id === rt.player.id) return
         if (!this.onlineDiveResults.find(r => r.id === res.id)) {
           this.onlineDiveResults.push(res)
         }
       })
+    }
 
-      // 步骤3：所有监听注册完毕后再订阅
-      await this.roomRealtime.subscribe()
-
-      this.emitHud(`在线同步已连接：${this.roomCode}`)
-    } catch {
-      this.emitHud('Realtime 连接失败，回落到离线')
-      this.offline = true
+    // 尝试连接，失败时等 1.5 秒重试一次
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        this.roomRealtime.prepare(this.roomCode)
+        registerHandlers()
+        await this.roomRealtime.subscribe()
+        this.emitHud(`在线同步已连接：${this.roomCode}`)
+        return
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.warn(`[Realtime] 第${attempt}次连接失败:`, msg)
+        if (attempt < 2) {
+          this.emitHud(`同步连接中 (${attempt}/2)…`)
+          await new Promise(r => setTimeout(r, 1500))
+        } else {
+          this.emitHud(`Realtime 失败 [${msg}]，离线模式`)
+          this.offline = true
+        }
+      }
     }
   }
 
