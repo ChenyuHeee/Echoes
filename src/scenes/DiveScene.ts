@@ -5,6 +5,8 @@ import { SKILL_DEFINITIONS } from '../config/skills'
 import { ENEMY_DEFINITIONS } from '../config/enemies'
 import { PROLOGUE_LINES } from '../config/lore'
 import { getCurrentUser, saveDiveRecord } from '../lib/supabase'
+import { audioManager } from '../systems/AudioManager'
+import { voiceManager, getSpeakerRole } from '../systems/VoiceManager'
 import { RoomRealtime } from '../net/realtime'
 import {
   addTimeSand,
@@ -52,6 +54,8 @@ export class DiveScene extends Phaser.Scene {
   private diveStart = 0
   private lastMoveSyncAt = 0
   private dashVisualUntil = 0
+  private tutorialActive = false
+  private diveFinished = false
   private currentFragmentId: FragmentId = 'steam_district'
   private currentTheme: FragmentTheme = FRAGMENT_THEMES.steam_district
 
@@ -94,7 +98,11 @@ export class DiveScene extends Phaser.Scene {
     this.spawnPickupsAndExtraction()
     this.setupInput()
     this.setupCombat()
-    this.showPrologue()
+    if (!localStorage.getItem('echoes.tutorial.v1')) {
+      this.showTutorial(() => this.showPrologue())
+    } else {
+      this.showPrologue()
+    }
 
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08)
 
@@ -134,18 +142,18 @@ export class DiveScene extends Phaser.Scene {
       this.tryCast(2)
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.keys.extract)) {
+    if (Phaser.Input.Keyboard.JustDown(this.keys.extract) && !this.diveFinished) {
       const inZone = Phaser.Geom.Intersects.RectangleToRectangle(
         this.player.getBounds(),
         this.extractionZone.getBounds()
       )
       if (inZone) {
-        this.finishDive('success')
+        void this.finishDive('success')
       }
     }
 
-    if (this.hp <= 0) {
-      this.finishDive('death')
+    if (this.hp <= 0 && !this.diveFinished) {
+      void this.finishDive('death')
     }
 
     this.emitHud(undefined)
@@ -240,6 +248,7 @@ export class DiveScene extends Phaser.Scene {
     }
 
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      if (this.tutorialActive) return
       this.fireBasicShot(p.worldX, p.worldY)
     })
   }
@@ -330,6 +339,7 @@ export class DiveScene extends Phaser.Scene {
       const gain = 18 + Math.floor(Math.random() * 12)
       this.timeSand += gain
       addTimeSand(gain)
+      audioManager.playPickup()
       this.emitHud(`拾取时砂 +${gain}`)
     })
   }
@@ -345,8 +355,8 @@ export class DiveScene extends Phaser.Scene {
     move.normalize().scale(210)
     this.player.setVelocity(move.x, move.y)
 
-    const pointer = this.input.activePointer
-    this.player.rotation = Phaser.Math.Angle.Between(this.player.x, this.player.y, pointer.worldX, pointer.worldY)
+    this.player.setRotation(0)
+    this.player.setFlipX(this.input.activePointer.worldX < this.player.x)
   }
 
   private updateVisuals(time: number) {
@@ -412,6 +422,7 @@ export class DiveScene extends Phaser.Scene {
 
     this.physics.moveTo(b, targetX, targetY, 500)
     this.bullets.add(b)
+    audioManager.playShoot()
 
     this.time.delayedCall(1200, () => b.destroy())
   }
@@ -512,6 +523,11 @@ export class DiveScene extends Phaser.Scene {
     })
 
     this.emitHud(`${isEcho ? '回响' : '施放'}：${def.name}`)
+    if (isEcho) {
+      audioManager.playEcho()
+    } else {
+      audioManager.playSkill()
+    }
   }
 
   private spawnAreaDamage(x: number, y: number, skill: SkillType) {
@@ -548,10 +564,12 @@ export class DiveScene extends Phaser.Scene {
       enemy.setTintFill(0xffffff)
       this.time.delayedCall(70, () => enemy.clearTint())
       enemy.setTint(0xd56d6d)
+      audioManager.playHit()
       return
     }
 
     enemy.destroy()
+    audioManager.playEnemyDeath()
     this.diveKills += 1
 
     if (Math.random() < 0.6) {
@@ -619,19 +637,28 @@ export class DiveScene extends Phaser.Scene {
   }
 
   private showPrologue() {
+    const { width } = this.scale
     const lines = PROLOGUE_LINES.slice(0, 3).map((l) => `${l.speaker}: ${l.text}`).join('\n')
-    const box = this.add.rectangle(480, 80, 880, 96, 0x000000, 0.45).setScrollFactor(0)
-    const text = this.add.text(40, 38, lines, {
+    const box = this.add.rectangle(width / 2, 76, width - 80, 92, 0x000000, 0.52)
+      .setScrollFactor(0).setDepth(50)
+    const text = this.add.text(40, 32, lines, {
       fontFamily: 'monospace',
       fontSize: '13px',
       color: '#dce9ff',
-      wordWrap: { width: 820 },
+      wordWrap: { width: width - 120 },
       lineSpacing: 4,
-    }).setScrollFactor(0)
+    }).setScrollFactor(0).setDepth(51)
+
+    // TTS 配音 — 朗读第一条旁白（需玩家手动开启配音后生效）
+    const firstLine = PROLOGUE_LINES[0]
+    if (firstLine.textEn) {
+      voiceManager.speak(firstLine.textEn, getSpeakerRole(firstLine.speaker))
+    }
 
     this.time.delayedCall(6500, () => {
       box.destroy()
       text.destroy()
+      voiceManager.cancel()
     })
   }
 
@@ -649,6 +676,9 @@ export class DiveScene extends Phaser.Scene {
   }
 
   private async finishDive(result: 'success' | 'death') {
+    if (this.diveFinished) return
+    this.diveFinished = true
+
     const duration = Math.floor((Date.now() - this.diveStart) / 1000)
     const rt = getRuntimeState()
 
@@ -679,11 +709,137 @@ export class DiveScene extends Phaser.Scene {
       })
     }
 
-    const title = result === 'success' ? '深潜成功' : '深潜失败'
-    const details = `耗时 ${duration}s\n击杀 ${this.diveKills}\n带回时砂 ${this.timeSand}`
-    window.alert(`${title}\n${details}`)
+    this.showDiveResult(result, duration, this.diveKills, this.timeSand)
+  }
 
-    this.scene.stop('HUDScene')
-    this.scene.start('SanctuaryScene')
+  private showDiveResult(result: 'success' | 'death', duration: number, kills: number, sand: number) {
+    const { width, height } = this.scale
+    const isSuccess = result === 'success'
+
+    if (isSuccess) audioManager.playExtract()
+    else audioManager.playDeath()
+
+    this.add.rectangle(0, 0, width, height, 0x000000, 0.78)
+      .setOrigin(0).setScrollFactor(0).setDepth(200)
+
+    this.add.text(width / 2, height * 0.28, isSuccess ? '✦  深潜成功  ✦' : '✦  深潜失败  ✦', {
+      fontFamily: 'monospace',
+      fontSize: '34px',
+      color: isSuccess ? '#7ce0bc' : '#e07c7c',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
+
+    this.add.text(width / 2, height * 0.46,
+      `耗时 ${duration}s    ·    击杀 ${kills}    ·    带回时砂 ${sand}`, {
+      fontFamily: 'monospace',
+      fontSize: '15px',
+      color: '#a0c4e8',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
+
+    let sec = 4
+    const cntText = this.add.text(width / 2, height * 0.62, `${sec} 秒后返回庇护所…`, {
+      fontFamily: 'monospace',
+      fontSize: '12px',
+      color: '#506080',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
+
+    this.time.addEvent({
+      delay: 1000,
+      repeat: 3,
+      callback: () => {
+        sec--
+        if (cntText.active) cntText.setText(`${Math.max(0, sec)} 秒后返回庇护所…`)
+      },
+    })
+
+    this.time.delayedCall(4200, () => {
+      this.scene.stop('HUDScene')
+      this.scene.start('SanctuaryScene')
+    })
+  }
+
+  private showTutorial(onDone?: () => void) {
+    this.tutorialActive = true
+    const { width, height } = this.scale
+
+    const steps = [
+      {
+        icon: '◆ 移动',
+        body: 'WASD 键控制方向\n鼠标方向决定角色朝向',
+      },
+      {
+        icon: '◆ 射击',
+        body: '鼠标左键 发射子弹\n枪口指向鼠标光标',
+      },
+      {
+        icon: '◆ 技能与回响',
+        body: '按 1 / 2 / 3 使用技能槽\n\n连续使用不同技能将触发「回响」\n前一个技能的因果残余将再次结算\n这就是你的核心战术',
+      },
+      {
+        icon: '◆ 撤离',
+        body: '找到地图上的金色撤离信标\n进入范围内按 E 键安全撤出\n\n带着时砂平安回家！',
+      },
+    ]
+
+    let step = 0
+
+    const dim = this.add.rectangle(0, 0, width, height, 0x000000, 0.74)
+      .setOrigin(0).setScrollFactor(0).setDepth(100).setInteractive()
+
+    const iconTxt = this.add.text(width / 2, height * 0.27, '', {
+      fontFamily: 'monospace',
+      fontSize: '22px',
+      color: '#c8a96e',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(101)
+
+    const bodyTxt = this.add.text(width / 2, height * 0.48, '', {
+      fontFamily: 'monospace',
+      fontSize: '14px',
+      color: '#dce9ff',
+      align: 'center',
+      lineSpacing: 8,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(101)
+
+    const promptTxt = this.add.text(width / 2, height * 0.74, '[ 点击继续 ]', {
+      fontFamily: 'monospace',
+      fontSize: '12px',
+      color: '#7090b0',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(101)
+
+    const counterTxt = this.add.text(width / 2, height * 0.82, '', {
+      fontFamily: 'monospace',
+      fontSize: '11px',
+      color: '#40506a',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(101)
+
+    const skipTxt = this.add.text(width - 14, height - 14, '跳过教程', {
+      fontFamily: 'monospace',
+      fontSize: '11px',
+      color: '#405060',
+    }).setOrigin(1, 1).setScrollFactor(0).setDepth(102).setInteractive()
+    skipTxt.on('pointerover', () => skipTxt.setStyle({ color: '#7090b0' }))
+    skipTxt.on('pointerout', () => skipTxt.setStyle({ color: '#405060' }))
+
+    const allObjs = [dim, iconTxt, bodyTxt, promptTxt, counterTxt, skipTxt]
+
+    const closeTutorial = () => {
+      allObjs.forEach(o => { if (o.active) o.destroy() })
+      this.tutorialActive = false
+      localStorage.setItem('echoes.tutorial.v1', 'done')
+      audioManager.playClick()
+      onDone?.()
+    }
+
+    const showStep = (i: number) => {
+      if (i >= steps.length) { closeTutorial(); return }
+      audioManager.playClick()
+      iconTxt.setText(steps[i].icon)
+      bodyTxt.setText(steps[i].body)
+      counterTxt.setText(`${i + 1} / ${steps.length}`)
+      promptTxt.setText(i === steps.length - 1 ? '[ 点击开始深潜 ]' : '[ 点击继续 ]')
+    }
+
+    showStep(0)
+    dim.on('pointerdown', () => { step++; showStep(step) })
+    skipTxt.on('pointerdown', closeTutorial)
   }
 }

@@ -10,6 +10,7 @@ export interface RuntimePlayer {
   maxStability: number
   skills: SkillType[]
   timeSand: number
+  lastHarvestAt: number | null
 }
 
 export interface RuntimeRoom {
@@ -44,6 +45,7 @@ function createDefaultState(): RuntimeState {
       maxStability: 100,
       skills: ['burn_module', 'dash', 'gravity_well'],
       timeSand: 120,
+      lastHarvestAt: null,
     },
     room: null,
     diveStartAt: null,
@@ -132,6 +134,17 @@ export function resetDiveVitals() {
       ...runtimeState.player,
       hp: runtimeState.player.maxHp,
       stability: runtimeState.player.maxStability,
+    },
+  }
+  persistState()
+}
+
+export function setLastHarvestAt(ts: number) {
+  runtimeState = {
+    ...runtimeState,
+    player: {
+      ...runtimeState.player,
+      lastHarvestAt: ts,
     },
   }
   persistState()

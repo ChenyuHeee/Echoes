@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>身份验证 | 回响：破碎时间</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0a14;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Courier New', 'Consolas', monospace;
+      color: #dce9ff;
+      overflow: hidden;
+    }
+
+    /* 背景粒子 */
+    .stars {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: #c8a96e;
+      border-radius: 50%;
+      animation: twinkle var(--dur, 3s) infinite var(--delay, 0s);
+      opacity: 0.4;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.15; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.4); }
+    }
+
+    /* 主卡片 */
+    .card {
+      position: relative;
+      z-index: 10;
+      background: rgba(10, 12, 30, 0.92);
+      border: 1px solid #c8a96e40;
+      border-radius: 2px;
+      padding: 52px 64px;
+      max-width: 520px;
+      width: 90vw;
+      text-align: center;
+      box-shadow: 0 0 60px #c8a96e18, inset 0 0 30px #070a1840;
+    }
+
+    /* 像素风装饰角 */
+    .card::before,
+    .card::after {
+      content: '';
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-color: #c8a96e;
+      border-style: solid;
+    }
+    .card::before { top: 8px; left: 8px; border-width: 2px 0 0 2px; }
+    .card::after  { bottom: 8px; right: 8px; border-width: 0 2px 2px 0; }
+
+    .game-logo {
+      font-size: 11px;
+      letter-spacing: 0.3em;
+      color: #7090b0;
+      text-transform: uppercase;
+      margin-bottom: 32px;
+    }
+
+    .icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 24px;
+      position: relative;
+    }
+
+    .icon svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 成功状态 */
+    .status-success .icon-ring {
+      stroke: #7ce0bc;
+      animation: ringPulse 2s ease-in-out infinite;
+    }
+    .status-success .icon-mark { stroke: #7ce0bc; }
+
+    /* 错误状态 */
+    .status-error .icon-ring { stroke: #e07c7c; }
+    .status-error .icon-mark { stroke: #e07c7c; }
+
+    /* 等待状态 */
+    .status-loading .icon-ring {
+      stroke: #c8a96e;
+      stroke-dasharray: 100;
+      stroke-dashoffset: 0;
+      animation: spin 1.2s linear infinite;
+      transform-origin: center;
+      transform-box: fill-box;
+    }
+
+    @keyframes ringPulse {
+      0%, 100% { filter: drop-shadow(0 0 4px #7ce0bc60); }
+      50% { filter: drop-shadow(0 0 12px #7ce0bc); }
+    }
+
+    @keyframes spin {
+      to { stroke-dashoffset: -100; }
+    }
+
+    .title {
+      font-size: 22px;
+      letter-spacing: 0.15em;
+      color: #c8a96e;
+      margin-bottom: 12px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #7090b0;
+      letter-spacing: 0.08em;
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+
+    .desc {
+      font-size: 13px;
+      color: #a0b8d8;
+      line-height: 1.8;
+      margin-bottom: 36px;
+    }
+
+    .countdown {
+      font-size: 11px;
+      color: #506080;
+      letter-spacing: 0.1em;
+      margin-bottom: 24px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 12px 36px;
+      background: transparent;
+      border: 1px solid #c8a96e80;
+      color: #c8a96e;
+      font-family: inherit;
+      font-size: 13px;
+      letter-spacing: 0.15em;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: #c8a96e18;
+      border-color: #c8a96e;
+      box-shadow: 0 0 16px #c8a96e30;
+    }
+
+    .divider {
+      width: 60px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #c8a96e60, transparent);
+      margin: 24px auto;
+    }
+
+    .lore {
+      font-size: 11px;
+      color: #40506a;
+      font-style: italic;
+      letter-spacing: 0.05em;
+      line-height: 1.7;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 星空背景 -->
+  <div class="stars" id="stars"></div>
+
+  <!-- 主卡片 -->
+  <div class="card" id="card">
+    <div class="game-logo">ECHOES: FRACTURED TIME</div>
+
+    <div class="icon" id="statusIcon">
+      <!-- 由 JS 动态填充 -->
+    </div>
+
+    <h1 class="title" id="statusTitle">正在验证…</h1>
+    <p class="subtitle" id="statusSubtitle">请稍候，身份核验中</p>
+
+    <div class="desc" id="statusDesc"></div>
+    <div class="countdown" id="countdown"></div>
+
+    <a class="btn" id="returnBtn" href="#" style="display:none">← 返回游戏</a>
+
+    <div class="divider"></div>
+    <p class="lore">
+      「在时震之后，身份是唯一比时砂更宝贵的东西。」<br>
+      <span style="color:#30405a">— 庇护所核心日志 #EC-01</span>
+    </p>
+  </div>
+
+  <script>
+    // ── 生成星空 ──────────────────────────────────
+    const starsEl = document.getElementById('stars')
+    for (let i = 0; i < 80; i++) {
+      const s = document.createElement('div')
+      s.className = 'star'
+      s.style.cssText = `
+        left: ${Math.random() * 100}%;
+        top: ${Math.random() * 100}%;
+        --dur: ${2 + Math.random() * 3}s;
+        --delay: ${Math.random() * 3}s;
+        opacity: ${0.1 + Math.random() * 0.4};
+      `
+      starsEl.appendChild(s)
+    }
+
+    // ── 图标 SVG 模板 ──────────────────────────────
+    const ICONS = {
+      loading: `
+        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="26" stroke-width="2" stroke="#c8a96e40"/>
+          <circle cx="32" cy="32" r="26" stroke-width="2" class="icon-ring" fill="none"
+            stroke-linecap="round" stroke-dasharray="40 120"/>
+        </svg>`,
+      success: `
+        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="26" stroke-width="2" class="icon-ring" fill="none"/>
+          <polyline points="20,32 28,42 46,22" stroke-width="2.5" stroke-linecap="round"
+            stroke-linejoin="round" class="icon-mark" fill="none"/>
+        </svg>`,
+      error: `
+        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="26" stroke-width="2" class="icon-ring" fill="none"/>
+          <line x1="22" y1="22" x2="42" y2="42" stroke-width="2.5" stroke-linecap="round" class="icon-mark"/>
+          <line x1="42" y1="22" x2="22" y2="42" stroke-width="2.5" stroke-linecap="round" class="icon-mark"/>
+        </svg>`,
+    }
+
+    const iconEl      = document.getElementById('statusIcon')
+    const titleEl     = document.getElementById('statusTitle')
+    const subtitleEl  = document.getElementById('statusSubtitle')
+    const descEl      = document.getElementById('statusDesc')
+    const countdownEl = document.getElementById('countdown')
+    const returnBtn   = document.getElementById('returnBtn')
+    const card        = document.getElementById('card')
+
+    // ── 确定游戏根路径 ────────────────────────────
+    // 支持本地 (/) 和 GitHub Pages (/Echoes/) 两种情况
+    const pathParts = window.location.pathname.split('/')
+    // 移除最后一个文件名片段
+    pathParts.pop()
+    const gameRoot = pathParts.join('/') + '/'
+
+    function setReturnLink() {
+      returnBtn.href = gameRoot || '/'
+    }
+
+    function showSuccess() {
+      card.className = 'card status-success'
+      iconEl.innerHTML = ICONS.success
+      titleEl.textContent = '验证成功'
+      titleEl.style.color = '#7ce0bc'
+      subtitleEl.textContent = '回响体身份已核验'
+      descEl.innerHTML =
+        '你的邮箱已成功绑定到庇护所核心。<br>' +
+        '现在可以返回游戏，使用注册的账号登录。'
+      returnBtn.style.display = 'inline-block'
+      setReturnLink()
+
+      // 5 秒后自动跳转
+      let sec = 5
+      const tick = setInterval(() => {
+        sec--
+        countdownEl.textContent = sec > 0 ? `${sec} 秒后自动返回游戏…` : ''
+        if (sec <= 0) {
+          clearInterval(tick)
+          window.location.href = returnBtn.href
+        }
+      }, 1000)
+    }
+
+    function showError(reason) {
+      card.className = 'card status-error'
+      iconEl.innerHTML = ICONS.error
+      titleEl.textContent = '验证失败'
+      titleEl.style.color = '#e07c7c'
+      subtitleEl.textContent = '时空干扰，身份验证中断'
+      descEl.innerHTML =
+        (reason || '验证链接已过期或无效。') +
+        '<br><br>请重新注册或联系管理员。'
+      returnBtn.textContent = '← 返回重试'
+      returnBtn.style.display = 'inline-block'
+      setReturnLink()
+    }
+
+    function showLoading() {
+      card.className = 'card status-loading'
+      iconEl.innerHTML = ICONS.loading
+    }
+
+    // ── 解析 URL 参数 ─────────────────────────────
+    showLoading()
+
+    const hash   = window.location.hash.substring(1)  // 去掉 #
+    const search = window.location.search.substring(1) // 去掉 ?
+    const params = new URLSearchParams(hash || search)
+
+    const errorCode = params.get('error') || params.get('error_code')
+    const errorDesc = params.get('error_description')
+    const type      = params.get('type')
+    const token     = params.get('access_token')
+
+    setTimeout(() => {
+      if (errorCode) {
+        const msg = errorDesc
+          ? decodeURIComponent(errorDesc.replace(/\+/g, ' '))
+          : '未知错误'
+        showError(`错误代码：${errorCode}<br>${msg}`)
+      } else if (token || type === 'signup' || type === 'recovery' || type === 'magiclink') {
+        showSuccess()
+      } else {
+        // 没有明确的 token 但也没有错误，可能是直接访问此页面
+        showSuccess()
+      }
+    }, 800) // 短暂延迟，让 loading 动画有机会显示
+  </script>
+</body>
+</html>

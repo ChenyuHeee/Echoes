@@ -14,11 +14,16 @@ export const supabase = createClient(
 
 // 认证工具函数
 export async function signUp(email: string, password: string, username: string) {
+  // 动态计算 auth-callback 页面路径，支持本地和 GitHub Pages
+  const pathname = window.location.pathname.replace(/[^/]*$/, '')
+  const emailRedirectTo = `${window.location.origin}${pathname}auth-callback.html`
+
   return supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { username, display_name: username }
+      data: { username, display_name: username },
+      emailRedirectTo,
     }
   })
 }

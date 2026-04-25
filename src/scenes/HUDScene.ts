@@ -24,20 +24,28 @@ export class HUDScene extends Phaser.Scene {
     const rt = getRuntimeState()
     const { width } = this.scale
 
-    this.add.image(170, 52, 'ui_hud_box').setScrollFactor(0)
-    this.add.image(width - 180, 34, 'ui_hud_box').setDisplaySize(340, 52).setScrollFactor(0)
+    // 左侧状态面板（HP / 稳定度 / 时砂 / 房间 / 回响技能）
+    // 背景矩形：左上角 (0,0)，宽 330，高 76
+    this.add.rectangle(165, 38, 330, 76, 0x05060f, 0.82).setScrollFactor(0).setDepth(9)
+    this.add.rectangle(165, 76, 330, 1, 0x7cceff, 0.35).setScrollFactor(0).setDepth(9)   // 底边线
+    this.add.rectangle(330, 38, 1, 76, 0x7cceff, 0.2).setScrollFactor(0).setDepth(9)     // 右边线
 
-    this.hudText = this.add.text(16, 12, '', {
+    // 右侧提示面板
+    this.add.rectangle(width - 200, 18, 394, 32, 0x05060f, 0.78).setScrollFactor(0).setDepth(9)
+    this.add.rectangle(width - 200, 34, 394, 1, 0x7cceff, 0.25).setScrollFactor(0).setDepth(9)
+
+    this.hudText = this.add.text(10, 6, '', {
       fontFamily: 'monospace',
-      fontSize: '14px',
+      fontSize: '13px',
       color: '#e8f2ff',
-    })
+      lineSpacing: 4,
+    }).setScrollFactor(0).setDepth(10)
 
-    this.hintText = this.add.text(width - 16, 12, 'WASD移动 鼠标瞄准 左键射击 1/2/3技能 E撤离', {
+    this.hintText = this.add.text(width - 8, 6, 'WASD移动  鼠标瞄准  左键射击  1/2/3技能  E撤离', {
       fontFamily: 'monospace',
-      fontSize: '12px',
+      fontSize: '11px',
       color: '#9fbdde',
-    }).setOrigin(1, 0)
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(10)
 
     this.updateHud({
       hp: rt.player.hp,

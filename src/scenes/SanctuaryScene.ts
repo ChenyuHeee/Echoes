@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { SANCTUARY_LINES } from '../config/lore'
-import { addTimeSand, getRuntimeState } from '../state/gameState'
+import { addTimeSand, getRuntimeState, setLastHarvestAt } from '../state/gameState'
+import { audioManager } from '../systems/AudioManager'
 
 export class SanctuaryScene extends Phaser.Scene {
   private tipText!: Phaser.GameObjects.Text
@@ -50,16 +51,33 @@ export class SanctuaryScene extends Phaser.Scene {
     }).setOrigin(0, 0.5)
 
     this.makeButton(width / 2 - 140, height * 0.82, '收取温室时砂 +20', () => {
+      audioManager.playClick()
+      const state = getRuntimeState()
+      const now = Date.now()
+      const COOLDOWN_MS = 4 * 60 * 60 * 1000  // 4 小时冷却
+
+      if (state.player.lastHarvestAt && now - state.player.lastHarvestAt < COOLDOWN_MS) {
+        const remainMs = COOLDOWN_MS - (now - state.player.lastHarvestAt)
+        const remainH = Math.floor(remainMs / 3600000)
+        const remainM = Math.floor((remainMs % 3600000) / 60000)
+        this.tipText.setText(`温室正在生长中，${remainH}h ${remainM}m 后可再次收取`)
+        return
+      }
+
       addTimeSand(20)
+      setLastHarvestAt(now)
+      audioManager.playHarvest()
       const sand = getRuntimeState().player.timeSand
-      this.tipText.setText(`已收取，当前时砂：${sand}`)
+      this.tipText.setText(`✦ 已收取 +20 时砂，当前：${sand}`)
     })
 
     this.makeButton(width / 2 + 140, height * 0.82, '前往深潜大厅', () => {
+      audioManager.playClick()
       this.scene.start('LobbyScene')
     })
 
     this.makeButton(width / 2, height * 0.9, '返回主菜单', () => {
+      audioManager.playClick()
       this.scene.start('MenuScene')
     })
   }

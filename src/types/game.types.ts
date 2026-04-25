@@ -236,6 +236,7 @@ export interface LoreEntry {
 export interface DialogueLine {
   speaker: string
   text: string
+  textEn?: string           // 英文文本，用于 TTS 配音
   voiceKey?: string
   emotion?: 'neutral' | 'urgent' | 'sad' | 'mysterious' | 'angry'
 }

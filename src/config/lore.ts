@@ -1,16 +1,51 @@
 import type { DialogueLine, LoreEntry } from '../types/game.types'
 
 export const PROLOGUE_LINES: DialogueLine[] = [
-  { speaker: '旁白', text: '时震之后，文明像玻璃一样裂开。你在碎片之间醒来。', emotion: 'mysterious' },
-  { speaker: '导航员阿刻戎', text: '回响体，别发呆。时间深潜窗口只剩 90 秒。', emotion: 'urgent' },
-  { speaker: '你', text: '我听见了另一个自己的枪声。', emotion: 'neutral' },
-  { speaker: '导航员阿刻戎', text: '那不是幻觉，是你的上一个技能正在回响。', emotion: 'mysterious' },
+  {
+    speaker: '旁白',
+    text: '时震之后，文明像玻璃一样裂开。你在碎片之间醒来。',
+    textEn: 'After the Time-Quake, civilization shattered like glass. You awaken between the fragments.',
+    emotion: 'mysterious',
+  },
+  {
+    speaker: '导航员阿刻戎',
+    text: '回响体，别发呆。时间深潜窗口只剩 90 秒。',
+    textEn: "Echo-Bearer, snap out of it. The time-dive window is closing. You have ninety seconds.",
+    emotion: 'urgent',
+  },
+  {
+    speaker: '你',
+    text: '我听见了另一个自己的枪声。',
+    textEn: "I can hear my own gunshots... from another timeline.",
+    emotion: 'neutral',
+  },
+  {
+    speaker: '导航员阿刻戎',
+    text: '那不是幻觉，是你的上一个技能正在回响。',
+    textEn: "That's no hallucination. Your last skill is echoing back through causality. Use it.",
+    emotion: 'mysterious',
+  },
 ]
 
 export const SANCTUARY_LINES: DialogueLine[] = [
-  { speaker: '庇护所核心', text: '欢迎回来，回响体。你的时砂温室已完成一轮收成。', emotion: 'neutral' },
-  { speaker: '庇护所核心', text: '检测到新残响：一名修正者军官在蒸汽城失踪。', emotion: 'urgent' },
-  { speaker: '你', text: '记录任务。下次深潜去蒸汽城旧电车库。', emotion: 'neutral' },
+  {
+    speaker: '庇护所核心',
+    text: '欢迎回来，回响体。你的时砂温室已完成一轮收成。',
+    textEn: "Welcome back, Echo-Bearer. Your time-sand greenhouse has completed another harvest cycle.",
+    emotion: 'neutral',
+  },
+  {
+    speaker: '庇护所核心',
+    text: '检测到新残响：一名修正者军官在蒸汽城失踪。',
+    textEn: "New echo fragment detected: a Rectifier officer has vanished in the Steam District.",
+    emotion: 'urgent',
+  },
+  {
+    speaker: '你',
+    text: '记录任务。下次深潜去蒸汽城旧电车库。',
+    textEn: "Log the mission. Next dive — the old tram depot in Steam City.",
+    emotion: 'neutral',
+  },
 ]
 
 export const LORE_ENTRIES: LoreEntry[] = [
