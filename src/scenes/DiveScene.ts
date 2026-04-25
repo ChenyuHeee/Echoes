@@ -53,6 +53,15 @@ export class DiveScene extends Phaser.Scene {
   private isHost = false
   private enemyIdCounter = 0
   private killedEnemyIds = new Set<number>()
+  // 确定性伪随机（用 roomCode 作种子，保证所有玩家怪物 ID 一致）
+  private _rngState = 0
+  private seededRandom(): number {
+    // mulberry32
+    this._rngState = (this._rngState + 0x6D2B79F5) >>> 0
+    let t = Math.imul(this._rngState ^ (this._rngState >>> 15), 1 | this._rngState)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) >>> 0
+    return ((t ^ (t >>> 14)) >>> 0) / 0xFFFFFFFF
+  }
   private onlineDiveResults: NetDiveResult[] = []
   private lastHpSyncAt = 0
 
@@ -113,6 +122,11 @@ export class DiveScene extends Phaser.Scene {
     this.roomCode = data.roomCode || ''
     this.enemyIdCounter = 0
     this.killedEnemyIds.clear()
+    // 用 roomCode 的字符编码初始化种子，离线时用固定值
+    let seed = 0x12345678
+    const rc = this.roomCode || 'offline'
+    for (let i = 0; i < rc.length; i++) seed = (seed * 31 + rc.charCodeAt(i)) >>> 0
+    this._rngState = seed
     this.onlineDiveResults = []
     this.lastHpSyncAt = 0
     const runtime = getRuntimeState()
@@ -314,21 +328,21 @@ export class DiveScene extends Phaser.Scene {
     ]
 
     for (let i = 0; i < count; i++) {
-      const isElite = !isBossWave && Math.random() < eliteChance
+      const isElite = !isBossWave && this.seededRandom() < eliteChance
       const isBoss = isBossWave && i === 0
 
       let enemyType: string
       if (isBoss) {
         enemyType = 'ancient_guardian'
       } else if (isElite) {
-        enemyType = Math.random() < 0.5 ? 'time_construct_heavy' : 'echo_hunter'
+        enemyType = this.seededRandom() < 0.5 ? 'time_construct_heavy' : 'echo_hunter'
       } else {
         enemyType = enemyTypes[i % enemyTypes.length]
       }
 
       const region = spawnRegions[i % spawnRegions.length]
-      const x = region.x + (Math.random() - 0.5) * 160
-      const y = region.y + (Math.random() - 0.5) * 160
+      const x = region.x + (this.seededRandom() - 0.5) * 160
+      const y = region.y + (this.seededRandom() - 0.5) * 160
 
       this.spawnEnemy(enemyType, x, y, isBoss, isElite)
     }
@@ -351,7 +365,7 @@ export class DiveScene extends Phaser.Scene {
     e.setData('isElite', isElite)
     e.setData('aiMode', this.pickAiMode(enemyType))
     e.setData('lastShot', 0)
-    e.setData('wanderAngle', Math.random() * Math.PI * 2)
+    e.setData('wanderAngle', this.seededRandom() * Math.PI * 2)
     e.setData('enemyId', ++this.enemyIdCounter)
 
     if (isBoss) {
