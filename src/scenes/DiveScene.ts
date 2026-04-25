@@ -1134,6 +1134,15 @@ export class DiveScene extends Phaser.Scene {
       this.physics.moveTo(b, targetX, targetY, 500)
       audioManager.playShoot()
       this.time.delayedCall(1200, () => b.destroy())
+
+      if (!this.offline && this.roomRealtime) {
+        const rt = getRuntimeState()
+        this.roomRealtime.sendSkill({
+          id: rt.player.id, skillId: 'gun',
+          x: this.player.x, y: this.player.y,
+          isEcho: false, t: Date.now(),
+        })
+      }
     }
   }
 
@@ -1305,6 +1314,15 @@ export class DiveScene extends Phaser.Scene {
         })
         break
       }
+    }
+
+    if (!this.offline && this.roomRealtime) {
+      const rt = getRuntimeState()
+      this.roomRealtime.sendSkill({
+        id: rt.player.id, skillId: skill,
+        x: this.player.x, y: this.player.y,
+        isEcho, t: Date.now(),
+      })
     }
   }
 
@@ -1762,11 +1780,21 @@ export class DiveScene extends Phaser.Scene {
       this.roomRealtime!.onRemoteSkill((evt) => {
         const rt = getRuntimeState()
         if (evt.id === rt.player.id) return
-        const pulse = this.add.circle(evt.x, evt.y, evt.isEcho ? 24 : 16, evt.isEcho ? 0x7fffd1 : 0xffcd8a, 0.35)
-        this.tweens.add({
-          targets: pulse, alpha: 0, scaleX: 2, scaleY: 2, duration: 500,
-          onComplete: () => pulse.destroy(),
-        })
+        if (evt.skillId === 'gun') {
+          // 普通射击：小弹光闪
+          const flash = this.add.circle(evt.x, evt.y, 5, 0xffeebb, 0.7)
+          this.tweens.add({
+            targets: flash, alpha: 0, scaleX: 3, scaleY: 3, duration: 180,
+            onComplete: () => flash.destroy(),
+          })
+        } else {
+          // 技能：元素脉冲圆圈
+          const pulse = this.add.circle(evt.x, evt.y, evt.isEcho ? 24 : 16, evt.isEcho ? 0x7fffd1 : 0xffcd8a, 0.35)
+          this.tweens.add({
+            targets: pulse, alpha: 0, scaleX: 2, scaleY: 2, duration: 500,
+            onComplete: () => pulse.destroy(),
+          })
+        }
       })
 
       this.roomRealtime!.onEnemyDeath(({ enemyId, killerId }) => {
