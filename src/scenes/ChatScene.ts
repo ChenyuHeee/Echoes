@@ -69,6 +69,11 @@ export class ChatScene extends Phaser.Scene {
     // T 键切换（仅在 chat 关闭且已连接房间时响应；打开时 DOM input 劫持键盘）
     this.tKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.T)
     this.tKey.on('down', () => {
+      // 如果焦点在任意 DOM 输入框内（登录/注册表单等），不响应
+      const focused = document.activeElement
+      const isInputFocused = focused instanceof HTMLInputElement
+                          || focused instanceof HTMLTextAreaElement
+      if (isInputFocused) return
       if (!this.expanded && chatManager.connected) this.openPanel()
     })
 
