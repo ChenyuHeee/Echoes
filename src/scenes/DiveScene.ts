@@ -63,6 +63,19 @@ export class DiveScene extends Phaser.Scene {
   private currentFragmentId: FragmentId = 'steam_district'
   private currentTheme: FragmentTheme = FRAGMENT_THEMES.steam_district
 
+  // 波次系统
+  private waveNumber = 0
+  private waveInProgress = false
+  private bossAlive = false
+  private waveText!: Phaser.GameObjects.Text
+
+  // DOT 持续伤害状态
+  private burnDots = new Map<EnemyBody, { damage: number; until: number; nextTick: number }>()
+  private slowUntil = new Map<EnemyBody, number>()
+
+  // 小地图
+  private minimap!: Phaser.GameObjects.Graphics
+
   constructor() {
     super('DiveScene')
   }
@@ -98,15 +111,18 @@ export class DiveScene extends Phaser.Scene {
 
     this.spawnMapTiles()
     this.spawnPlayer()
-    this.spawnEnemies()
+    this.setupCombat()
     this.spawnPickupsAndExtraction()
     this.setupInput()
-    this.setupCombat()
+    this.setupMinimap()
     if (!localStorage.getItem('echoes.tutorial.v1')) {
       this.showTutorial(() => this.showPrologue())
     } else {
       this.showPrologue()
     }
+
+    // 启动第一波
+    this.time.delayedCall(3000, () => this.startNextWave())
 
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08)
 
@@ -121,8 +137,10 @@ export class DiveScene extends Phaser.Scene {
 
   update(time: number) {
     this.movePlayer()
-    this.updateEnemies()
+    this.updateEnemies(time)
+    this.updateDots()
     this.updateVisuals(time)
+    this.updateMinimap()
 
     if (!this.offline && this.roomRealtime && time - this.lastMoveSyncAt > 100) {
       this.lastMoveSyncAt = time
@@ -161,6 +179,13 @@ export class DiveScene extends Phaser.Scene {
       void this.finishDive('death')
     }
 
+    // 波次清空检测
+    if (this.waveInProgress && this.enemies.countActive() === 0) {
+      this.waveInProgress = false
+      this.bossAlive = false
+      this.time.delayedCall(2500, () => this.startNextWave())
+    }
+
     this.emitHud(undefined)
   }
 
@@ -194,28 +219,123 @@ export class DiveScene extends Phaser.Scene {
 
   private spawnEnemies() {
     this.enemies = this.physics.add.group()
-    const enemyTypes = this.currentTheme.enemyPool
+  }
 
-    for (let i = 0; i < 12; i++) {
-      const enemyType = enemyTypes[i % enemyTypes.length]
-      const type = ENEMY_DEFINITIONS[enemyType]
-      const e = this.physics.add.sprite(
-        400 + Math.random() * 1200,
-        200 + Math.random() * 900,
-        type.spriteKey
-      ) as EnemyBody
-      e.hp = type.hp
-      e.maxHp = type.hp
-      e.setScale(type.isBoss ? 2.2 : enemyType === 'void_drone' ? 1.8 : 2)
-      e.setData('speed', Math.min(140, type.speed * 0.8))
-      e.setData('enemyType', enemyType)
-      if (this.currentTheme.biome === 'magic_forest') {
-        e.setTint(type.isBoss ? 0xa6ffd8 : 0x8ed6a2)
-      } else if (this.currentTheme.biome === 'cyber_wasteland') {
-        e.setTint(type.isBoss ? 0xff8cf1 : 0xb195ff)
+  // ─────────────────── 波次系统 ───────────────────────
+  private startNextWave() {
+    if (this.diveFinished) return
+    this.waveNumber++
+    this.waveInProgress = true
+
+    const isBossWave = this.waveNumber % 3 === 0
+    const count = isBossWave ? 4 : 6 + this.waveNumber * 2
+    const eliteChance = Math.min(0.4, 0.1 + this.waveNumber * 0.05)
+
+    // 波次提示
+    const { width } = this.scale
+    const label = isBossWave
+      ? `⚠ 第 ${this.waveNumber} 波  —  精英遭遇`
+      : `第 ${this.waveNumber} 波`
+    const waveTxt = this.add.text(width / 2, 56, label, {
+      fontFamily: 'monospace', fontSize: '18px',
+      color: isBossWave ? '#ff9050' : '#7ce0bc',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(60)
+    this.tweens.add({
+      targets: waveTxt, alpha: 0, y: waveTxt.y - 20,
+      duration: 2200, delay: 1200,
+      onComplete: () => waveTxt.destroy(),
+    })
+
+    const enemyTypes = this.currentTheme.enemyPool
+    const spawnRegions = [
+      { x: 100, y: 100 }, { x: 1700, y: 100 },
+      { x: 100, y: 1100 }, { x: 1700, y: 1100 },
+      { x: 900, y: 100 }, { x: 900, y: 1100 },
+    ]
+
+    for (let i = 0; i < count; i++) {
+      const isElite = !isBossWave && Math.random() < eliteChance
+      const isBoss = isBossWave && i === 0
+
+      let enemyType: string
+      if (isBoss) {
+        enemyType = 'ancient_guardian'
+      } else if (isElite) {
+        enemyType = Math.random() < 0.5 ? 'time_construct_heavy' : 'echo_hunter'
+      } else {
+        enemyType = enemyTypes[i % enemyTypes.length]
       }
-      this.enemies.add(e)
+
+      const region = spawnRegions[i % spawnRegions.length]
+      const x = region.x + (Math.random() - 0.5) * 160
+      const y = region.y + (Math.random() - 0.5) * 160
+
+      this.spawnEnemy(enemyType, x, y, isBoss, isElite)
     }
+
+    if (isBossWave) this.bossAlive = true
+  }
+
+  private spawnEnemy(enemyType: string, x: number, y: number, isBoss: boolean, isElite: boolean) {
+    const typeDef = ENEMY_DEFINITIONS[enemyType as keyof typeof ENEMY_DEFINITIONS]
+    if (!typeDef) return
+
+    const hpMult = isBoss ? 3.5 : isElite ? 1.8 : 1 + this.waveNumber * 0.12
+    const e = this.physics.add.sprite(x, y, typeDef.spriteKey) as EnemyBody
+    e.hp = Math.floor(typeDef.hp * hpMult)
+    e.maxHp = e.hp
+    e.setScale(isBoss ? 2.6 : isElite ? 2.2 : 2)
+    e.setData('speed', typeDef.speed * (isElite ? 1.2 : 1))
+    e.setData('enemyType', enemyType)
+    e.setData('isBoss', isBoss)
+    e.setData('isElite', isElite)
+    e.setData('aiMode', this.pickAiMode(enemyType))
+    e.setData('lastShot', 0)
+    e.setData('wanderAngle', Math.random() * Math.PI * 2)
+
+    if (isBoss) {
+      e.setTint(0xff6040)
+      // Boss 血条
+      this.spawnBossHpBar(e)
+    } else if (isElite) {
+      e.setTint(this.currentTheme.biome === 'magic_forest' ? 0xd4ff50 : 0xffa840)
+    } else if (this.currentTheme.biome === 'magic_forest') {
+      e.setTint(typeDef.isBoss ? 0xa6ffd8 : 0x8ed6a2)
+    } else if (this.currentTheme.biome === 'cyber_wasteland') {
+      e.setTint(typeDef.isBoss ? 0xff8cf1 : 0xb195ff)
+    }
+
+    this.enemies.add(e)
+  }
+
+  private pickAiMode(enemyType: string): string {
+    switch (enemyType) {
+      case 'void_drone':    return 'kite'     // 游击：保持距离，绕行射击
+      case 'echo_hunter':   return 'hunter'   // 猎手：预判玩家位置
+      case 'time_wraith':   return 'flank'    // 侧翼包抄
+      default:              return 'chase'    // 直线追逐
+    }
+  }
+
+  private spawnBossHpBar(boss: EnemyBody) {
+    const { width } = this.scale
+    const barBg = this.add.rectangle(width / 2, 30, 400, 14, 0x200810, 1).setScrollFactor(0).setDepth(55)
+    barBg.setStrokeStyle(1, 0x804040, 1)
+    const barFill = this.add.rectangle(width / 2 - 200, 30, 400, 10, 0xe05030, 1)
+      .setOrigin(0, 0.5).setScrollFactor(0).setDepth(56)
+    this.add.text(width / 2, 14, '时砂守护者', {
+      fontFamily: 'monospace', fontSize: '11px', color: '#ff8060',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(56)
+
+    // 每帧更新 Boss 血条
+    const update = this.time.addEvent({
+      delay: 50, repeat: -1,
+      callback: () => {
+        if (!boss.active) { barBg.destroy(); barFill.destroy(); update.remove(); return }
+        const pct = Math.max(0, boss.hp / boss.maxHp)
+        barFill.setDisplaySize(400 * pct, 10)
+      },
+    })
   }
 
   private spawnPickupsAndExtraction() {
@@ -299,6 +419,63 @@ export class DiveScene extends Phaser.Scene {
         },
       })
     })
+  }
+
+  private setupMinimap() {
+    const { width, height } = this.scale
+    const mmW = 110, mmH = 74
+    const mmX = width - mmW - 8
+    const mmY = height - mmH - 8
+
+    const bg = this.add.rectangle(mmX + mmW / 2, mmY + mmH / 2, mmW + 2, mmH + 2, 0x000000, 0.65)
+      .setScrollFactor(0).setDepth(60)
+    bg.setStrokeStyle(1, 0x304050, 0.8)
+
+    this.minimap = this.add.graphics().setScrollFactor(0).setDepth(61)
+    this.add.text(mmX + 2, mmY + 2, '地图', {
+      fontFamily: 'monospace', fontSize: '8px', color: '#304050',
+    }).setScrollFactor(0).setDepth(62)
+  }
+
+  private updateMinimap() {
+    if (!this.minimap) return
+    const { width, height } = this.scale
+    const mmW = 110, mmH = 74
+    const mmX = width - mmW - 8
+    const mmY = height - mmH - 8
+    const scaleX = mmW / 1800
+    const scaleY = mmH / 1200
+
+    this.minimap.clear()
+
+    // 撤离点（金色）
+    this.minimap.fillStyle(0xf0c040, 0.9)
+    this.minimap.fillCircle(mmX + 1650 * scaleX, mmY + 1040 * scaleY, 3)
+
+    // 时砂拾取物（蓝色）
+    this.minimap.fillStyle(0x60b0ff, 0.6)
+    this.pickups.children.each(p => {
+      const img = p as Phaser.Physics.Arcade.Image
+      if (img.active) {
+        this.minimap.fillCircle(mmX + img.x * scaleX, mmY + img.y * scaleY, 1.5)
+      }
+      return true
+    })
+
+    // 敌人（红色，Boss 更大）
+    this.minimap.fillStyle(0xff4040, 0.8)
+    this.enemies.children.each(e => {
+      const enemy = e as EnemyBody
+      if (enemy.active) {
+        const r = enemy.getData('isBoss') ? 3.5 : enemy.getData('isElite') ? 2.5 : 1.8
+        this.minimap.fillCircle(mmX + enemy.x * scaleX, mmY + enemy.y * scaleY, r)
+      }
+      return true
+    })
+
+    // 玩家（白色）
+    this.minimap.fillStyle(0xffffff, 1)
+    this.minimap.fillCircle(mmX + this.player.x * scaleX, mmY + this.player.y * scaleY, 2.5)
   }
 
   private showLorePanel(title: string, source: string, content: string) {
@@ -409,6 +586,10 @@ export class DiveScene extends Phaser.Scene {
       const bullet = a as Phaser.Physics.Arcade.Image
       const enemy = b as EnemyBody
       const damage = Number(bullet.getData('damage') || 12)
+      const isChain = bullet.getData('chain') === true
+      if (isChain) {
+        enemy.setData('chainTarget', true)
+      }
       this.damageEnemy(enemy, damage)
       bullet.destroy()
     })
@@ -467,17 +648,86 @@ export class DiveScene extends Phaser.Scene {
     this.extractionHint.setAlpha(Math.floor(time / 400) % 2 === 0 ? 1 : 0.6)
   }
 
-  private updateEnemies() {
+  private updateEnemies(time: number) {
     this.enemies.children.each((child) => {
       const enemy = child as EnemyBody
       if (!enemy.active) return true
 
-      const speed = Number(enemy.getData('speed') || 70)
+      const baseSpeed = Number(enemy.getData('speed') || 70)
+      const slowed = this.slowUntil.get(enemy) ? Date.now() < this.slowUntil.get(enemy)! : false
+      const speed = slowed ? baseSpeed * 0.35 : baseSpeed
+      const aiMode = String(enemy.getData('aiMode') || 'chase')
+      const isBoss = enemy.getData('isBoss') === true
       const enemyType = String(enemy.getData('enemyType') || 'time_construct_basic')
-      this.physics.moveToObject(enemy, this.player, speed)
+
+      const dx = this.player.x - enemy.x
+      const dy = this.player.y - enemy.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+
+      switch (aiMode) {
+        case 'kite': {
+          // 游击：距离 220+ 绕行，距离 < 120 撤退
+          if (dist > 220) {
+            this.physics.moveToObject(enemy, this.player, speed)
+          } else if (dist < 120) {
+            enemy.setVelocity(-dx / dist * speed, -dy / dist * speed)
+          } else {
+            // 绕行
+            const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, this.player.x, this.player.y)
+            const strafe = angle + Math.PI / 2
+            enemy.setVelocity(Math.cos(strafe) * speed * 0.8, Math.sin(strafe) * speed * 0.8)
+          }
+          break
+        }
+        case 'hunter': {
+          // 猎手：预判玩家运动方向
+          const pVel = this.player.body?.velocity || { x: 0, y: 0 }
+          const predictX = this.player.x + pVel.x * 0.4
+          const predictY = this.player.y + pVel.y * 0.4
+          this.physics.moveTo(enemy, predictX, predictY, speed)
+          break
+        }
+        case 'flank': {
+          // 侧翼：从玩家侧面靠近
+          const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, this.player.x, this.player.y)
+          const flankAngle = angle + (enemy.x > this.player.x ? Math.PI / 3 : -Math.PI / 3)
+          enemy.setVelocity(Math.cos(flankAngle) * speed, Math.sin(flankAngle) * speed)
+          break
+        }
+        case 'chase':
+        default: {
+          if (isBoss && dist < 350) {
+            // Boss 特殊行为：周期性冲锋
+            const dashPhase = Math.floor(time / 2200) % 2
+            if (dashPhase === 0) {
+              this.physics.moveToObject(enemy, this.player, speed * 2.2)
+            } else {
+              enemy.setVelocity(0, 0)
+            }
+          } else {
+            this.physics.moveToObject(enemy, this.player, speed)
+          }
+          break
+        }
+      }
+
       enemy.setTexture(this.getEnemyTexture(enemyType, this.time.now))
       enemy.setDepth(enemy.y)
       return true
+    })
+  }
+
+  // DOT 持续伤害更新
+  private updateDots() {
+    const now = Date.now()
+    this.burnDots.forEach((dot, enemy) => {
+      if (!enemy.active) { this.burnDots.delete(enemy); return }
+      if (now > dot.until) { this.burnDots.delete(enemy); return }
+      if (now >= dot.nextTick) {
+        this.damageEnemy(enemy, dot.damage, false)
+        this.spawnDamageNumber(enemy.x, enemy.y - 16, dot.damage, '#ff7730')
+        dot.nextTick = now + 600
+      }
     })
   }
 
@@ -571,8 +821,36 @@ export class DiveScene extends Phaser.Scene {
       }
       case 'gravity_well':
       case 'toxic_fog':
-      case 'plague_module': {
+      case 'plague_module':
+      case 'cryo_field':
+      case 'magnet_module': {
         this.spawnAreaDamage(pointer.worldX, pointer.worldY, skill)
+        // cryo_field 额外冻结效果
+        if (skill === 'cryo_field') {
+          this.enemies.children.each(child => {
+            const enemy = child as EnemyBody
+            if (!enemy.active) return true
+            const d = Phaser.Math.Distance.Between(pointer.worldX, pointer.worldY, enemy.x, enemy.y)
+            if (d < (SKILL_DEFINITIONS[skill].range || 200) * 0.4) {
+              this.applySlow(enemy, 3000)
+            }
+            return true
+          })
+        }
+        break
+      }
+      case 'lightning_bolt': {
+        // 闪电：主目标 + 链式传导至3个最近敌人
+        const def = SKILL_DEFINITIONS[skill]
+        const b = this.physics.add.image(this.player.x, this.player.y, isEcho ? 'bullet_echo' : 'bullet')
+        b.setTint(0xf0e040)
+        b.setScale(1.6)
+        b.setData('damage', (def.damage || 45) * (isEcho ? 0.8 : 1))
+        b.setData('chain', true)
+        b.rotation = Phaser.Math.Angle.Between(this.player.x, this.player.y, pointer.worldX, pointer.worldY)
+        this.bullets.add(b)
+        this.physics.moveTo(b, pointer.worldX, pointer.worldY, 700)
+        this.time.delayedCall(1400, () => b.destroy())
         break
       }
       case 'shadow_clone': {
@@ -635,70 +913,214 @@ export class DiveScene extends Phaser.Scene {
     const fx = this.add.image(x, y, effectTexture).setDisplaySize(radius * 2, radius * 2)
     fx.setAlpha(skill === 'gravity_well' ? 0.85 : 0.78)
 
-    this.enemies.children.each((child) => {
-      const enemy = child as EnemyBody
-      if (!enemy.active) return true
-      const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y)
-      if (dist <= radius) {
-        this.damageEnemy(enemy, def.damage || 18)
-      }
-      return true
-    })
+    const duration = def.duration || 650
+
+    // gravity_well：持续吸引敌人
+    if (skill === 'gravity_well') {
+      const pullInterval = this.time.addEvent({
+        delay: 120,
+        repeat: Math.floor(duration / 120),
+        callback: () => {
+          this.enemies.children.each(child => {
+            const enemy = child as EnemyBody
+            if (!enemy.active) return true
+            const d = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y)
+            if (d < radius * 2.2) {
+              const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, x, y)
+              enemy.setVelocity(
+                (enemy.body?.velocity.x || 0) + Math.cos(angle) * 160,
+                (enemy.body?.velocity.y || 0) + Math.sin(angle) * 160,
+              )
+              this.damageEnemy(enemy, 4, false)
+            }
+            return true
+          })
+        },
+      })
+      this.time.delayedCall(duration, () => pullInterval.remove())
+    }
+
+    // toxic_fog / plague_module：AOE + 燃烧DOT
+    if (skill === 'toxic_fog' || skill === 'plague_module') {
+      const dmgInterval = this.time.addEvent({
+        delay: 600,
+        repeat: Math.floor(duration / 600),
+        callback: () => {
+          this.enemies.children.each(child => {
+            const enemy = child as EnemyBody
+            if (!enemy.active) return true
+            const d = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y)
+            if (d <= radius) {
+              this.applyBurnDot(enemy, def.damage || 10)
+            }
+            return true
+          })
+        },
+      })
+      this.time.delayedCall(duration, () => dmgInterval.remove())
+    } else {
+      // 即时AOE伤害
+      this.enemies.children.each((child) => {
+        const enemy = child as EnemyBody
+        if (!enemy.active) return true
+        const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y)
+        if (dist <= radius) {
+          this.damageEnemy(enemy, def.damage || 18)
+        }
+        return true
+      })
+    }
 
     this.tweens.add({
       targets: fx,
       alpha: 0.2,
       scaleX: 1.15,
       scaleY: 1.15,
-      duration: def.duration || 650,
+      duration,
       onComplete: () => fx.destroy(),
     })
   }
 
-  private damageEnemy(enemy: EnemyBody, amount: number) {
+  private applyBurnDot(enemy: EnemyBody, damage: number) {
+    const existing = this.burnDots.get(enemy)
+    const now = Date.now()
+    if (existing) {
+      existing.until = now + 4000
+      existing.damage = Math.max(existing.damage, damage)
+    } else {
+      this.burnDots.set(enemy, { damage, until: now + 4000, nextTick: now + 300 })
+    }
+    enemy.setTint(0x50ff50)
+    this.time.delayedCall(300, () => { if (enemy.active) enemy.clearTint() })
+  }
+
+  private applySlow(enemy: EnemyBody, duration: number) {
+    this.slowUntil.set(enemy, Date.now() + duration)
+    enemy.setTint(0x80d4ff)
+    this.time.delayedCall(duration, () => {
+      if (enemy.active) enemy.clearTint()
+      this.slowUntil.delete(enemy)
+    })
+  }
+
+  private damageEnemy(enemy: EnemyBody, amount: number, showNumber = true) {
     enemy.hp -= amount
+    if (showNumber) {
+      this.spawnDamageNumber(enemy.x, enemy.y - 20, amount, '#f0e050')
+    }
+
     if (enemy.hp > 0) {
+      // 击退
+      const dx = enemy.x - this.player.x
+      const dy = enemy.y - this.player.y
+      const len = Math.sqrt(dx * dx + dy * dy) || 1
+      enemy.setVelocity(
+        (enemy.body?.velocity.x || 0) + (dx / len) * 180,
+        (enemy.body?.velocity.y || 0) + (dy / len) * 180,
+      )
       enemy.setTintFill(0xffffff)
-      this.time.delayedCall(70, () => enemy.clearTint())
+      this.time.delayedCall(70, () => { if (enemy.active) enemy.clearTint() })
       enemy.setTint(0xd56d6d)
       audioManager.playHit()
       return
+    }
+
+    // 死亡
+    // 链式闪电传导
+    if (enemy.getData('chainTarget')) {
+      const nearby = this.getNearestEnemies(enemy.x, enemy.y, 2, 200)
+      nearby.forEach(next => {
+        if (!next.getData('chainTarget')) {
+          next.setData('chainTarget', true)
+          this.time.delayedCall(80, () => {
+            if (next.active) {
+              this.damageEnemy(next, Math.floor(amount * 0.5))
+              // 链式电弧特效
+              const arc = this.add.line(0, 0, enemy.x, enemy.y, next.x, next.y, 0xf0e040, 0.8)
+              arc.setDepth(80)
+              this.tweens.add({ targets: arc, alpha: 0, duration: 280, onComplete: () => arc.destroy() })
+            }
+          })
+        }
+      })
     }
 
     enemy.destroy()
     audioManager.playEnemyDeath()
     this.diveKills += 1
 
-    // Boss 死亡 20% 掉落回响水晶
+    // 小屏幕震动
+    this.cameras.main.shake(80, 0.004)
+
+    // Boss / 精英 掉落
     const isBoss = enemy.getData('isBoss') === true
-    if (isBoss && Math.random() < 0.20) {
+    const isElite = enemy.getData('isElite') === true
+    if (isBoss) {
       const crystalId = `crystal_${this.currentFragmentId}_${Date.now()}`
       addCrystal(crystalId)
       audioManager.playPickup()
-      this.emitHud('✦ 回响水晶')
+      this.emitHud('✦ 回响水晶 已获得')
+      this.cameras.main.shake(200, 0.012)
+      // Boss 大爆炸特效
+      for (let i = 0; i < 8; i++) {
+        this.time.delayedCall(i * 60, () => {
+          const ex = this.add.image(
+            enemy.x + (Math.random() - 0.5) * 80,
+            enemy.y + (Math.random() - 0.5) * 80,
+            'effect_echo_ring'
+          ).setScale(0.5 + Math.random() * 0.8).setTint(0xff6030)
+          this.tweens.add({ targets: ex, alpha: 0, scaleX: 2, scaleY: 2, duration: 400, onComplete: () => ex.destroy() })
+        })
+      }
+    } else if (isElite && Math.random() < 0.3) {
+      const crystalId = `crystal_elite_${Date.now()}`
+      addCrystal(crystalId)
+      this.emitHud('✦ 精英水晶')
     }
 
-    if (Math.random() < 0.6) {
-      const p = this.physics.add.image(enemy.x, enemy.y, 'pickup')
-      p.setScale(1.5)
-      this.pickups.add(p)
-
-      const shine = this.add.image(enemy.x, enemy.y, 'effect_pickup_shine').setScale(1.1)
-      this.tweens.add({
-        targets: shine,
-        alpha: 0,
-        duration: 550,
-        onComplete: () => shine.destroy(),
-      })
-
-      this.tweens.add({
-        targets: p,
-        y: p.y - 6,
-        duration: 700,
-        yoyo: true,
-        repeat: -1,
-      })
+    const dropChance = isBoss ? 1 : isElite ? 0.9 : 0.55
+    if (Math.random() < dropChance) {
+      const dropCount = isBoss ? 3 : isElite ? 2 : 1
+      for (let i = 0; i < dropCount; i++) {
+        const ox = (Math.random() - 0.5) * 60
+        const oy = (Math.random() - 0.5) * 60
+        const p = this.physics.add.image(enemy.x + ox, enemy.y + oy, 'pickup')
+        p.setScale(1.5)
+        this.pickups.add(p)
+        const shine = this.add.image(enemy.x + ox, enemy.y + oy, 'effect_pickup_shine').setScale(1.1)
+        this.tweens.add({ targets: shine, alpha: 0, duration: 550, onComplete: () => shine.destroy() })
+        this.tweens.add({ targets: p, y: p.y - 6, duration: 700, yoyo: true, repeat: -1 })
+      }
     }
+  }
+
+  // 飘字伤害数字
+  private spawnDamageNumber(x: number, y: number, amount: number, color: string) {
+    const txt = this.add.text(x, y, `-${amount}`, {
+      fontFamily: 'monospace', fontSize: '13px', color,
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(90)
+    this.tweens.add({
+      targets: txt,
+      y: y - 28,
+      alpha: 0,
+      duration: 700,
+      ease: 'Power2',
+      onComplete: () => txt.destroy(),
+    })
+  }
+
+  // 获取最近的 N 个敌人
+  private getNearestEnemies(x: number, y: number, count: number, maxDist: number): EnemyBody[] {
+    const result: { enemy: EnemyBody; dist: number }[] = []
+    this.enemies.children.each(child => {
+      const e = child as EnemyBody
+      if (!e.active) return true
+      const d = Phaser.Math.Distance.Between(x, y, e.x, e.y)
+      if (d <= maxDist) result.push({ enemy: e, dist: d })
+      return true
+    })
+    return result.sort((a, b) => a.dist - b.dist).slice(0, count).map(r => r.enemy)
   }
 
   private async setupRealtime() {
