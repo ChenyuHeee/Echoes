@@ -194,6 +194,11 @@ export class LoginScene extends Phaser.Scene {
     document.body.appendChild(overlay)
     this.overlay = overlay
 
+    // 阻止 pointer 事件透传到 Phaser canvas
+    overlay.addEventListener('pointerdown', e => e.stopPropagation())
+    overlay.addEventListener('pointerup', e => e.stopPropagation())
+    overlay.addEventListener('pointermove', e => e.stopPropagation())
+
     // 第一个输入框自动获焦
     if (fields.length > 0) {
       setTimeout(() => inputs[fields[0].id]?.focus(), 60)
