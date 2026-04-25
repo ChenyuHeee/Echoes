@@ -45,11 +45,11 @@ export class SanctuaryScene extends Phaser.Scene {
     this.add.rectangle(width / 2, 28, width, 56, 0x060810, 0.95).setDepth(5)
     this.add.rectangle(width / 2, 56, width, 1, 0x406080, 0.3).setDepth(5)
     this.add.text(width / 2, 18, '✦  回响庇护所', {
-      fontFamily: 'monospace', fontSize: '22px', color: '#7ce0bc',
+      fontFamily: '"Silkscreen", monospace', fontSize: '22px', color: '#7ce0bc',
     }).setOrigin(0.5, 0).setDepth(6)
     const faction = FACTION_DEFINITIONS[rt.player.faction]
     this.add.text(width / 2, 40, `${faction?.name || ''}  ·  Lv.${rt.player.level}  ·  ${rt.player.username}`, {
-      fontFamily: 'monospace', fontSize: '11px', color: faction?.color || '#7090b0',
+      fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: faction?.color || '#7090b0',
     }).setOrigin(0.5, 0).setDepth(6)
 
     // 标签页按钮
@@ -67,7 +67,7 @@ export class SanctuaryScene extends Phaser.Scene {
         .setDepth(6)
       bg.setStrokeStyle(1, 0x304050, 0.6)
       const txt = this.add.text(tx, 82, tab.label, {
-        fontFamily: 'monospace', fontSize: '13px', color: '#6080a0',
+        fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#6080a0',
       }).setOrigin(0.5).setDepth(7)
 
       bg.setInteractive({ useHandCursor: true })
@@ -85,7 +85,7 @@ export class SanctuaryScene extends Phaser.Scene {
 
     // 底部提示
     this.tipText = this.add.text(width / 2, height - 14, '', {
-      fontFamily: 'monospace', fontSize: '12px', color: '#f0d48a',
+      fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#f0d48a',
     }).setOrigin(0.5, 1).setDepth(8)
 
     this.switchTab('overview')
@@ -128,7 +128,7 @@ export class SanctuaryScene extends Phaser.Scene {
       y: cy - 110,
       text: dialogue,
       style: {
-        fontFamily: 'monospace', fontSize: '13px', color: '#b8d0e8',
+        fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#b8d0e8',
         wordWrap: { width: 700 }, lineSpacing: 5, align: 'center',
       },
       add: false,
@@ -157,7 +157,7 @@ export class SanctuaryScene extends Phaser.Scene {
       x: width / 2,
       y: cy + 90,
       text: `当前时砂：${rt.player.timeSand}`,
-      style: { fontFamily: 'monospace', fontSize: '14px', color: '#e8d080' },
+      style: { fontFamily: '"Silkscreen", monospace', fontSize: '14px', color: '#e8d080' },
       add: false,
     }).setOrigin(0.5)
     this.contentLayer.add(sandTxt)
@@ -195,7 +195,7 @@ export class SanctuaryScene extends Phaser.Scene {
     this.contentLayer.add(this.make.text({
       x: width / 2, y: 8,
       text: '点击已解锁技能可装备到 [1][2][3] 槽 · 橙色 = 已装备',
-      style: { fontFamily: 'monospace', fontSize: '11px', color: '#506070' },
+      style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#506070' },
       add: false,
     }).setOrigin(0.5))
 
@@ -224,7 +224,7 @@ export class SanctuaryScene extends Phaser.Scene {
         x: cx, y: cy - 24,
         text: skill.name,
         style: {
-          fontFamily: 'monospace', fontSize: '13px',
+          fontFamily: '"Silkscreen", monospace', fontSize: '13px',
           color: isEquipped ? '#f0c060' : isUnlocked ? '#dce9ff' : '#384858',
         },
         add: false,
@@ -234,7 +234,7 @@ export class SanctuaryScene extends Phaser.Scene {
       this.contentLayer.add(this.make.text({
         x: cx, y: cy - 10,
         text: `${skill.element}  CD:${(skill.cooldown / 1000).toFixed(1)}s  ${isUnlocked ? (isEquipped ? '✦已装备' : '已解锁') : `${skill.unlockCost}时砂`}`,
-        style: { fontFamily: 'monospace', fontSize: '9px', color: isUnlocked ? skill.elementColor : '#384858' },
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: isUnlocked ? skill.elementColor : '#384858' },
         add: false,
       }).setOrigin(0.5))
 
@@ -243,7 +243,7 @@ export class SanctuaryScene extends Phaser.Scene {
         x: cx, y: cy + 2,
         text: skill.description,
         style: {
-          fontFamily: 'monospace', fontSize: '9px',
+          fontFamily: '"Silkscreen", monospace', fontSize: '9px',
           color: isUnlocked ? '#8090a8' : '#2a3038',
           wordWrap: { width: CARD_W - 16 }, align: 'center',
         },
@@ -258,7 +258,7 @@ export class SanctuaryScene extends Phaser.Scene {
         this.contentLayer.add(btnBg)
         this.contentLayer.add(this.make.text({
           x: cx, y: btnY, text: `解锁 (${skill.unlockCost}时砂)`,
-          style: { fontFamily: 'monospace', fontSize: '10px', color: '#5090b0' },
+          style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#5090b0' },
           add: false,
         }).setOrigin(0.5))
         btnBg.setInteractive({ useHandCursor: true })
@@ -281,7 +281,7 @@ export class SanctuaryScene extends Phaser.Scene {
         this.contentLayer.add(btnBg)
         this.contentLayer.add(this.make.text({
           x: cx, y: btnY, text: '装备',
-          style: { fontFamily: 'monospace', fontSize: '10px', color: skill.elementColor },
+          style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: skill.elementColor },
           add: false,
         }).setOrigin(0.5))
         btnBg.setInteractive({ useHandCursor: true })
@@ -302,7 +302,7 @@ export class SanctuaryScene extends Phaser.Scene {
         this.contentLayer.add(btnBg)
         this.contentLayer.add(this.make.text({
           x: cx, y: btnY, text: '卸下',
-          style: { fontFamily: 'monospace', fontSize: '10px', color: '#c07030' },
+          style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#c07030' },
           add: false,
         }).setOrigin(0.5))
         btnBg.setInteractive({ useHandCursor: true })
@@ -346,7 +346,7 @@ export class SanctuaryScene extends Phaser.Scene {
     this.contentLayer.add(this.make.text({
       x: cx, y: y + 10,
       text: faction ? `${faction.name}  ${faction.nameEn}` : '未选择阵营',
-      style: { fontFamily: 'monospace', fontSize: '18px', color: fColor },
+      style: { fontFamily: '"Silkscreen", monospace', fontSize: '18px', color: fColor },
       add: false,
     }).setOrigin(0.5))
 
@@ -355,7 +355,7 @@ export class SanctuaryScene extends Phaser.Scene {
         x: cx, y: y + 34,
         text: `${faction.passiveName}：${faction.passiveDescription}`,
         style: {
-          fontFamily: 'monospace', fontSize: '11px', color: '#8090a8',
+          fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#8090a8',
           wordWrap: { width: 460 }, align: 'center',
         },
         add: false,
@@ -365,7 +365,7 @@ export class SanctuaryScene extends Phaser.Scene {
         x: cx, y: y + 56,
         text: `「${faction.philosophy}」`,
         style: {
-          fontFamily: 'monospace', fontSize: '11px', color: fColor, fontStyle: 'italic',
+          fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: fColor, fontStyle: 'italic',
           wordWrap: { width: 460 }, align: 'center',
         },
         add: false,
@@ -396,12 +396,12 @@ export class SanctuaryScene extends Phaser.Scene {
 
       this.contentLayer.add(this.make.text({
         x: sx - colW / 2 + 12, y: sy,
-        text: k, style: { fontFamily: 'monospace', fontSize: '12px', color: '#506070' }, add: false,
+        text: k, style: { fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#506070' }, add: false,
       }).setOrigin(0))
 
       this.contentLayer.add(this.make.text({
         x: sx + colW / 2 - 12, y: sy,
-        text: v, style: { fontFamily: 'monospace', fontSize: '12px', color: '#c8d8f0' }, add: false,
+        text: v, style: { fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#c8d8f0' }, add: false,
       }).setOrigin(1, 0))
 
       this.contentLayer.add(this.add.rectangle(
@@ -420,7 +420,7 @@ export class SanctuaryScene extends Phaser.Scene {
       this.contentLayer.add(this.make.text({
         x: cx, y: 80,
         text: '尚无残响记录。在深潜中拾取发光碎片以收集。',
-        style: { fontFamily: 'monospace', fontSize: '14px', color: '#304050' },
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '14px', color: '#304050' },
         add: false,
       }).setOrigin(0.5))
       return
@@ -441,17 +441,17 @@ export class SanctuaryScene extends Phaser.Scene {
       this.contentLayer.add(this.make.text({
         x: cx - 328, y: y + 10,
         text: entry.title,
-        style: { fontFamily: 'monospace', fontSize: '13px', color: '#c8a96e' }, add: false,
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#c8a96e' }, add: false,
       }))
       this.contentLayer.add(this.make.text({
         x: cx - 328, y: y + 28,
         text: `— ${entry.source}`,
-        style: { fontFamily: 'monospace', fontSize: '10px', color: '#405060' }, add: false,
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#405060' }, add: false,
       }))
       this.contentLayer.add(this.make.text({
         x: cx - 328, y: y + 44,
         text: entry.content,
-        style: { fontFamily: 'monospace', fontSize: '11px', color: '#8090a8', wordWrap: { width: 660 } },
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#8090a8', wordWrap: { width: 660 } },
         add: false,
       }))
 
@@ -466,7 +466,7 @@ export class SanctuaryScene extends Phaser.Scene {
 
     const txt = this.make.text({
       x, y, text: label,
-      style: { fontFamily: 'monospace', fontSize: '13px', color: '#90b8d8' },
+      style: { fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#90b8d8' },
       add: false,
     }).setOrigin(0.5)
 

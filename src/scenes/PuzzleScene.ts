@@ -113,15 +113,15 @@ export class PuzzleScene extends Phaser.Scene {
     this.add.rectangle(480, 40, 960, 1, 0x304860, 0.5).setScrollFactor(0).setDepth(30)
 
     this.roomTitle = this.add.text(480, 8, '', {
-      fontFamily: 'monospace', fontSize: '15px', color: '#50e8a0',
+      fontFamily: '"Silkscreen", monospace', fontSize: '15px', color: '#50e8a0',
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(31)
 
     this.levelCounter = this.add.text(480, 27, '', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#304860',
+      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#304860',
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(31)
 
     const back = this.add.text(14, 8, '<- \u8fd4\u56de', {
-      fontFamily: 'monospace', fontSize: '12px', color: '#304050',
+      fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#304050',
     }).setOrigin(0, 0).setScrollFactor(0).setDepth(31)
     back.setInteractive({ useHandCursor: true })
     back.on('pointerover', () => back.setColor('#608090'))
@@ -129,16 +129,16 @@ export class PuzzleScene extends Phaser.Scene {
     back.on('pointerdown', () => { audioManager.playClick(); this.scene.start('ModeSelectScene') })
 
     this.echoText = this.add.text(700, 8, 'P1\u56de\u54cd\uff1a\u7a7a', {
-      fontFamily: 'monospace', fontSize: '11px', color: '#384850',
+      fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#384850',
     }).setOrigin(0, 0).setScrollFactor(0).setDepth(31)
 
     this.hintText = this.add.text(480, 510, '', {
-      fontFamily: 'monospace', fontSize: '11px', color: '#3a5868',
+      fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#3a5868',
       wordWrap: { width: 920 }, align: 'center',
     }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(31)
 
     this.statusText = this.add.text(480, 290, '', {
-      fontFamily: 'monospace', fontSize: '17px', color: '#ffffff',
+      fontFamily: '"Silkscreen", monospace', fontSize: '17px', color: '#ffffff',
       stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(40).setAlpha(0)
 
@@ -194,7 +194,7 @@ export class PuzzleScene extends Phaser.Scene {
       const sprite = this.add.rectangle(p.x, p.y, 52, 52, col, 0.18).setDepth(5)
       sprite.setStrokeStyle(2, col, 0.65)
       const label = this.add.text(p.x, p.y, p.id, {
-        fontFamily: 'monospace', fontSize: '22px', color: p.color,
+        fontFamily: '"Silkscreen", monospace', fontSize: '22px', color: p.color,
       }).setOrigin(0.5).setDepth(6)
       this.pads.push({ id: p.id, sprite, label, onPad: false, activationTimes: [], color: col })
     })
@@ -208,7 +208,7 @@ export class PuzzleScene extends Phaser.Scene {
         return cnt > 1 ? `${id}x${cnt}` : id
       }).join('+')
       const label = this.add.text(d.x, d.y + d.h / 2 + 10, `${reqStr}\n${d.windowMs}ms`, {
-        fontFamily: 'monospace', fontSize: '9px', color: '#8850d0', align: 'center',
+        fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#8850d0', align: 'center',
       }).setOrigin(0.5, 0).setDepth(9)
       this.doors.push({ sprite, label, open: false, requiredPads: d.requiredPads, windowMs: d.windowMs })
     })
@@ -240,7 +240,7 @@ export class PuzzleScene extends Phaser.Scene {
       right: kb.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT),
     }
     this.echo2Text = this.add.text(700, 25, 'P2\u56de\u54cd\uff1a\u7a7a', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#7a6020',
+      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#7a6020',
     }).setOrigin(0, 0).setScrollFactor(0).setDepth(31)
   }
 
@@ -257,7 +257,7 @@ export class PuzzleScene extends Phaser.Scene {
     this.exitGfx.strokeCircle(level.exitX, level.exitY, 26)
 
     this.exitTxt = this.add.text(level.exitX, level.exitY - 36, '\u51fa\u53e3', {
-      fontFamily: 'monospace', fontSize: '12px', color: '#ffd060',
+      fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#ffd060',
     }).setOrigin(0.5, 1).setDepth(13)
     this.tweens.add({ targets: this.exitTxt, y: this.exitTxt.y - 6, duration: 800, yoyo: true, repeat: -1 })
     this.showStatus('\u2746 \u51fa\u53e3\u5df2\u5f00\u542f \u2014 \u8d70\u5165\u91d1\u8272\u4f20\u9001\u95e8', '#ffd060')
@@ -383,18 +383,18 @@ export class PuzzleScene extends Phaser.Scene {
     this.add.rectangle(W / 2, H / 2, 510, 250, 0x040810, 0.97)
       .setScrollFactor(0).setDepth(120).setStrokeStyle(2, 0x50e8a0)
     this.add.text(W / 2, H / 2 - 85, '\u2746 \u65f6\u5e8f\u8c1c\u9898\u5168\u90e8\u7834\u89e3 \u2746', {
-      fontFamily: 'monospace', fontSize: '22px', color: '#50e8a0',
+      fontFamily: '"Silkscreen", monospace', fontSize: '22px', color: '#50e8a0',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(121)
 
     const totalLevels = this.isCoop ? 5 : 30
     this.add.text(W / 2, H / 2 - 50, `\u901a\u5173 ${totalLevels} \u4e2a\u5173\u5361`, {
-      fontFamily: 'monospace', fontSize: '14px', color: '#507090',
+      fontFamily: '"Silkscreen", monospace', fontSize: '14px', color: '#507090',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(121)
     this.add.text(W / 2, H / 2 - 18, `\u83b7\u5f97\u65f6\u7802  ${this.totalSand}`, {
-      fontFamily: 'monospace', fontSize: '18px', color: '#c8e060',
+      fontFamily: '"Silkscreen", monospace', fontSize: '18px', color: '#c8e060',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(121)
     this.add.text(W / 2, H / 2 + 14, '\u56de\u54cd\u4e0d\u6b62\u4e8e\u6218\u6597\u2014\u2014\u5b83\u662f\u65f6\u95f4\u672c\u8eab\u7684\u8bed\u8a00', {
-      fontFamily: 'monospace', fontSize: '12px', color: '#384850',
+      fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#384850',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(121)
 
     const mkBtn = (cx: number, label: string, color: number, fn: () => void) => {
@@ -407,7 +407,7 @@ export class PuzzleScene extends Phaser.Scene {
       bg.on('pointerdown',  () => { audioManager.playClick(); fn() })
       const hex = '#' + color.toString(16).padStart(6, '0')
       this.add.text(cx, H / 2 + 76, label, {
-        fontFamily: 'monospace', fontSize: '14px', color: hex,
+        fontFamily: '"Silkscreen", monospace', fontSize: '14px', color: hex,
       }).setOrigin(0.5).setScrollFactor(0).setDepth(122)
     }
     mkBtn(W / 2 - 100, '\u518d\u6b21\u6311\u6218', 0x50e8a0, () => this.scene.restart())

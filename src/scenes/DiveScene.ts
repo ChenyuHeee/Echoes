@@ -263,7 +263,7 @@ export class DiveScene extends Phaser.Scene {
     this.spawnEnvironmentProps()
 
     this.add.text(120, 90, this.currentTheme.name, {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '22px',
       color: this.currentTheme.ambientColor,
     }).setDepth(3)
@@ -297,7 +297,7 @@ export class DiveScene extends Phaser.Scene {
       ? `⚠ 第 ${this.waveNumber} 波  —  精英遭遇`
       : `第 ${this.waveNumber} 波`
     const waveTxt = this.add.text(width / 2, 56, label, {
-      fontFamily: 'monospace', fontSize: '18px',
+      fontFamily: '"Silkscreen", monospace', fontSize: '18px',
       color: isBossWave ? '#ff9050' : '#7ce0bc',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(60)
     this.tweens.add({
@@ -385,7 +385,7 @@ export class DiveScene extends Phaser.Scene {
     const barFill = this.add.rectangle(width / 2 - 200, 30, 400, 10, 0xe05030, 1)
       .setOrigin(0, 0.5).setScrollFactor(0).setDepth(56)
     this.add.text(width / 2, 14, '时砂守护者', {
-      fontFamily: 'monospace', fontSize: '11px', color: '#ff8060',
+      fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#ff8060',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(56)
 
     // 每帧更新 Boss 血条
@@ -414,7 +414,7 @@ export class DiveScene extends Phaser.Scene {
       repeat: -1,
     })
     this.extractionHint = this.add.text(1650, 1115, this.currentTheme.extractionLabel, {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '14px',
       color: this.currentTheme.ambientColor,
     }).setOrigin(0.5)
@@ -454,7 +454,7 @@ export class DiveScene extends Phaser.Scene {
 
       // F 键拾取提示（靠近时显示）
       const hint = this.add.text(pos.x, pos.y - 28, `[F] ${entry.title}`, {
-        fontFamily: 'monospace', fontSize: '11px', color: '#80c8ff',
+        fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#80c8ff',
       }).setOrigin(0.5).setAlpha(0)
 
       // 注册为可交互拾取物（通过定时检测距离 + F 键）
@@ -498,11 +498,11 @@ export class DiveScene extends Phaser.Scene {
 
     // 说明文字
     const label = this.add.text(doorX, doorY - 70, '时序共鸣之门', {
-      fontFamily: 'monospace', fontSize: '13px', color: '#a060ff',
+      fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#a060ff',
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5)
     const subLabel = this.add.text(doorX, doorY - 52, '装填模块后开枪 — 回响将同时触发感应器', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#604880',
+      fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#604880',
     }).setOrigin(0.5)
 
     // 两个感应器（左右各一）
@@ -515,10 +515,10 @@ export class DiveScene extends Phaser.Scene {
     s2.setStrokeStyle(1.5, 0xb080ff, 0.9)
 
     const s1Hint = this.add.text(s1Pos.x, s1Pos.y - 18, 'α', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#8050d0',
+      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#8050d0',
     }).setOrigin(0.5)
     const s2Hint = this.add.text(s2Pos.x, s2Pos.y - 18, 'β', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#8050d0',
+      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#8050d0',
     }).setOrigin(0.5)
 
     // 物理感应区
@@ -579,11 +579,11 @@ export class DiveScene extends Phaser.Scene {
 
     const { width, height } = this.scale
     const txt = this.add.text(width / 2, height / 2 - 55, '✦ 时序共鸣 ✦', {
-      fontFamily: 'monospace', fontSize: '28px', color: '#b080ff',
+      fontFamily: '"Silkscreen", monospace', fontSize: '28px', color: '#b080ff',
       stroke: '#000000', strokeThickness: 5,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(200)
     const sub = this.add.text(width / 2, height / 2 - 20, '回响的因果在此刻交汇，门锁应声而开', {
-      fontFamily: 'monospace', fontSize: '13px', color: '#9060cc',
+      fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#9060cc',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(200)
     this.tweens.add({
       targets: [txt, sub], y: '-=40', alpha: 0,
@@ -602,7 +602,7 @@ export class DiveScene extends Phaser.Scene {
         const reward = this.add.image(doorX, doorY, 'prop_time_crystal').setScale(2).setTint(0xb080ff)
         this.tweens.add({ targets: reward, y: doorY - 12, alpha: 0.7, duration: 900, yoyo: true, repeat: -1 })
         const rewardHint = this.add.text(doorX, doorY - 48, '[F] 汲取完美回响', {
-          fontFamily: 'monospace', fontSize: '11px', color: '#b080ff',
+          fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#b080ff',
         }).setOrigin(0.5).setAlpha(0)
 
         const KEY_F2 = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F)
@@ -646,7 +646,7 @@ export class DiveScene extends Phaser.Scene {
 
     this.minimap = this.add.graphics().setScrollFactor(0).setDepth(61)
     this.add.text(mmX + 2, mmY + 2, '地图', {
-      fontFamily: 'monospace', fontSize: '8px', color: '#304050',
+      fontFamily: '"Silkscreen", monospace', fontSize: '8px', color: '#304050',
     }).setScrollFactor(0).setDepth(62)
   }
 
@@ -717,20 +717,20 @@ export class DiveScene extends Phaser.Scene {
     bg.setStrokeStyle(1, 0x4080c0, 0.6)
 
     const titleTxt = this.add.text(width / 2, height / 2 - 60, title, {
-      fontFamily: 'monospace', fontSize: '16px', color: '#c8a96e',
+      fontFamily: '"Silkscreen", monospace', fontSize: '16px', color: '#c8a96e',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(151)
 
     const srcTxt = this.add.text(width / 2, height / 2 - 38, `— ${source}`, {
-      fontFamily: 'monospace', fontSize: '10px', color: '#405060',
+      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#405060',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(151)
 
     const bodyTxt = this.add.text(width / 2, height / 2 - 18, content, {
-      fontFamily: 'monospace', fontSize: '12px', color: '#9090b0',
+      fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#9090b0',
       wordWrap: { width: 520 }, align: 'center',
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(151)
 
     const closeTxt = this.add.text(width / 2, height / 2 + 66, '[ 任意键关闭 ]', {
-      fontFamily: 'monospace', fontSize: '11px', color: '#304050',
+      fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#304050',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(151)
 
     this.input.keyboard!.once('keydown', () => {
@@ -1488,7 +1488,7 @@ export class DiveScene extends Phaser.Scene {
 
     // 大型组合名称文字
     const txt = this.add.text(width / 2, height / 2 - 55, cfg.name, {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '28px',
       color: cfg.color,
       stroke: '#000000',
@@ -1688,7 +1688,7 @@ export class DiveScene extends Phaser.Scene {
   // 飘字伤害数字
   private spawnDamageNumber(x: number, y: number, amount: number, color: string) {
     const txt = this.add.text(x, y, `-${amount}`, {
-      fontFamily: 'monospace', fontSize: '13px', color,
+      fontFamily: '"Silkscreen", monospace', fontSize: '13px', color,
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5).setDepth(90)
     this.tweens.add({
@@ -1730,7 +1730,7 @@ export class DiveScene extends Phaser.Scene {
           this.remotePlayers.set(p.id, sprite)
           // 创建名字+血量标签
           const label = this.add.text(p.x, p.y - 28, '', {
-            fontFamily: 'monospace', fontSize: '10px', color: '#7ce0bc',
+            fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#7ce0bc',
             stroke: '#000000', strokeThickness: 2,
           }).setOrigin(0.5).setDepth(26)
           this.remotePlayerLabels.set(p.id, label)
@@ -1796,7 +1796,7 @@ export class DiveScene extends Phaser.Scene {
     const box = this.add.rectangle(width / 2, 76, width - 80, 92, 0x000000, 0.52)
       .setScrollFactor(0).setDepth(50)
     const text = this.add.text(40, 32, lines, {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '13px',
       color: '#dce9ff',
       wordWrap: { width: width - 120 },
@@ -1912,7 +1912,7 @@ export class DiveScene extends Phaser.Scene {
       .setOrigin(0).setScrollFactor(0).setDepth(200)
 
     this.add.text(width / 2, 50, '✦  小队结算  ✦', {
-      fontFamily: 'monospace', fontSize: '28px', color: '#c8a96e',
+      fontFamily: '"Silkscreen", monospace', fontSize: '28px', color: '#c8a96e',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
     // 标题行
@@ -1921,7 +1921,7 @@ export class DiveScene extends Phaser.Scene {
     const HEADERS = ['玩家', '结果', '击杀', '时砂', '耗时']
     HEADERS.forEach((h, i) => {
       this.add.text(COL[i], HEADER_Y, h, {
-        fontFamily: 'monospace', fontSize: '11px', color: '#4a6a8a',
+        fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#4a6a8a',
       }).setOrigin(i === 0 ? 0 : 0.5).setScrollFactor(0).setDepth(201)
     })
     this.add.rectangle(width / 2, HEADER_Y + 16, 420, 1, 0x2a4060, 0.6)
@@ -1943,39 +1943,39 @@ export class DiveScene extends Phaser.Scene {
       const rankColors = ['#f0c040', '#c0c8d8', '#c08050']
       this.add.text(width / 2 - 215, rowY + 10,
         i < 3 ? ['①', '②', '③'][i] : `${i + 1}`, {
-        fontFamily: 'monospace', fontSize: '14px', color: rankColors[i] || '#506070',
+        fontFamily: '"Silkscreen", monospace', fontSize: '14px', color: rankColors[i] || '#506070',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
       // 玩家名
       this.add.text(COL[0], rowY + 10, `${r.username}${isMe ? ' ★' : ''}`, {
-        fontFamily: 'monospace', fontSize: '13px', color: isMe ? '#e8f0ff' : '#8090a8',
+        fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: isMe ? '#e8f0ff' : '#8090a8',
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(201)
 
       // 结果
       this.add.text(COL[1], rowY + 10, isSuccess ? '撤离' : '阵亡', {
-        fontFamily: 'monospace', fontSize: '13px', color: isSuccess ? '#7ce0bc' : '#e07c7c',
+        fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: isSuccess ? '#7ce0bc' : '#e07c7c',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
       // 击杀
       this.add.text(COL[2], rowY + 10, String(r.kills), {
-        fontFamily: 'monospace', fontSize: '13px', color: '#d8c880',
+        fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#d8c880',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
       // 时砂
       this.add.text(COL[3], rowY + 10, String(r.sand), {
-        fontFamily: 'monospace', fontSize: '13px', color: '#80c8f0',
+        fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#80c8f0',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
       // 耗时
       this.add.text(COL[4], rowY + 10, `${r.duration}s`, {
-        fontFamily: 'monospace', fontSize: '12px', color: '#506070',
+        fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#506070',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
     })
 
     const returnY = 135 + Math.max(sorted.length, 1) * 52 + 40
     let sec = 8
     const cntText = this.add.text(width / 2, returnY, `${sec} 秒后返回庇护所…`, {
-      fontFamily: 'monospace', fontSize: '12px', color: '#405060',
+      fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#405060',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
     this.time.addEvent({
@@ -1988,7 +1988,7 @@ export class DiveScene extends Phaser.Scene {
     backBtn.setInteractive({ useHandCursor: true })
     backBtn.on('pointerdown', () => { this.scene.stop('HUDScene'); this.scene.start('SanctuaryScene') })
     this.add.text(width / 2, returnY + 36, '返回庇护所', {
-      fontFamily: 'monospace', fontSize: '13px', color: '#7090b8',
+      fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#7090b8',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(202)
 
     this.time.delayedCall(8200, () => {
@@ -2009,21 +2009,21 @@ export class DiveScene extends Phaser.Scene {
       .setOrigin(0).setScrollFactor(0).setDepth(200)
 
     this.add.text(width / 2, height * 0.28, isSuccess ? '✦  深潜成功  ✦' : '✦  深潜失败  ✦', {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '34px',
       color: isSuccess ? '#7ce0bc' : '#e07c7c',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
     this.add.text(width / 2, height * 0.46,
       `耗时 ${duration}s    ·    击杀 ${kills}    ·    带回时砂 ${sand}`, {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '15px',
       color: '#a0c4e8',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
     let sec = 4
     const cntText = this.add.text(width / 2, height * 0.62, `${sec} 秒后返回庇护所…`, {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '12px',
       color: '#506080',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
@@ -2080,13 +2080,13 @@ export class DiveScene extends Phaser.Scene {
       .setOrigin(0).setScrollFactor(0).setDepth(100).setInteractive()
 
     const iconTxt = this.add.text(width / 2, height * 0.27, '', {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '22px',
       color: '#c8a96e',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(101)
 
     const bodyTxt = this.add.text(width / 2, height * 0.48, '', {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '14px',
       color: '#dce9ff',
       align: 'center',
@@ -2094,19 +2094,19 @@ export class DiveScene extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(101)
 
     const promptTxt = this.add.text(width / 2, height * 0.74, '[ 点击继续 ]', {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '12px',
       color: '#7090b0',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(101)
 
     const counterTxt = this.add.text(width / 2, height * 0.82, '', {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '11px',
       color: '#40506a',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(101)
 
     const skipTxt = this.add.text(width - 14, height - 14, '跳过教程', {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '11px',
       color: '#405060',
     }).setOrigin(1, 1).setScrollFactor(0).setDepth(102).setInteractive()

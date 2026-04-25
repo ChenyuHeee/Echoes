@@ -34,13 +34,13 @@ export class FactionScene extends Phaser.Scene {
 
     // 标题
     this.add.text(width / 2, height * 0.1, '选择你的阵营', {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '32px',
       color: '#c8a96e',
     }).setOrigin(0.5)
 
     this.add.text(width / 2, height * 0.17, '这将决定你的起始技能与世界观立场 · 之后可在庇护所修改世界观但不影响技能', {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '11px',
       color: '#506070',
     }).setOrigin(0.5)
@@ -60,7 +60,7 @@ export class FactionScene extends Phaser.Scene {
 
     // 底部提示
     this.add.text(width / 2, height * 0.93, '每个阵营都可以学习全部技能 — 阵营只影响起点与被动特性', {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '11px',
       color: '#405060',
     }).setOrigin(0.5)
@@ -90,25 +90,25 @@ export class FactionScene extends Phaser.Scene {
     }
 
     this.add.text(cx, cy - h / 2 + 36, sigils[faction.id] || '✦', {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '28px',
       color: faction.color,
     }).setOrigin(0.5)
 
     this.add.text(cx, cy - h / 2 + 68, faction.name, {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '18px',
       color: faction.accentColor,
     }).setOrigin(0.5)
 
     this.add.text(cx, cy - h / 2 + 86, faction.nameEn, {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '10px',
       color: faction.color,
       }).setOrigin(0.5).setAlpha(0.7)
 
     this.add.text(cx, cy - h / 2 + 118, faction.description, {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '11px',
       color: '#9ab0c8',
       wordWrap: { width: w - 32, useAdvancedWrap: true },
@@ -118,7 +118,7 @@ export class FactionScene extends Phaser.Scene {
 
     // 哲学语录
     this.add.text(cx, cy + 28, `「${faction.philosophy}」`, {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '10px',
       color: faction.color,
       fontStyle: 'italic',
@@ -128,13 +128,13 @@ export class FactionScene extends Phaser.Scene {
 
     // 起始奖励
     this.add.text(cx, cy + 56, `起始技能奖励：${faction.passiveName}`, {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '10px',
       color: '#dce9ff',
     }).setOrigin(0.5)
 
     this.add.text(cx, cy + 70, faction.passiveDescription, {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '9px',
       color: '#5a7090',
       wordWrap: { width: w - 32, useAdvancedWrap: true },
@@ -146,7 +146,7 @@ export class FactionScene extends Phaser.Scene {
     const btnBg = this.add.rectangle(cx, btnY, w - 40, 36, 0x0e1428, 1)
     btnBg.setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(faction.color).color, 0.6)
     const btnTxt = this.add.text(cx, btnY, `选择 ${faction.name}`, {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '13px',
       color: faction.accentColor,
     }).setOrigin(0.5)

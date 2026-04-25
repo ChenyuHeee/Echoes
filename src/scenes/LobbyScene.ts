@@ -94,21 +94,21 @@ export class LobbyScene extends Phaser.Scene {
     this.selectedIdx = FRAGMENT_OPTIONS.findIndex(f => f.id === rt.selectedFragment) || 0
 
     this.add.text(width / 2, 26, '时间深潜大厅', {
-      fontFamily: 'monospace', fontSize: '28px', color: '#c8a96e',
+      fontFamily: '"Silkscreen", monospace', fontSize: '28px', color: '#c8a96e',
     }).setOrigin(0.5)
     this.add.text(width / 2, 52, `回响体：${rt.player.username}  ·  时砂：${rt.player.timeSand}`, {
-      fontFamily: 'monospace', fontSize: '12px', color: '#506070',
+      fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#506070',
     }).setOrigin(0.5)
     this.add.rectangle(width / 2, 62, width, 1, 0x304050, 0.3)
 
     this.add.text(width / 2, 78, '选择深潜碎片', {
-      fontFamily: 'monospace', fontSize: '13px', color: '#7090b0',
+      fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#7090b0',
     }).setOrigin(0.5)
 
     this.buildFragmentCards(width, height)
 
     this.statusText = this.add.text(width / 2, height - 66, '状态：等待组队', {
-      fontFamily: 'monospace', fontSize: '12px', color: '#c8d8f0',
+      fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#c8d8f0',
     }).setOrigin(0.5)
 
     const btnY = height - 40
@@ -140,17 +140,17 @@ export class LobbyScene extends Phaser.Scene {
 
     // 标题
     this.add.text(width / 2, 18, '时间深潜 · 等待室', {
-      fontFamily: 'monospace', fontSize: '22px', color: '#c8a96e',
+      fontFamily: '"Silkscreen", monospace', fontSize: '22px', color: '#c8a96e',
     }).setOrigin(0.5)
 
     // 房间码（大字）
     this.add.text(width / 2, 56, this.roomCode, {
-      fontFamily: 'monospace', fontSize: '40px', color: '#7ce0bc', letterSpacing: 14,
+      fontFamily: '"Silkscreen", monospace', fontSize: '40px', color: '#7ce0bc', letterSpacing: 14,
     }).setOrigin(0.5)
 
     const theme = FRAGMENT_THEMES[this.mapFragment]
     this.add.text(width / 2, 90, `地图：${theme.name}  ·  将房间码分享给队友`, {
-      fontFamily: 'monospace', fontSize: '11px', color: '#405060',
+      fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#405060',
     }).setOrigin(0.5)
 
     this.add.rectangle(width / 2, 102, width - 40, 1, 0x203040, 0.5)
@@ -160,7 +160,7 @@ export class LobbyScene extends Phaser.Scene {
     this.add.rectangle(width / 2, panelCY, 480, 210, 0x060c18, 1)
       .setStrokeStyle(1, 0x2a4060, 0.8)
     this.add.text(width / 2 - 220, panelCY - 98, '▸ 队伍成员', {
-      fontFamily: 'monospace', fontSize: '12px', color: '#4a6a8a',
+      fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#4a6a8a',
     }).setOrigin(0, 0.5)
 
     this.playerListContainer = this.add.container(0, 0)
@@ -169,7 +169,7 @@ export class LobbyScene extends Phaser.Scene {
     this.renderPlayerList()
 
     this.waitingStatusText = this.add.text(width / 2, panelCY + 114, '等待所有玩家准备...', {
-      fontFamily: 'monospace', fontSize: '11px', color: '#405060',
+      fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#405060',
     }).setOrigin(0.5)
 
     // 准备按钮
@@ -178,7 +178,7 @@ export class LobbyScene extends Phaser.Scene {
     this.readyBtnRect.setStrokeStyle(1, 0x3a7090, 0.7)
     this.readyBtnRect.setInteractive({ useHandCursor: true })
     this.readyBtnText = this.add.text(readyX, height - 76, '准备', {
-      fontFamily: 'monospace', fontSize: '14px', color: '#60a0d0',
+      fontFamily: '"Silkscreen", monospace', fontSize: '14px', color: '#60a0d0',
     }).setOrigin(0.5)
     this.readyBtnRect.on('pointerdown', () => this.toggleReady())
     this.readyBtnRect.on('pointerover', () => this.readyBtnRect?.setFillStyle(0x142032, 1))
@@ -191,7 +191,7 @@ export class LobbyScene extends Phaser.Scene {
       this.startBtnRect = this.add.rectangle(width / 2 + 92, height - 76, 165, 36, 0x060810, 1)
       this.startBtnRect.setStrokeStyle(1, 0x203040, 0.4)
       this.startBtnText = this.add.text(width / 2 + 92, height - 76, '开始游戏', {
-        fontFamily: 'monospace', fontSize: '14px', color: '#304050',
+        fontFamily: '"Silkscreen", monospace', fontSize: '14px', color: '#304050',
       }).setOrigin(0.5)
       this.startBtnRect.setInteractive({ useHandCursor: true })
       this.startBtnRect.on('pointerdown', () => this.tryStartGame())
@@ -209,7 +209,7 @@ export class LobbyScene extends Phaser.Scene {
       this.broadcastBtnRect.setStrokeStyle(1, 0x2a5078, 0.6)
       this.broadcastBtnRect.setInteractive({ useHandCursor: true })
       this.broadcastBtnText = this.add.text(width / 2 - 160, height - 44, '广播到大厅', {
-        fontFamily: 'monospace', fontSize: '11px', color: '#4a7a9a',
+        fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#4a7a9a',
       }).setOrigin(0.5)
       this.broadcastBtnRect.on('pointerdown', () => this.toggleBroadcast())
       this.broadcastBtnRect.on('pointerover', () => this.broadcastBtnRect?.setFillStyle(0x0c1828, 1))
@@ -219,7 +219,7 @@ export class LobbyScene extends Phaser.Scene {
       remindRect.setStrokeStyle(1, 0x2a5040, 0.6)
       remindRect.setInteractive({ useHandCursor: true })
       this.add.text(width / 2, height - 44, '催促准备', {
-        fontFamily: 'monospace', fontSize: '11px', color: '#4a7a5a',
+        fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#4a7a5a',
       }).setOrigin(0.5)
       remindRect.on('pointerdown', () => this.remindReady())
       remindRect.on('pointerover', () => remindRect.setFillStyle(0x0c1a10, 1))
@@ -229,7 +229,7 @@ export class LobbyScene extends Phaser.Scene {
       dissolveRect.setStrokeStyle(1, 0x602020, 0.6)
       dissolveRect.setInteractive({ useHandCursor: true })
       this.add.text(width / 2 + 148, height - 44, '解散房间', {
-        fontFamily: 'monospace', fontSize: '11px', color: '#904040',
+        fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#904040',
       }).setOrigin(0.5)
       dissolveRect.on('pointerdown', () => this.dissolveRoom())
       dissolveRect.on('pointerover', () => dissolveRect.setFillStyle(0x1c0c0c, 1))
@@ -242,7 +242,7 @@ export class LobbyScene extends Phaser.Scene {
         .setStrokeStyle(1, 0x402020, 0.6).setDepth(5)
       leaveRect.setInteractive({ useHandCursor: true })
       this.add.text(72, height - 44, '← 离开房间', {
-        fontFamily: 'monospace', fontSize: '11px', color: '#704040',
+        fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#704040',
       }).setOrigin(0.5).setDepth(5)
       leaveRect.on('pointerover', () => leaveRect.setFillStyle(0x1c0c0c, 1))
       leaveRect.on('pointerout', () => leaveRect.setFillStyle(0x080f1c, 1))
@@ -395,7 +395,7 @@ export class LobbyScene extends Phaser.Scene {
       const nameText = this.make.text({
         x: width / 2 - 190, y,
         text: `${player.username}${isMe ? '  (你)' : ''}`,
-        style: { fontFamily: 'monospace', fontSize: '15px', color: readyColor },
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '15px', color: readyColor },
         add: false,
       }).setOrigin(0, 0.5)
       this.playerListContainer!.add(nameText)
@@ -405,7 +405,7 @@ export class LobbyScene extends Phaser.Scene {
       const badge = this.make.text({
         x: badgeX, y,
         text: player.ready ? '✓ 已准备' : '等待中',
-        style: { fontFamily: 'monospace', fontSize: '12px', color: player.ready ? '#5adc9a' : '#404c5a' },
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: player.ready ? '#5adc9a' : '#404c5a' },
         add: false,
       }).setOrigin(1, 0.5)
       this.playerListContainer!.add(badge)
@@ -415,7 +415,7 @@ export class LobbyScene extends Phaser.Scene {
         const kickBtn = this.make.text({
           x: width / 2 + 163, y,
           text: '[踢]',
-          style: { fontFamily: 'monospace', fontSize: '10px', color: '#703030' },
+          style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#703030' },
           add: false,
         }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true })
         kickBtn.on('pointerover', () => kickBtn.setColor('#d06060'))
@@ -539,19 +539,19 @@ export class LobbyScene extends Phaser.Scene {
       const stars = '★'.repeat(opt.difficulty) + '☆'.repeat(5 - opt.difficulty)
       container.add(this.make.text({
         x: 0, y: -CARD_H / 2 + 22, text: stars,
-        style: { fontFamily: 'monospace', fontSize: '13px', color: theme.ambientColor },
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: theme.ambientColor },
         add: false,
       }).setOrigin(0.5).setAlpha(isSelected ? 1 : 0.5))
 
       container.add(this.make.text({
         x: 0, y: -CARD_H / 2 + 42, text: theme.name,
-        style: { fontFamily: 'monospace', fontSize: '18px', color: isSelected ? '#e8f0ff' : '#506070' },
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '18px', color: isSelected ? '#e8f0ff' : '#506070' },
         add: false,
       }).setOrigin(0.5))
 
       container.add(this.make.text({
         x: 0, y: -CARD_H / 2 + 62, text: theme.subtitle,
-        style: { fontFamily: 'monospace', fontSize: '11px', color: theme.ambientColor },
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: theme.ambientColor },
         add: false,
       }).setOrigin(0.5).setAlpha(0.8))
 
@@ -560,7 +560,7 @@ export class LobbyScene extends Phaser.Scene {
       container.add(this.make.text({
         x: 0, y: -CARD_H / 2 + 96, text: opt.description,
         style: {
-          fontFamily: 'monospace', fontSize: '11px',
+          fontFamily: '"Silkscreen", monospace', fontSize: '11px',
           color: isSelected ? '#8090a8' : '#304050',
           wordWrap: { width: CARD_W - 28, useAdvancedWrap: true }, align: 'center', lineSpacing: 4,
         },
@@ -570,7 +570,7 @@ export class LobbyScene extends Phaser.Scene {
       container.add(this.make.text({
         x: 0, y: -CARD_H / 2 + 175, text: `敌人：${theme.enemyPool.slice(0, 3).join(' / ')}`,
         style: {
-          fontFamily: 'monospace', fontSize: '10px',
+          fontFamily: '"Silkscreen", monospace', fontSize: '10px',
           color: isSelected ? '#5a7090' : '#2a3840',
           wordWrap: { width: CARD_W - 24, useAdvancedWrap: true }, align: 'center',
         },
@@ -583,7 +583,7 @@ export class LobbyScene extends Phaser.Scene {
         container.add(badge)
         container.add(this.make.text({
           x: 0, y: CARD_H / 2 - 26, text: '✦ 已选择',
-          style: { fontFamily: 'monospace', fontSize: '13px', color: theme.ambientColor },
+          style: { fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: theme.ambientColor },
           add: false,
         }).setOrigin(0.5))
       }
@@ -644,7 +644,7 @@ export class LobbyScene extends Phaser.Scene {
     overlay.style.cssText = [
       'position:fixed', 'top:0', 'left:0', 'width:100%', 'height:100%',
       'background:rgba(4,6,14,0.90)', 'display:flex', 'align-items:center',
-      'justify-content:center', 'z-index:9999', 'font-family:monospace',
+      'justify-content:center', 'z-index:9999', 'font-family:"Silkscreen",monospace',
     ].join(';')
 
     const panel = document.createElement('div')
@@ -666,7 +666,7 @@ export class LobbyScene extends Phaser.Scene {
       'background:none', 'border:none',
       `border-bottom:2px solid ${active ? '#c8a96e' : 'transparent'}`,
       `color:${active ? '#c8a96e' : '#405060'}`,
-      'font-family:monospace', 'font-size:12px',
+      'font-family:"Silkscreen",monospace', 'font-size:12px',
       'padding:6px 16px', 'cursor:pointer', 'margin-bottom:-1px',
     ].join(';')
     const tabCode = document.createElement('button')
@@ -694,7 +694,7 @@ export class LobbyScene extends Phaser.Scene {
     inp.placeholder = 'ABC123'
     inp.style.cssText = [
       'background:#060b16', 'border:1px solid #2a4060', 'color:#c8d8f0',
-      'padding:10px 14px', 'font-family:monospace', 'font-size:20px',
+      'padding:10px 14px', 'font-family:"Silkscreen",monospace', 'font-size:20px',
       'letter-spacing:8px', 'text-align:center', 'outline:none', 'width:100%', 'box-sizing:border-box',
     ].join(';')
     inp.addEventListener('input', () => { inp.value = inp.value.toUpperCase() })
@@ -710,7 +710,7 @@ export class LobbyScene extends Phaser.Scene {
     joinBtn.textContent = '加入'
     joinBtn.style.cssText = [
       'flex:1', 'background:#0c1828', 'border:1px solid #4080b0',
-      'color:#90c8e8', 'font-family:monospace', 'font-size:14px', 'padding:10px', 'cursor:pointer',
+      'color:#90c8e8', 'font-family:"Silkscreen",monospace', 'font-size:14px', 'padding:10px', 'cursor:pointer',
     ].join(';')
     joinBtn.addEventListener('click', async () => {
       const code = inp.value.trim().toUpperCase()
@@ -735,7 +735,7 @@ export class LobbyScene extends Phaser.Scene {
     cancelBtn.textContent = '取消'
     cancelBtn.style.cssText = [
       'flex:1', 'background:#060810', 'border:1px solid #2a3a4a',
-      'color:#405060', 'font-family:monospace', 'font-size:14px', 'padding:10px', 'cursor:pointer',
+      'color:#405060', 'font-family:"Silkscreen",monospace', 'font-size:14px', 'padding:10px', 'cursor:pointer',
     ].join(';')
     cancelBtn.addEventListener('click', () => cleanup())
     codeRowBtns.appendChild(joinBtn)
@@ -760,7 +760,7 @@ export class LobbyScene extends Phaser.Scene {
     browseCancelBtn.textContent = '取消'
     browseCancelBtn.style.cssText = [
       'background:#060810', 'border:1px solid #2a3a4a',
-      'color:#405060', 'font-family:monospace', 'font-size:14px', 'padding:10px', 'cursor:pointer',
+      'color:#405060', 'font-family:"Silkscreen",monospace', 'font-size:14px', 'padding:10px', 'cursor:pointer',
     ].join(';')
     browseCancelBtn.addEventListener('click', () => cleanup())
     browseSection.appendChild(browseCancelBtn)
@@ -807,7 +807,7 @@ export class LobbyScene extends Phaser.Scene {
         joinRowBtn.textContent = '加入'
         joinRowBtn.style.cssText = [
           'background:#0c1828', 'border:1px solid #4080b0',
-          'color:#90c8e8', 'font-family:monospace', 'font-size:12px',
+          'color:#90c8e8', 'font-family:"Silkscreen",monospace', 'font-size:12px',
           'padding:6px 14px', 'cursor:pointer', 'white-space:nowrap',
         ].join(';')
         joinRowBtn.addEventListener('click', async () => {
@@ -911,7 +911,7 @@ export class LobbyScene extends Phaser.Scene {
     const bg = this.add.rectangle(x, y, w, 34, 0x0c1428, 1)
     bg.setStrokeStyle(1, 0x3a5878, 0.7)
     this.add.text(x, y, label, {
-      fontFamily: 'monospace', fontSize: '13px', color: '#7090b8',
+      fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#7090b8',
     }).setOrigin(0.5)
     bg.setInteractive({ useHandCursor: true })
     bg.on('pointerover', () => bg.setFillStyle(0x142032, 1))

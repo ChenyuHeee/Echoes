@@ -18,7 +18,7 @@ export class LoginScene extends Phaser.Scene {
 
     // 先显示检查中状态，异步检测登录
     const checkingText = this.add.text(width / 2, height / 2, '正在检查登录状态...', {
-      fontFamily: 'monospace', fontSize: '16px', color: '#4a6a8a',
+      fontFamily: '"Silkscreen", monospace', fontSize: '16px', color: '#4a6a8a',
     }).setOrigin(0.5)
 
     void getCurrentUser().then(user => {
@@ -43,15 +43,15 @@ export class LoginScene extends Phaser.Scene {
     const { width, height } = this.scale
 
     this.add.text(width / 2, height * 0.14, '认证终端', {
-      fontFamily: 'monospace', fontSize: '36px', color: '#c8a96e',
+      fontFamily: '"Silkscreen", monospace', fontSize: '36px', color: '#c8a96e',
     }).setOrigin(0.5)
 
     this.add.text(width / 2, height * 0.26, '使用 Supabase 账号进入在线模式', {
-      fontFamily: 'monospace', fontSize: '15px', color: '#6080a0',
+      fontFamily: '"Silkscreen", monospace', fontSize: '15px', color: '#6080a0',
     }).setOrigin(0.5)
 
     this.statusText = this.add.text(width / 2, height * 0.35, '状态：未登录', {
-      fontFamily: 'monospace', fontSize: '13px', color: '#dbe8ff', align: 'center',
+      fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#dbe8ff', align: 'center',
     }).setOrigin(0.5)
 
     // 按钮行
@@ -67,7 +67,7 @@ export class LoginScene extends Phaser.Scene {
     })
 
     this.add.text(width / 2, height * 0.88, '终端已接入庇护所边缘网络  ·  注册后需邮件激活', {
-      fontFamily: 'monospace', fontSize: '11px', color: '#304050',
+      fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#304050',
     }).setOrigin(0.5)
   }
 
@@ -112,7 +112,7 @@ export class LoginScene extends Phaser.Scene {
     overlay.style.cssText = [
       'position:fixed', 'top:0', 'left:0', 'width:100%', 'height:100%',
       'background:rgba(4,6,14,0.92)', 'display:flex', 'align-items:center',
-      'justify-content:center', 'z-index:9999', 'font-family:monospace',
+      'justify-content:center', 'z-index:9999', 'font-family:"Silkscreen",monospace',
     ].join(';')
 
     const panel = document.createElement('div')
@@ -138,7 +138,7 @@ export class LoginScene extends Phaser.Scene {
       inp.placeholder = f.placeholder
       inp.style.cssText = [
         'background:#060b16', 'border:1px solid #2a4060', 'color:#c8d8f0',
-        'padding:8px 12px', 'font-family:monospace', 'font-size:14px',
+        'padding:8px 12px', 'font-family:"Silkscreen",monospace', 'font-size:14px',
         'outline:none', 'width:100%', 'box-sizing:border-box',
       ].join(';')
       inp.addEventListener('focus', () => { inp.style.borderColor = '#4080c0' })
@@ -160,7 +160,7 @@ export class LoginScene extends Phaser.Scene {
     submitBtn.textContent = '确认'
     submitBtn.style.cssText = [
       'flex:1', 'background:#0c1828', 'border:1px solid #4080b0',
-      'color:#90c8e8', 'font-family:monospace', 'font-size:14px',
+      'color:#90c8e8', 'font-family:"Silkscreen",monospace', 'font-size:14px',
       'padding:10px', 'cursor:pointer',
     ].join(';')
     submitBtn.addEventListener('click', () => {
@@ -181,7 +181,7 @@ export class LoginScene extends Phaser.Scene {
     cancelBtn.textContent = '取消'
     cancelBtn.style.cssText = [
       'flex:1', 'background:#0a0e16', 'border:1px solid #2a3a4a',
-      'color:#506070', 'font-family:monospace', 'font-size:14px',
+      'color:#506070', 'font-family:"Silkscreen",monospace', 'font-size:14px',
       'padding:10px', 'cursor:pointer',
     ].join(';')
     cancelBtn.addEventListener('click', () => this.removeOverlay())
@@ -258,7 +258,7 @@ export class LoginScene extends Phaser.Scene {
     bg.setStrokeStyle(1, 0x405880, 0.7)
 
     this.add.text(x, y, label, {
-      fontFamily: 'monospace', fontSize: '14px', color: '#8ab0d0',
+      fontFamily: '"Silkscreen", monospace', fontSize: '14px', color: '#8ab0d0',
     }).setOrigin(0.5)
 
     bg.setInteractive({ useHandCursor: true })

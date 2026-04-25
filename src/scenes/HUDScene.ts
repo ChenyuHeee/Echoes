@@ -58,7 +58,7 @@ export class HUDScene extends Phaser.Scene {
       .setScrollFactor(0).setDepth(9)
 
     // HP 条
-    this.add.text(8, 8, 'HP', { fontFamily: 'monospace', fontSize: '10px', color: '#e06060' })
+    this.add.text(8, 8, 'HP', { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#e06060' })
       .setScrollFactor(0).setDepth(10)
     const barW = 200
     this.add.rectangle(80 + barW / 2, 14, barW, 10, 0x280a0a, 1)
@@ -67,7 +67,7 @@ export class HUDScene extends Phaser.Scene {
       .setOrigin(0, 0.5).setScrollFactor(0).setDepth(11)
 
     // Stability 条
-    this.add.text(8, 26, 'STB', { fontFamily: 'monospace', fontSize: '10px', color: '#5090e0' })
+    this.add.text(8, 26, 'STB', { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#5090e0' })
       .setScrollFactor(0).setDepth(10)
     this.add.rectangle(80 + barW / 2, 32, barW, 10, 0x0a1828, 1)
       .setScrollFactor(0).setDepth(10)
@@ -76,7 +76,7 @@ export class HUDScene extends Phaser.Scene {
 
     // 数值文字
     this.hudText = this.add.text(8, 46, '', {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '11px',
       color: '#c8d8f0',
       lineSpacing: 2,
@@ -86,7 +86,7 @@ export class HUDScene extends Phaser.Scene {
     this.add.rectangle(width - 200, 14, 392, 28, 0x060810, 0.78)
       .setScrollFactor(0).setDepth(9)
     this.hintText = this.add.text(width - 8, 5, 'WASD移动  1/2/3装填模块  左键开枪  E撤离', {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '11px',
       color: '#4a6080',
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(10)
@@ -103,11 +103,11 @@ export class HUDScene extends Phaser.Scene {
       .setOrigin(0, 0.5).setScrollFactor(0).setDepth(10)
 
     this.echoIcon = this.add.text(width / 2 - 105, echoPanelY, '↩', {
-      fontFamily: 'monospace', fontSize: '14px', color: '#4a3060',
+      fontFamily: '"Silkscreen", monospace', fontSize: '14px', color: '#4a3060',
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10)
 
     this.echoText = this.add.text(width / 2 - 82, echoPanelY, '时砂未记忆任何技能', {
-      fontFamily: 'monospace',
+      fontFamily: '"Silkscreen", monospace',
       fontSize: '12px',
       color: '#2a1840',
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10)
@@ -123,7 +123,7 @@ export class HUDScene extends Phaser.Scene {
 
     // 右上角设置齿轮
     const gearBtn = this.add.text(width - 10, 5, '⚙', {
-      fontFamily: 'monospace', fontSize: '16px', color: '#304050',
+      fontFamily: '"Silkscreen", monospace', fontSize: '16px', color: '#304050',
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(12).setInteractive({ useHandCursor: true })
     gearBtn.on('pointerover', () => gearBtn.setColor('#8aa8c0'))
     gearBtn.on('pointerout', () => gearBtn.setColor('#304050'))
@@ -179,21 +179,21 @@ export class HUDScene extends Phaser.Scene {
         .setScrollFactor(0).setDepth(11)
       // 按键编号
       this.add.text(x - slotW / 2 + 6, y - slotH / 2 + 6, `${i + 1}`, {
-        fontFamily: 'monospace',
+        fontFamily: '"Silkscreen", monospace',
         fontSize: '10px',
         color: '#384858',
       }).setScrollFactor(0).setDepth(11)
 
       // 装填提示
       this.add.text(x + slotW / 2 - 6, y - slotH / 2 + 6, '装填', {
-        fontFamily: 'monospace',
+        fontFamily: '"Silkscreen", monospace',
         fontSize: '8px',
         color: '#2a3a4a',
       }).setOrigin(1, 0).setScrollFactor(0).setDepth(11)
 
       // 技能名
       const label = this.add.text(x, y - 6, def ? def.name : '—', {
-        fontFamily: 'monospace',
+        fontFamily: '"Silkscreen", monospace',
         fontSize: '13px',
         color: def ? '#dce9ff' : '#304050',
       }).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(11)
@@ -201,7 +201,7 @@ export class HUDScene extends Phaser.Scene {
       // 元素类型
       if (def) {
         this.add.text(x, y + 11, def.element, {
-          fontFamily: 'monospace',
+          fontFamily: '"Silkscreen", monospace',
           fontSize: '9px',
           color: def.elementColor,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(11).setAlpha(0.7)
@@ -213,7 +213,7 @@ export class HUDScene extends Phaser.Scene {
 
       // 冷却剩余时间文字
       const cdText = this.add.text(x, y, '', {
-        fontFamily: 'monospace',
+        fontFamily: '"Silkscreen", monospace',
         fontSize: '11px',
         color: '#a0c0ff',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(13)
