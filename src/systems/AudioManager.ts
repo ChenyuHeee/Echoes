@@ -4,7 +4,8 @@
  */
 class AudioManager {
   private ctx: AudioContext | null = null
-  private muted = false
+  private muted = localStorage.getItem('echoes.audio.muted') === '1'
+  private _volume = parseFloat(localStorage.getItem('echoes.audio.volume') ?? '0.7')
 
   private getCtx(): AudioContext {
     if (!this.ctx) this.ctx = new AudioContext()
@@ -23,6 +24,15 @@ class AudioManager {
     return this.muted
   }
 
+  setVolume(v: number) {
+    this._volume = Math.max(0, Math.min(1, v))
+    localStorage.setItem('echoes.audio.volume', String(this._volume))
+  }
+
+  getVolume() {
+    return this._volume
+  }
+
   private tone(
     freq: number,
     duration: number,
@@ -39,11 +49,12 @@ class AudioManager {
     osc.connect(gain)
     gain.connect(ctx.destination)
 
+    const vol = volume * this._volume
     osc.type = type
     osc.frequency.setValueAtTime(freq, ctx.currentTime + startOffset)
 
     gain.gain.setValueAtTime(0, ctx.currentTime + startOffset)
-    gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + startOffset + attack)
+    gain.gain.linearRampToValueAtTime(vol, ctx.currentTime + startOffset + attack)
     gain.gain.exponentialRampToValueAtTime(
       0.0001,
       ctx.currentTime + startOffset + attack + Math.max(duration - attack, 0.001),
@@ -65,7 +76,7 @@ class AudioManager {
     source.buffer = buf
 
     const gain = ctx.createGain()
-    gain.gain.setValueAtTime(volume, ctx.currentTime + startOffset)
+    gain.gain.setValueAtTime(volume * this._volume, ctx.currentTime + startOffset)
     gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + startOffset + duration)
 
     source.connect(gain)

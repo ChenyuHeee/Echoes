@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { getRuntimeState } from '../state/gameState'
 import { getCurrentUser } from '../lib/supabase'
 import { audioManager } from '../systems/AudioManager'
+import { showSettingsPanel, showAboutPanel } from '../systems/SettingsManager'
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -70,6 +71,25 @@ export class MenuScene extends Phaser.Scene {
       audioManager.playClick()
       this.scene.start('SanctuaryScene')
     })
+
+    // 右上角设置图标
+    const gearTxt = this.add.text(width - 14, 14, '⚙', {
+      fontFamily: 'monospace', fontSize: '20px', color: '#304050',
+    }).setOrigin(1, 0).setInteractive({ useHandCursor: true })
+    gearTxt.on('pointerover', () => gearTxt.setColor('#9ab0c8'))
+    gearTxt.on('pointerout', () => gearTxt.setColor('#304050'))
+    gearTxt.on('pointerdown', () => {
+      audioManager.playClick()
+      showSettingsPanel({ onLogout: () => { this.scene.start('LoginScene') } })
+    })
+
+    // 左下角关于按钮
+    const aboutTxt = this.add.text(14, height - 10, '关于', {
+      fontFamily: 'monospace', fontSize: '11px', color: '#2a3a4a',
+    }).setOrigin(0, 1).setInteractive({ useHandCursor: true })
+    aboutTxt.on('pointerover', () => aboutTxt.setColor('#4a6a8a'))
+    aboutTxt.on('pointerout', () => aboutTxt.setColor('#2a3a4a'))
+    aboutTxt.on('pointerdown', () => { audioManager.playClick(); showAboutPanel() })
   }
 
   private makeButton(x: number, y: number, text: string, onClick: () => void) {

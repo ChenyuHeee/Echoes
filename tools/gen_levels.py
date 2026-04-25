@@ -1,38 +1,32 @@
-// 30 solo levels + 5 co-op levels
-// Design: genuine puzzle variety — routing traps, spatial [A,B,C], timing [A,A], multi-door chains
+"""
+Regenerate src/config/puzzleLevels.ts with 30 redesigned solo levels.
+Each level has a distinct challenge type instead of the same mechanic with shrinking windows.
+"""
+import os
 
-export interface PuzzlePad {
-  id: string
-  x: number
-  y: number
-  color: string
-}
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+TARGET = os.path.join(THIS_DIR, '..', 'src', 'config', 'puzzleLevels.ts')
 
-export interface PuzzleDoor {
-  x: number
-  y: number
-  w: number
-  h: number
-  requiredPads: string[]
-  windowMs: number
-}
+with open(TARGET, encoding='utf-8') as f:
+    original = f.read()
 
-export interface PuzzleLevel {
-  id: number
-  name: string
-  hint: string
-  solution: string
-  pads: PuzzlePad[]
-  doors: PuzzleDoor[]
-  exitX: number
-  exitY: number
-  coop: boolean
-  sandReward: number
-}
+# Keep the TypeScript interface section (everything before PUZZLE_LEVELS array body)
+HEADER_MARKER = 'export const PUZZLE_LEVELS: readonly PuzzleLevel[] = [\n'
+header_end = original.find(HEADER_MARKER) + len(HEADER_MARKER)
+HEADER = original[:header_end]
 
-export const PUZZLE_LEVELS: readonly PuzzleLevel[] = [
+# Keep co-op levels section (id 31-35)
+COOP_MARKER = '  {\n    id: 31,'
+coop_start = original.find(COOP_MARKER)
+COOP = '  ' + original[coop_start:]   # keep the closing ] too
+
+# ── New solo levels (TypeScript strings) ────────────────────────────────────
+
+CHAPTER1 = """\
   // ═══ 第一章：共振基础（1-5）— 学会回响机制 ════════════════════════════════
+"""
 
+L1 = """\
   {
     id: 1,
     name: '第1室·初鸣',
@@ -49,7 +43,9 @@ export const PUZZLE_LEVELS: readonly PuzzleLevel[] = [
     exitY: 270,
     coop: false,
     sandReward: 18,
-  },
+  },"""
+
+L2 = """\
   {
     id: 2,
     name: '第2室·绕行',
@@ -67,7 +63,9 @@ export const PUZZLE_LEVELS: readonly PuzzleLevel[] = [
     exitY: 270,
     coop: false,
     sandReward: 24,
-  },
+  },"""
+
+L3 = """\
   {
     id: 3,
     name: '第3室·夹道',
@@ -86,7 +84,9 @@ export const PUZZLE_LEVELS: readonly PuzzleLevel[] = [
     exitY: 270,
     coop: false,
     sandReward: 28,
-  },
+  },"""
+
+L4 = """\
   {
     id: 4,
     name: '第4室·双踩',
@@ -105,7 +105,9 @@ X 挡住了下方通路，需要绕上方到达 B`,
     exitY: 270,
     coop: false,
     sandReward: 32,
-  },
+  },"""
+
+L5 = """\
   {
     id: 5,
     name: '第5室·双锁初探',
@@ -125,9 +127,13 @@ X 挡住了下方通路，需要绕上方到达 B`,
     exitY: 270,
     coop: false,
     sandReward: 40,
-  },
-  // ═══ 第二章：路径抉择（6-10）— 路线规划成为核心挑战 ══════════════════════
+  },"""
 
+CHAPTER2 = """\
+  // ═══ 第二章：路径抉择（6-10）— 路线规划成为核心挑战 ══════════════════════
+"""
+
+L6 = """\
   {
     id: 6,
     name: '第6室·三重奏',
@@ -146,7 +152,9 @@ X 挡住了下方通路，需要绕上方到达 B`,
     exitY: 270,
     coop: false,
     sandReward: 46,
-  },
+  },"""
+
+L7 = """\
   {
     id: 7,
     name: '第7室·斜线突围',
@@ -164,7 +172,9 @@ X 挡住了下方通路，需要绕上方到达 B`,
     exitY: 270,
     coop: false,
     sandReward: 50,
-  },
+  },"""
+
+L8 = """\
   {
     id: 8,
     name: '第8室·双锁绕线',
@@ -185,7 +195,9 @@ X 挡住了下方通路，需要绕上方到达 B`,
     exitY: 270,
     coop: false,
     sandReward: 55,
-  },
+  },"""
+
+L9 = """\
   {
     id: 9,
     name: '第9室·栅栏',
@@ -205,7 +217,9 @@ X 挡住了下方通路，需要绕上方到达 B`,
     exitY: 270,
     coop: false,
     sandReward: 58,
-  },
+  },"""
+
+L10 = """\
   {
     id: 10,
     name: '第10室·三角陷阱',
@@ -225,9 +239,13 @@ X 挡住了下方通路，需要绕上方到达 B`,
     exitY: 270,
     coop: false,
     sandReward: 62,
-  },
-  // ═══ 第三章：精密计时（11-15）— 时间窗口开始产生真正压力 ═══════════════════
+  },"""
 
+CHAPTER3 = """\
+  // ═══ 第三章：精密计时（11-15）— 时间窗口开始产生真正压力 ═══════════════════
+"""
+
+L11 = """\
   {
     id: 11,
     name: '第11室·逆向直觉',
@@ -246,7 +264,9 @@ X 挡住了 B 到 A 的斜线`,
     exitY: 270,
     coop: false,
     sandReward: 65,
-  },
+  },"""
+
+L12 = """\
   {
     id: 12,
     name: '第12室·双踩夹击',
@@ -265,7 +285,9 @@ X 挡住了 B 到 A 的斜线`,
     exitY: 270,
     coop: false,
     sandReward: 68,
-  },
+  },"""
+
+L13 = """\
   {
     id: 13,
     name: '第13室·连锁反应',
@@ -287,7 +309,9 @@ Z 字形穿越，每步回响都打开一扇门`,
     exitY: 270,
     coop: false,
     sandReward: 76,
-  },
+  },"""
+
+L14 = """\
   {
     id: 14,
     name: '第14室·三角博弈',
@@ -306,7 +330,9 @@ Z 字形穿越，每步回响都打开一扇门`,
     exitY: 270,
     coop: false,
     sandReward: 80,
-  },
+  },"""
+
+L15 = """\
   {
     id: 15,
     name: '第15室·水平封锁',
@@ -324,9 +350,13 @@ Z 字形穿越，每步回响都打开一扇门`,
     exitY: 270,
     coop: false,
     sandReward: 72,
-  },
-  // ═══ 第四章：多重博弈（16-20）— 多扇门，需要统筹规划整条路线 ═══════════════
+  },"""
 
+CHAPTER4 = """\
+  // ═══ 第四章：多重博弈（16-20）— 多扇门，需要统筹规划整条路线 ═══════════════
+"""
+
+L16 = """\
   {
     id: 16,
     name: '第16室·共享枢纽',
@@ -348,7 +378,9 @@ Z 字形穿越，每步回响都打开一扇门`,
     exitY: 270,
     coop: false,
     sandReward: 85,
-  },
+  },"""
+
+L17 = """\
   {
     id: 17,
     name: '第17室·双线并行',
@@ -369,7 +401,9 @@ Z 字形穿越，每步回响都打开一扇门`,
     exitY: 270,
     coop: false,
     sandReward: 88,
-  },
+  },"""
+
+L18 = """\
   {
     id: 18,
     name: '第18室·双响交织',
@@ -389,7 +423,9 @@ Z 字形穿越，每步回响都打开一扇门`,
     exitY: 270,
     coop: false,
     sandReward: 92,
-  },
+  },"""
+
+L19 = """\
   {
     id: 19,
     name: '第19室·双向封堵',
@@ -410,7 +446,9 @@ Z 字形穿越，每步回响都打开一扇门`,
     exitY: 270,
     coop: false,
     sandReward: 96,
-  },
+  },"""
+
+L20 = """\
   {
     id: 20,
     name: '第20室·三锁贯通',
@@ -433,9 +471,13 @@ Z 字形穿越，每步回响都打开一扇门`,
     exitY: 270,
     coop: false,
     sandReward: 100,
-  },
-  // ═══ 第五章：逻辑倒置（21-25）— 需要反直觉的解法或更深的推理 ═══════════════
+  },"""
 
+CHAPTER5 = """\
+  // ═══ 第五章：逻辑倒置（21-25）— 需要反直觉的解法或更深的推理 ═══════════════
+"""
+
+L21 = """\
   {
     id: 21,
     name: '第21室·同色双踏',
@@ -455,7 +497,9 @@ Z 字形穿越，每步回响都打开一扇门`,
     exitY: 270,
     coop: false,
     sandReward: 103,
-  },
+  },"""
+
+L22 = """\
   {
     id: 22,
     name: '第22室·精确绕行',
@@ -475,7 +519,9 @@ Z 字形穿越，每步回响都打开一扇门`,
     exitY: 270,
     coop: false,
     sandReward: 107,
-  },
+  },"""
+
+L23 = """\
   {
     id: 23,
     name: '第23室·双踩陷阱',
@@ -494,7 +540,9 @@ Z 字形穿越，每步回响都打开一扇门`,
     exitY: 270,
     coop: false,
     sandReward: 111,
-  },
+  },"""
+
+L24 = """\
   {
     id: 24,
     name: '第24室·三锁连环',
@@ -517,7 +565,9 @@ Z 字形穿越，每步回响都打开一扇门`,
     exitY: 270,
     coop: false,
     sandReward: 115,
-  },
+  },"""
+
+L25 = """\
   {
     id: 25,
     name: '第25室·三角联锁',
@@ -538,9 +588,13 @@ Z 字形穿越，每步回响都打开一扇门`,
     exitY: 270,
     coop: false,
     sandReward: 120,
-  },
-  // ═══ 第六章：时序极限（26-30）— 综合挑战，大师级难度 ══════════════════════
+  },"""
 
+CHAPTER6 = """\
+  // ═══ 第六章：时序极限（26-30）— 综合挑战，大师级难度 ══════════════════════
+"""
+
+L26 = """\
   {
     id: 26,
     name: '第26室·双重迷阵',
@@ -563,7 +617,9 @@ Z 字形穿越，每步回响都打开一扇门`,
     exitY: 270,
     coop: false,
     sandReward: 118,
-  },
+  },"""
+
+L27 = """\
   {
     id: 27,
     name: '第27室·距离测算',
@@ -582,7 +638,9 @@ Z 字形穿越，每步回响都打开一扇门`,
     exitY: 270,
     coop: false,
     sandReward: 126,
-  },
+  },"""
+
+L28 = """\
   {
     id: 28,
     name: '第28室·枢纽封锁',
@@ -604,7 +662,9 @@ Z 字形穿越，每步回响都打开一扇门`,
     exitY: 270,
     coop: false,
     sandReward: 132,
-  },
+  },"""
+
+L29 = """\
   {
     id: 29,
     name: '第29室·毫秒博弈',
@@ -624,7 +684,9 @@ Z 字形穿越，每步回响都打开一扇门`,
     exitY: 270,
     coop: false,
     sandReward: 140,
-  },
+  },"""
+
+L30 = """\
   {
     id: 30,
     name: '第30室·时空终局',
@@ -648,113 +710,23 @@ X 挡在 C 到 D 之间。提前规划好完整路线再出发`,
     exitY: 270,
     coop: false,
     sandReward: 150,
-  },
-      {
-    id: 31,
-    name: '双人第1室·镜像',
-    hint: `两人分工：P1（WASD）前往 A，P2（方向键）前往 B
-需在 600ms 内同时踩下——纯粹的眼神交流`,
-    solution: 'P1:A 与 P2:B 同时踩下（600ms 内）→ 门开',
-    pads: [
-      { id: 'A', x: 210, y: 270, color: '#50e8a0' },
-      { id: 'B', x: 680, y: 270, color: '#e0a030' },
-    ],
-    doors: [
-      { x: 900, y: 270, w: 55, h: 160, requiredPads: ['A', 'B'], windowMs: 600 },
-    ],
-    exitX: 938,
-    exitY: 270,
-    coop: true,
-    sandReward: 55,
-  },
-  {
-    id: 32,
-    name: '双人第2室·接力',
-    hint: `两人各自负责一扇门（互相独立）
-P1：踩 A → B（回响触发 A，门1）
-P2：踩 C → D（回响触发 C，门2）`,
-    solution: 'P1:A→B(回响A)=门1  P2:C→D(回响C)=门2  → 通过',
-    pads: [
-      { id: 'A', x: 155, y: 175, color: '#50e8a0' },
-      { id: 'B', x: 380, y: 375, color: '#e0a030' },
-      { id: 'C', x: 480, y: 175, color: '#c060ff' },
-      { id: 'D', x: 680, y: 375, color: '#e06060' },
-    ],
-    doors: [
-      { x: 900, y: 205, w: 55, h: 108, requiredPads: ['A', 'B'], windowMs: 1600 },
-      { x: 900, y: 345, w: 55, h: 108, requiredPads: ['C', 'D'], windowMs: 1600 },
-    ],
-    exitX: 938,
-    exitY: 275,
-    coop: true,
-    sandReward: 65,
-  },
-  {
-    id: 33,
-    name: '双人第3室·三角',
-    hint: `门需要 A、B、C 全部在 1800ms 内激活
-P1：踩 A → B（回响 A）
-P2：在 P1 踩 B 的前后 1.8s 内踩 C`,
-    solution: 'P1:A→B(回响A)  P2:恰当时机踩C  三者在1800ms内 → 门开',
-    pads: [
-      { id: 'A', x: 175, y: 200, color: '#50e8a0' },
-      { id: 'B', x: 400, y: 380, color: '#e0a030' },
-      { id: 'C', x: 650, y: 200, color: '#c060ff' },
-    ],
-    doors: [
-      { x: 900, y: 270, w: 55, h: 160, requiredPads: ['A', 'B', 'C'], windowMs: 1800 },
-    ],
-    exitX: 938,
-    exitY: 270,
-    coop: true,
-    sandReward: 75,
-  },
-  {
-    id: 34,
-    name: '双人第4室·回响交汇',
-    hint: `两扇门各需某踏板激活两次（双响机制）
-P1：踩 A（记住）→ 快速踩 E（回响触发 A 第二次）→ 门1
-P2：踩 C（记住）→ 快速踩 F（回响触发 C 第二次）→ 门2
-两人都要快！`,
-    solution: 'P1:A→E(回响A,A×2)=门1  P2:C→F(回响C,C×2)=门2  → 通过',
-    pads: [
-      { id: 'A', x: 155, y: 160, color: '#50e8a0' },
-      { id: 'E', x: 315, y: 160, color: '#40b8ff' },
-      { id: 'C', x: 490, y: 390, color: '#c060ff' },
-      { id: 'F', x: 660, y: 390, color: '#f0e040' },
-    ],
-    doors: [
-      { x: 900, y: 185, w: 55, h: 108, requiredPads: ['A', 'A'], windowMs: 1100 },
-      { x: 900, y: 360, w: 55, h: 108, requiredPads: ['C', 'C'], windowMs: 1100 },
-    ],
-    exitX: 938,
-    exitY: 275,
-    coop: true,
-    sandReward: 90,
-  },
-  {
-    id: 35,
-    name: '双人第5室·时间悖论',
-    hint: `终极挑战——窗口仅 650ms，任何失误都是全队重来
-P1：踩 C（记住）→ 快速踩 A（回响 C）避开干扰踏板 E
-P2：踩 D（记住）→ 快速踩 B（回响 D）避开干扰踏板 X
-两人必须几乎同时完成各自序列`,
-    solution: 'P1:C→A(回响C,避开E)=门1  P2:D→B(回响D,避开X)=门2  → 通关',
-    pads: [
-      { id: 'A', x: 200, y: 175, color: '#50e8a0' },
-      { id: 'B', x: 610, y: 375, color: '#e0a030' },
-      { id: 'C', x: 120, y: 375, color: '#c060ff' },
-      { id: 'D', x: 700, y: 175, color: '#e06060' },
-      { id: 'E', x: 155, y: 275, color: '#ff9090' },
-      { id: 'X', x: 655, y: 275, color: '#90c0ff' },
-    ],
-    doors: [
-      { x: 900, y: 185, w: 55, h: 108, requiredPads: ['A', 'C'], windowMs: 650 },
-      { x: 900, y: 360, w: 55, h: 108, requiredPads: ['B', 'D'], windowMs: 650 },
-    ],
-    exitX: 938,
-    exitY: 275,
-    coop: true,
-    sandReward: 120,
-  }
+  },"""
+
+ALL_SOLO = [
+    CHAPTER1, L1, L2, L3, L4, L5,
+    CHAPTER2, L6, L7, L8, L9, L10,
+    CHAPTER3, L11, L12, L13, L14, L15,
+    CHAPTER4, L16, L17, L18, L19, L20,
+    CHAPTER5, L21, L22, L23, L24, L25,
+    CHAPTER6, L26, L27, L28, L29, L30,
 ]
+
+solo_body = '\n'.join(ALL_SOLO) + '\n'
+new_file = HEADER + solo_body + '  ' + COOP
+
+with open(TARGET, 'w', encoding='utf-8') as f:
+    f.write(new_file)
+
+print(f'Written. Lines: {new_file.count(chr(10))}, Solo levels: 30, Coop: 5')
+ids = [int(line.split('id: ')[1].rstrip(',')) for line in new_file.split('\n') if '    id: ' in line]
+print(f'IDs found: {sorted(ids)}')

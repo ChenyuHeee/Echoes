@@ -238,13 +238,15 @@ export class LobbyScene extends Phaser.Scene {
 
     // 取消/返回（仅非房主；房主用解散房间）
     if (!this.isHost) {
-      const backTxt = this.add.text(20, height - 12, '← 离开', {
-        fontFamily: 'monospace', fontSize: '12px', color: '#405060',
-      }).setOrigin(0, 1)
-      backTxt.setInteractive({ useHandCursor: true })
-      backTxt.on('pointerover', () => backTxt.setColor('#7090b0'))
-      backTxt.on('pointerout', () => backTxt.setColor('#405060'))
-      backTxt.on('pointerdown', () => {
+      const leaveRect = this.add.rectangle(72, height - 44, 120, 30, 0x080f1c, 1)
+        .setStrokeStyle(1, 0x402020, 0.6).setDepth(5)
+      leaveRect.setInteractive({ useHandCursor: true })
+      this.add.text(72, height - 44, '← 离开房间', {
+        fontFamily: 'monospace', fontSize: '11px', color: '#704040',
+      }).setOrigin(0.5).setDepth(5)
+      leaveRect.on('pointerover', () => leaveRect.setFillStyle(0x1c0c0c, 1))
+      leaveRect.on('pointerout', () => leaveRect.setFillStyle(0x080f1c, 1))
+      leaveRect.on('pointerdown', () => {
         audioManager.playClick()
         this.cleanupAll()
         this.scene.start('LobbyScene')
@@ -312,6 +314,8 @@ export class LobbyScene extends Phaser.Scene {
         this.players.set(p.id, { username: p.username, ready: p.ready })
         this.renderPlayerList()
         this.updateStartBtn()
+        // 回应自己的状态，让新加入者也能看到自己
+        this.broadcastSelf()
         const allDone = this.allReady
         this.waitingStatusText?.setText(allDone ? '✦ 所有人已就绪！' : '等待所有玩家准备...')
         this.waitingStatusText?.setColor(allDone ? '#7ce0bc' : '#405060')
@@ -473,10 +477,8 @@ export class LobbyScene extends Phaser.Scene {
   private dissolveRoom() {
     audioManager.playClick()
     void this.lobbyChannel?.send({ type: 'broadcast', event: 'dissolve', payload: {} })
-    this.time.delayedCall(300, () => {
-      this.cleanupAll()
-      this.scene.start('LobbyScene')
-    })
+    this.cleanupAll()
+    this.scene.start('LobbyScene')
   }
 
   private remindReady() {
@@ -882,7 +884,7 @@ export class LobbyScene extends Phaser.Scene {
 
   private cleanupLobbyChannel() {
     if (this.lobbyChannel) {
-      this.lobbyChannel.unsubscribe()
+      supabase.removeChannel(this.lobbyChannel)
       this.lobbyChannel = null
     }
   }

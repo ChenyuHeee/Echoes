@@ -6,6 +6,7 @@ import { ENEMY_DEFINITIONS } from '../config/enemies'
 import { PROLOGUE_LINES } from '../config/lore'
 import { closeRoomBeacon, getCurrentUser, saveDiveRecord } from '../lib/supabase'
 import { audioManager } from '../systems/AudioManager'
+import { getKeybindings, keyCodeFromStr } from '../systems/SettingsManager'
 import { voiceManager, getSpeakerRole } from '../systems/VoiceManager'
 import { RoomRealtime, type NetEnemyDeath, type NetDiveResult } from '../net/realtime'
 import {
@@ -740,14 +741,14 @@ export class DiveScene extends Phaser.Scene {
   private setupInput() {
     this.cursors = this.input.keyboard!.createCursorKeys()
     this.keys = {
-      w: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
-      a: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A),
-      s: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S),
-      d: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
-      digit1: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
-      digit2: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
-      digit3: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.THREE),
-      extract: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E),
+      w: this.input.keyboard!.addKey(keyCodeFromStr(getKeybindings().moveUp)),
+      a: this.input.keyboard!.addKey(keyCodeFromStr(getKeybindings().moveLeft)),
+      s: this.input.keyboard!.addKey(keyCodeFromStr(getKeybindings().moveDown)),
+      d: this.input.keyboard!.addKey(keyCodeFromStr(getKeybindings().moveRight)),
+      digit1: this.input.keyboard!.addKey(keyCodeFromStr(getKeybindings().skill1)),
+      digit2: this.input.keyboard!.addKey(keyCodeFromStr(getKeybindings().skill2)),
+      digit3: this.input.keyboard!.addKey(keyCodeFromStr(getKeybindings().skill3)),
+      extract: this.input.keyboard!.addKey(keyCodeFromStr(getKeybindings().extract)),
     }
 
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {

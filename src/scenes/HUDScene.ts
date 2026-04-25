@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { getRuntimeState } from '../state/gameState'
 import { SKILL_DEFINITIONS } from '../config/skills'
 import type { SkillType } from '../types/game.types'
+import { showSettingsPanel } from '../systems/SettingsManager'
 
 interface HudPayload {
   hp: number
@@ -118,6 +119,22 @@ export class HUDScene extends Phaser.Scene {
       maxStability: rt.player.maxStability,
       timeSand: rt.player.timeSand,
       roomCode: rt.room?.code,
+    })
+
+    // 右上角设置齿轮
+    const gearBtn = this.add.text(width - 10, 5, '⚙', {
+      fontFamily: 'monospace', fontSize: '16px', color: '#304050',
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(12).setInteractive({ useHandCursor: true })
+    gearBtn.on('pointerover', () => gearBtn.setColor('#8aa8c0'))
+    gearBtn.on('pointerout', () => gearBtn.setColor('#304050'))
+    gearBtn.on('pointerdown', () => {
+      showSettingsPanel({
+        onLogout: () => {
+          // 停止所有游戏场景并返回登录
+          this.scene.manager.scenes.forEach(s => { if (s.scene.key !== 'BootScene') s.scene.stop() })
+          this.scene.start('LoginScene')
+        },
+      })
     })
 
     this.game.events.on('hud:update', this.updateHud, this)
