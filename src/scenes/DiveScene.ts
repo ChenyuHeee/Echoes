@@ -129,8 +129,8 @@ export class DiveScene extends Phaser.Scene {
     this.spawnEnemies()
     this.echoAuraGraphics = this.add.graphics().setDepth(30)
     this.muzzleGraphics = this.add.graphics().setDepth(31)
+    this.spawnPickupsAndExtraction()  // 必须在 setupCombat() 之前，确保 this.pickups 已初始化
     this.setupCombat()
-    this.spawnPickupsAndExtraction()
     this.setupInput()
     this.setupMinimap()
     if (!localStorage.getItem('echoes.tutorial.v1')) {

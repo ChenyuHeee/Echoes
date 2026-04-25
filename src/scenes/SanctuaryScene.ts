@@ -179,11 +179,12 @@ export class SanctuaryScene extends Phaser.Scene {
   private buildWorkshop() {
     const { width } = this.scale
     const rt = getRuntimeState()
-    const COLS = 3
-    const CARD_W = 270
-    const CARD_H = 110
-    const GAP_X = 18
-    const GAP_Y = 14
+    // 4 列 × 3 行 = 12 格，恰好容纳全部技能且不超出可见区域
+    const COLS = 4
+    const CARD_W = 210
+    const CARD_H = 90
+    const GAP_X = 10
+    const GAP_Y = 8
     const totalW = COLS * CARD_W + (COLS - 1) * GAP_X
     const startX = width / 2 - totalW / 2 + CARD_W / 2
     const startY = 30
@@ -214,46 +215,52 @@ export class SanctuaryScene extends Phaser.Scene {
         isEquipped ? 1 : isUnlocked ? 0.6 : 0.3)
       this.contentLayer.add(bg)
 
-      // 元素色条
+      // 顶部元素色条
       this.contentLayer.add(this.add.rectangle(cx, cy - CARD_H / 2 + 2, CARD_W, 3,
         colorVal, isUnlocked ? 0.7 : 0.15))
 
-      // 技能名 + 类型
+      // 技能名
       this.contentLayer.add(this.make.text({
-        x: cx, y: cy - 34,
+        x: cx, y: cy - 24,
         text: skill.name,
         style: {
-          fontFamily: 'monospace', fontSize: '14px',
+          fontFamily: 'monospace', fontSize: '13px',
           color: isEquipped ? '#f0c060' : isUnlocked ? '#dce9ff' : '#384858',
         },
         add: false,
       }).setOrigin(0.5))
 
+      // 元素/冷却/状态
       this.contentLayer.add(this.make.text({
-        x: cx, y: cy - 18,
-        text: `${skill.element}  CD:${(skill.cooldown / 1000).toFixed(1)}s  ${isUnlocked ? (isEquipped ? '✦已装备' : '已解锁') : `需要 ${skill.unlockCost} 时砂`}`,
-        style: { fontFamily: 'monospace', fontSize: '10px', color: isUnlocked ? skill.elementColor : '#384858' },
+        x: cx, y: cy - 10,
+        text: `${skill.element}  CD:${(skill.cooldown / 1000).toFixed(1)}s  ${isUnlocked ? (isEquipped ? '✦已装备' : '已解锁') : `${skill.unlockCost}时砂`}`,
+        style: { fontFamily: 'monospace', fontSize: '9px', color: isUnlocked ? skill.elementColor : '#384858' },
         add: false,
       }).setOrigin(0.5))
 
+      // 技能描述（wordWrap 防溢出）
       this.contentLayer.add(this.make.text({
         x: cx, y: cy + 2,
         text: skill.description,
-        style: { fontFamily: 'monospace', fontSize: '10px', color: isUnlocked ? '#8090a8' : '#2a3038', wordWrap: { width: CARD_W - 20 }, align: 'center' },
+        style: {
+          fontFamily: 'monospace', fontSize: '9px',
+          color: isUnlocked ? '#8090a8' : '#2a3038',
+          wordWrap: { width: CARD_W - 16 }, align: 'center',
+        },
         add: false,
       }).setOrigin(0.5, 0))
 
-      // 动作按钮
+      // 动作按钮（cy + 32，离卡片底部有余量）
+      const btnY = cy + 32
       if (!isUnlocked && skill.unlockCost > 0) {
-        const btnBg = this.add.rectangle(cx, cy + 42, CARD_W - 30, 22, 0x0a0e16)
+        const btnBg = this.add.rectangle(cx, btnY, CARD_W - 30, 20, 0x0a0e16)
         btnBg.setStrokeStyle(1, 0x305060, 0.5)
         this.contentLayer.add(btnBg)
         this.contentLayer.add(this.make.text({
-          x: cx, y: cy + 42, text: `解锁 (${skill.unlockCost}时砂)`,
-          style: { fontFamily: 'monospace', fontSize: '11px', color: '#5090b0' },
+          x: cx, y: btnY, text: `解锁 (${skill.unlockCost}时砂)`,
+          style: { fontFamily: 'monospace', fontSize: '10px', color: '#5090b0' },
           add: false,
         }).setOrigin(0.5))
-
         btnBg.setInteractive({ useHandCursor: true })
         btnBg.on('pointerdown', () => {
           audioManager.playClick()
@@ -266,24 +273,22 @@ export class SanctuaryScene extends Phaser.Scene {
           unlockSkill(skill.id)
           this.tipText.setText(`✦ 已解锁 ${skill.name}`)
           audioManager.playPickup()
-          this.buildWorkshop()  // 刷新
+          this.buildWorkshop()
         })
       } else if (isUnlocked && !isEquipped) {
-        const btnBg = this.add.rectangle(cx, cy + 42, CARD_W - 30, 22, 0x0a1016)
+        const btnBg = this.add.rectangle(cx, btnY, CARD_W - 30, 20, 0x0a1016)
         btnBg.setStrokeStyle(1, colorVal, 0.4)
         this.contentLayer.add(btnBg)
         this.contentLayer.add(this.make.text({
-          x: cx, y: cy + 42, text: '装备',
-          style: { fontFamily: 'monospace', fontSize: '11px', color: skill.elementColor },
+          x: cx, y: btnY, text: '装备',
+          style: { fontFamily: 'monospace', fontSize: '10px', color: skill.elementColor },
           add: false,
         }).setOrigin(0.5))
-
         btnBg.setInteractive({ useHandCursor: true })
         btnBg.on('pointerdown', () => {
           audioManager.playClick()
           const state = getRuntimeState()
           const equipped = [...state.player.skills]
-          // 找空槽，或替换第3槽
           const emptyIdx = equipped.findIndex(s => !s)
           const targetIdx = emptyIdx >= 0 ? emptyIdx : 2
           equipped[targetIdx] = skill.id
@@ -292,15 +297,14 @@ export class SanctuaryScene extends Phaser.Scene {
           this.buildWorkshop()
         })
       } else if (isEquipped) {
-        const btnBg = this.add.rectangle(cx, cy + 42, CARD_W - 30, 22, 0x1a1208)
+        const btnBg = this.add.rectangle(cx, btnY, CARD_W - 30, 20, 0x1a1208)
         btnBg.setStrokeStyle(1, 0xd07030, 0.5)
         this.contentLayer.add(btnBg)
         this.contentLayer.add(this.make.text({
-          x: cx, y: cy + 42, text: '卸下',
-          style: { fontFamily: 'monospace', fontSize: '11px', color: '#c07030' },
+          x: cx, y: btnY, text: '卸下',
+          style: { fontFamily: 'monospace', fontSize: '10px', color: '#c07030' },
           add: false,
         }).setOrigin(0.5))
-
         btnBg.setInteractive({ useHandCursor: true })
         btnBg.on('pointerdown', () => {
           audioManager.playClick()
@@ -312,7 +316,6 @@ export class SanctuaryScene extends Phaser.Scene {
         })
       }
 
-      // 卡片可交互区（背景 hover）
       bg.setInteractive()
       bg.on('pointerover', () => {
         if (isUnlocked) bg.setFillStyle(isEquipped ? 0x1e2a3c : 0x10182a, 1)
@@ -351,14 +354,20 @@ export class SanctuaryScene extends Phaser.Scene {
       this.contentLayer.add(this.make.text({
         x: cx, y: y + 34,
         text: `${faction.passiveName}：${faction.passiveDescription}`,
-        style: { fontFamily: 'monospace', fontSize: '11px', color: '#8090a8' },
+        style: {
+          fontFamily: 'monospace', fontSize: '11px', color: '#8090a8',
+          wordWrap: { width: 460 }, align: 'center',
+        },
         add: false,
       }).setOrigin(0.5))
 
       this.contentLayer.add(this.make.text({
         x: cx, y: y + 56,
         text: `「${faction.philosophy}」`,
-        style: { fontFamily: 'monospace', fontSize: '11px', color: fColor, fontStyle: 'italic' },
+        style: {
+          fontFamily: 'monospace', fontSize: '11px', color: fColor, fontStyle: 'italic',
+          wordWrap: { width: 460 }, align: 'center',
+        },
         add: false,
       }).setOrigin(0.5))
     }
