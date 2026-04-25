@@ -95,13 +95,23 @@ export class ModeSelectScene extends Phaser.Scene {
       },
       {
         title: '时序密室',
-        sub: '动作冒险  ·  单人',
+        sub: '谜题  ·  单人 / 协作',
         desc: '以回响系统破解上古时序逻辑\n踏板 + 回响 + 机关的优雅博弈\n纯谜题，无战斗，极致智力享受',
         color: '#50e8a0',
         bg: 'bg_forest',
         tag: '可游玩',
         locked: false,
         action: () => this.scene.start('PuzzleScene'),
+      },
+      {
+        title: '社区征稿地图',
+        sub: '谜题  ·  社区制作',
+        desc: '传送门炮 · 电梯 · 箱子推移\n压力板 · 钥匙 · 时控门 · 传送带\n15种元素，无限可能的关卡设计',
+        color: '#f0c060',
+        bg: 'bg_forest',
+        tag: '新',
+        locked: false,
+        action: () => this.scene.start('PuzzleScene', { community: true, mapIdx: 0 }),
       },
     ]
 
