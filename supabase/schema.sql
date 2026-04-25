@@ -193,47 +193,68 @@ ALTER TABLE public.leaderboard_arena ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.story_progress ENABLE ROW LEVEL SECURITY;
 
 -- 玩家档案：自己可读写，他人可读公开信息
+DROP POLICY IF EXISTS "profile_select_own" ON public.player_profiles;
 CREATE POLICY "profile_select_own" ON public.player_profiles FOR SELECT USING (auth.uid() = id);
+DROP POLICY IF EXISTS "profile_insert_own" ON public.player_profiles;
 CREATE POLICY "profile_insert_own" ON public.player_profiles FOR INSERT WITH CHECK (auth.uid() = id);
+DROP POLICY IF EXISTS "profile_update_own" ON public.player_profiles;
 CREATE POLICY "profile_update_own" ON public.player_profiles FOR UPDATE USING (auth.uid() = id);
 
 -- 技能记忆：仅自己操作
+DROP POLICY IF EXISTS "skills_own" ON public.skill_memories;
 CREATE POLICY "skills_own" ON public.skill_memories FOR ALL USING (auth.uid() = player_id);
 
 -- 装备：仅自己操作
+DROP POLICY IF EXISTS "equipment_own" ON public.equipment_modules;
 CREATE POLICY "equipment_own" ON public.equipment_modules FOR ALL USING (auth.uid() = player_id);
 
 -- 庇护所：自己可读写，公开的他人可读
+DROP POLICY IF EXISTS "sanctuary_own" ON public.sanctuaries;
 CREATE POLICY "sanctuary_own" ON public.sanctuaries FOR ALL USING (auth.uid() = player_id);
+DROP POLICY IF EXISTS "sanctuary_public_read" ON public.sanctuaries;
 CREATE POLICY "sanctuary_public_read" ON public.sanctuaries FOR SELECT USING (is_public = TRUE);
 
 -- 深潜记录：仅自己
+DROP POLICY IF EXISTS "dive_own" ON public.dive_records;
 CREATE POLICY "dive_own" ON public.dive_records FOR ALL USING (auth.uid() = player_id);
 
 -- 完美回响：仅自己
+DROP POLICY IF EXISTS "echoes_own" ON public.perfect_echoes;
 CREATE POLICY "echoes_own" ON public.perfect_echoes FOR ALL USING (auth.uid() = player_id);
 
 -- 游戏房间：已认证用户可读，主机可写
+DROP POLICY IF EXISTS "rooms_read" ON public.game_rooms;
 CREATE POLICY "rooms_read" ON public.game_rooms FOR SELECT USING (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "rooms_insert" ON public.game_rooms;
 CREATE POLICY "rooms_insert" ON public.game_rooms FOR INSERT WITH CHECK (auth.uid() = host_id);
+DROP POLICY IF EXISTS "rooms_update_host" ON public.game_rooms;
 CREATE POLICY "rooms_update_host" ON public.game_rooms FOR UPDATE USING (auth.uid() = host_id);
 
 -- 房间玩家：房间内玩家可读写
+DROP POLICY IF EXISTS "room_players_read" ON public.room_players;
 CREATE POLICY "room_players_read" ON public.room_players FOR SELECT USING (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "room_players_own" ON public.room_players;
 CREATE POLICY "room_players_own" ON public.room_players FOR INSERT WITH CHECK (auth.uid() = player_id);
+DROP POLICY IF EXISTS "room_players_update" ON public.room_players;
 CREATE POLICY "room_players_update" ON public.room_players FOR UPDATE USING (auth.uid() = player_id);
+DROP POLICY IF EXISTS "room_players_delete" ON public.room_players;
 CREATE POLICY "room_players_delete" ON public.room_players FOR DELETE USING (auth.uid() = player_id);
 
 -- 排行榜：所有认证用户可读
+DROP POLICY IF EXISTS "leaderboard_read" ON public.leaderboard_arena;
 CREATE POLICY "leaderboard_read" ON public.leaderboard_arena FOR SELECT USING (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "leaderboard_own" ON public.leaderboard_arena;
 CREATE POLICY "leaderboard_own" ON public.leaderboard_arena FOR INSERT WITH CHECK (auth.uid() = player_id);
+DROP POLICY IF EXISTS "leaderboard_update" ON public.leaderboard_arena;
 CREATE POLICY "leaderboard_update" ON public.leaderboard_arena FOR UPDATE USING (auth.uid() = player_id);
 
 -- 故事进度：仅自己
+DROP POLICY IF EXISTS "story_own" ON public.story_progress;
 CREATE POLICY "story_own" ON public.story_progress FOR ALL USING (auth.uid() = player_id);
 
 -- 世界事件：所有认证用户可读
 ALTER TABLE public.world_events ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "events_read" ON public.world_events;
 CREATE POLICY "events_read" ON public.world_events FOR SELECT USING (auth.role() = 'authenticated');
 
 -- ============================================================
@@ -247,14 +268,17 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_player_profiles_updated_at ON public.player_profiles;
 CREATE TRIGGER update_player_profiles_updated_at
   BEFORE UPDATE ON public.player_profiles
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+DROP TRIGGER IF EXISTS update_sanctuaries_updated_at ON public.sanctuaries;
 CREATE TRIGGER update_sanctuaries_updated_at
   BEFORE UPDATE ON public.sanctuaries
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+DROP TRIGGER IF EXISTS update_game_rooms_updated_at ON public.game_rooms;
 CREATE TRIGGER update_game_rooms_updated_at
   BEFORE UPDATE ON public.game_rooms
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
@@ -282,6 +306,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
