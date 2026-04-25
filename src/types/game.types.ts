@@ -35,6 +35,8 @@ export interface SkillDefinition {
   duration?: number         // 持续效果时长 ms
   thirdEchoTransform?: SkillType  // 第三次回响时质变成的技能
   iconFrame: number         // 图集中的帧序号
+  unlockCost: number        // 解锁所需时砂（0 = 初始解锁）
+  elementColor: string      // 元素颜色（用于 HUD 技能槽）
 }
 
 // --- 回响系统状态 ---

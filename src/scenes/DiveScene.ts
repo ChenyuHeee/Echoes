@@ -13,7 +13,11 @@ import {
   getRuntimeState,
   patchRuntimeState,
   resetDiveVitals,
+  recordDiveComplete,
+  addCrystal,
+  addLoreEntry,
 } from '../state/gameState'
+import { LORE_ENTRIES } from '../config/lore'
 import type { SkillType } from '../types/game.types'
 
 type DiveInit = {
@@ -232,6 +236,96 @@ export class DiveScene extends Phaser.Scene {
       fontSize: '14px',
       color: this.currentTheme.ambientColor,
     }).setOrigin(0.5)
+
+    // 叙事碎片拾取物（3-4 个）
+    this.spawnLorePickups()
+  }
+
+  private spawnLorePickups() {
+    const rt = getRuntimeState()
+    const collected = rt.player.loreCollected || []
+    const available = LORE_ENTRIES.filter(e => !collected.includes(e.id))
+    const toSpawn = available.slice(0, Math.min(3, available.length))
+    const KEY_F = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F)
+
+    const lorePosPool = [
+      { x: 450, y: 600 }, { x: 900, y: 350 }, { x: 1300, y: 700 },
+      { x: 600, y: 900 }, { x: 1100, y: 500 },
+    ]
+
+    toSpawn.forEach((entry, idx) => {
+      const pos = lorePosPool[idx % lorePosPool.length]
+      const crystal = this.add.image(pos.x, pos.y, 'prop_time_crystal').setScale(1.4).setAlpha(0.9)
+      this.tweens.add({
+        targets: crystal,
+        y: pos.y - 8,
+        alpha: 0.6,
+        duration: 1100 + idx * 200,
+        yoyo: true,
+        repeat: -1,
+      })
+
+      // 光晕
+      const glow = this.add.rectangle(pos.x, pos.y, 36, 36, 0x80d0ff, 0.12).setBlendMode('ADD')
+      this.tweens.add({ targets: glow, alpha: 0.04, duration: 900, yoyo: true, repeat: -1 })
+
+      // F 键拾取提示（靠近时显示）
+      const hint = this.add.text(pos.x, pos.y - 28, `[F] ${entry.title}`, {
+        fontFamily: 'monospace', fontSize: '11px', color: '#80c8ff',
+      }).setOrigin(0.5).setAlpha(0)
+
+      // 注册为可交互拾取物（通过定时检测距离 + F 键）
+      const checkInterval = this.time.addEvent({
+        delay: 100,
+        repeat: -1,
+        callback: () => {
+          if (!crystal.active) return
+          const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, pos.x, pos.y)
+          if (dist < 90) {
+            hint.setAlpha(1)
+            if (Phaser.Input.Keyboard.JustDown(KEY_F)) {
+              crystal.destroy()
+              glow.destroy()
+              hint.destroy()
+              checkInterval.remove()
+              addLoreEntry(entry.id)
+              audioManager.playPickup()
+              this.showLorePanel(entry.title, entry.source, entry.content)
+            }
+          } else {
+            hint.setAlpha(0)
+          }
+        },
+      })
+    })
+  }
+
+  private showLorePanel(title: string, source: string, content: string) {
+    const { width, height } = this.scale
+    const bg = this.add.rectangle(width / 2, height / 2, 560, 180, 0x060810, 0.96)
+      .setScrollFactor(0).setDepth(150)
+    bg.setStrokeStyle(1, 0x4080c0, 0.6)
+
+    const titleTxt = this.add.text(width / 2, height / 2 - 60, title, {
+      fontFamily: 'monospace', fontSize: '16px', color: '#c8a96e',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(151)
+
+    const srcTxt = this.add.text(width / 2, height / 2 - 38, `— ${source}`, {
+      fontFamily: 'monospace', fontSize: '10px', color: '#405060',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(151)
+
+    const bodyTxt = this.add.text(width / 2, height / 2 - 18, content, {
+      fontFamily: 'monospace', fontSize: '12px', color: '#9090b0',
+      wordWrap: { width: 520 }, align: 'center',
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(151)
+
+    const closeTxt = this.add.text(width / 2, height / 2 + 66, '[ 任意键关闭 ]', {
+      fontFamily: 'monospace', fontSize: '11px', color: '#304050',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(151)
+
+    this.input.keyboard!.once('keydown', () => {
+      bg.destroy(); titleTxt.destroy(); srcTxt.destroy(); bodyTxt.destroy(); closeTxt.destroy()
+    })
   }
 
   private setupInput() {
@@ -572,6 +666,15 @@ export class DiveScene extends Phaser.Scene {
     audioManager.playEnemyDeath()
     this.diveKills += 1
 
+    // Boss 死亡 20% 掉落回响水晶
+    const isBoss = enemy.getData('isBoss') === true
+    if (isBoss && Math.random() < 0.20) {
+      const crystalId = `crystal_${this.currentFragmentId}_${Date.now()}`
+      addCrystal(crystalId)
+      audioManager.playPickup()
+      this.emitHud('✦ 回响水晶')
+    }
+
     if (Math.random() < 0.6) {
       const p = this.physics.add.image(enemy.x, enemy.y, 'pickup')
       p.setScale(1.5)
@@ -672,6 +775,7 @@ export class DiveScene extends Phaser.Scene {
       roomCode: this.offline ? undefined : this.roomCode,
       echoSkill: this.echoSystem.getState().lastSkill || undefined,
       hint,
+      skillCooldowns: { ...this.cooldownUntil },
     })
   }
 
@@ -690,6 +794,7 @@ export class DiveScene extends Phaser.Scene {
       },
       diveStartAt: null,
     })
+    recordDiveComplete(this.diveKills)
 
     this.roomRealtime?.disconnect()
     this.roomRealtime = null

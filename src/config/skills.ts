@@ -14,6 +14,8 @@ export const SKILL_DEFINITIONS: Record<SkillType, SkillDefinition> = {
     range: 400,
     duration: 3000,
     iconFrame: 0,
+    unlockCost: 0,
+    elementColor: '#ff6b3a',
   },
   plague_module: {
     id: 'plague_module',
@@ -28,6 +30,8 @@ export const SKILL_DEFINITIONS: Record<SkillType, SkillDefinition> = {
     range: 350,
     duration: 5000,
     iconFrame: 1,
+    unlockCost: 80,
+    elementColor: '#7ec86a',
   },
   magnet_module: {
     id: 'magnet_module',
@@ -42,6 +46,8 @@ export const SKILL_DEFINITIONS: Record<SkillType, SkillDefinition> = {
     range: 300,
     duration: 2000,
     iconFrame: 2,
+    unlockCost: 100,
+    elementColor: '#6ab0e8',
   },
   teleport: {
     id: 'teleport',
@@ -54,6 +60,8 @@ export const SKILL_DEFINITIONS: Record<SkillType, SkillDefinition> = {
     canBeEchoed: true,
     range: 300,
     iconFrame: 3,
+    unlockCost: 180,
+    elementColor: '#b47cff',
   },
   headshot: {
     id: 'headshot',
@@ -67,6 +75,8 @@ export const SKILL_DEFINITIONS: Record<SkillType, SkillDefinition> = {
     damage: 80,
     range: 500,
     iconFrame: 4,
+    unlockCost: 120,
+    elementColor: '#d4c060',
   },
   toxic_fog: {
     id: 'toxic_fog',
@@ -81,6 +91,8 @@ export const SKILL_DEFINITIONS: Record<SkillType, SkillDefinition> = {
     range: 200,
     duration: 6000,
     iconFrame: 5,
+    unlockCost: 140,
+    elementColor: '#5cc47a',
   },
   shadow_clone: {
     id: 'shadow_clone',
@@ -93,6 +105,8 @@ export const SKILL_DEFINITIONS: Record<SkillType, SkillDefinition> = {
     canBeEchoed: true,
     duration: 4000,
     iconFrame: 6,
+    unlockCost: 200,
+    elementColor: '#9d7cff',
   },
   dash: {
     id: 'dash',
@@ -105,6 +119,8 @@ export const SKILL_DEFINITIONS: Record<SkillType, SkillDefinition> = {
     canBeEchoed: true,
     range: 250,
     iconFrame: 7,
+    unlockCost: 0,
+    elementColor: '#c8d4e8',
   },
   gravity_well: {
     id: 'gravity_well',
@@ -119,6 +135,8 @@ export const SKILL_DEFINITIONS: Record<SkillType, SkillDefinition> = {
     range: 400,
     duration: 3000,
     iconFrame: 8,
+    unlockCost: 60,
+    elementColor: '#44a8d8',
   },
   lightning_bolt: {
     id: 'lightning_bolt',
@@ -133,6 +151,8 @@ export const SKILL_DEFINITIONS: Record<SkillType, SkillDefinition> = {
     range: 450,
     iconFrame: 9,
     thirdEchoTransform: 'gravity_well',
+    unlockCost: 220,
+    elementColor: '#f0d040',
   },
   cryo_field: {
     id: 'cryo_field',
@@ -147,6 +167,8 @@ export const SKILL_DEFINITIONS: Record<SkillType, SkillDefinition> = {
     range: 350,
     duration: 4000,
     iconFrame: 10,
+    unlockCost: 280,
+    elementColor: '#80e4ff',
   },
   void_pulse: {
     id: 'void_pulse',
@@ -160,6 +182,8 @@ export const SKILL_DEFINITIONS: Record<SkillType, SkillDefinition> = {
     damage: 60,
     range: 300,
     iconFrame: 11,
+    unlockCost: 350,
+    elementColor: '#c070ff',
   },
 }
 

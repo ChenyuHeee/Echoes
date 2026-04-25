@@ -6,6 +6,7 @@ import { LobbyScene } from './scenes/LobbyScene'
 import { DiveScene } from './scenes/DiveScene'
 import { SanctuaryScene } from './scenes/SanctuaryScene'
 import { HUDScene } from './scenes/HUDScene'
+import { FactionScene } from './scenes/FactionScene'
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -20,6 +21,7 @@ const config: Phaser.Types.Core.GameConfig = {
     BootScene,
     MenuScene,
     LoginScene,
+    FactionScene,
     LobbyScene,
     DiveScene,
     SanctuaryScene,

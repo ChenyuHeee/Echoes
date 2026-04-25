@@ -7,6 +7,8 @@ export interface FragmentTheme {
   name: string
   biome: FragmentBiome
   subtitle: string
+  description: string
+  difficulty: number
   backgroundKey: string
   tileKeys: string[]
   propKeys: string[]
@@ -21,6 +23,8 @@ export const FRAGMENT_THEMES: Record<FragmentId, FragmentTheme> = {
     name: '蒸汽城碎片 A-17',
     biome: 'steampunk',
     subtitle: '锈蚀管道、钟楼残响与高压蒸汽构成的旧工业层',
+    description: '工业遗迹，钢铁与蒸汽气息浓郁。时砂浓度高但敌人密集，适合熟练回响体。',
+    difficulty: 2,
     backgroundKey: 'bg_dive',
     tileKeys: ['tile_steam_a', 'tile_steam_b', 'tile_steam_c'],
     propKeys: [
@@ -40,6 +44,8 @@ export const FRAGMENT_THEMES: Record<FragmentId, FragmentTheme> = {
     name: '荧冠林地 B-09',
     biome: 'magic_forest',
     subtitle: '菌伞林冠覆盖空岛边缘，时砂结晶沿树根发光',
+    description: '开阔的魔法森林空岛，视野宽广。敌人移速快但HP低，推荐新手入门。',
+    difficulty: 1,
     backgroundKey: 'bg_forest',
     tileKeys: ['tile_forest_a', 'tile_forest_b', 'tile_forest_c'],
     propKeys: [
@@ -57,6 +63,8 @@ export const FRAGMENT_THEMES: Record<FragmentId, FragmentTheme> = {
     name: '赛博塌陷区 C-21',
     biome: 'cyber_wasteland',
     subtitle: '霓虹残影与断裂高架桥交叠，广告光污染吞没夜空',
+    description: '地形复杂，敌人AI进化版本。时砂奖励丰厚，需要精准的回响技巧才能存活。',
+    difficulty: 3,
     backgroundKey: 'bg_cyber',
     tileKeys: ['tile_cyber_a', 'tile_cyber_b', 'tile_cyber_c'],
     propKeys: [
