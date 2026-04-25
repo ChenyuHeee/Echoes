@@ -15,6 +15,8 @@ export interface NetSkillEvent {
   skillId: string
   x: number
   y: number
+  tx: number   // 目标 X
+  ty: number   // 目标 Y
   t: number
   isEcho: boolean
 }

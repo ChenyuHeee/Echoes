@@ -1204,6 +1204,7 @@ export class DiveScene extends Phaser.Scene {
         this.roomRealtime.sendSkill({
           id: rt.player.id, skillId: 'gun',
           x: this.player.x, y: this.player.y,
+          tx: targetX, ty: targetY,
           isEcho: false, t: Date.now(),
         })
       }
@@ -1346,6 +1347,7 @@ export class DiveScene extends Phaser.Scene {
       this.roomRealtime.sendSkill({
         id: rt.player.id, skillId: skill,
         x: this.player.x, y: this.player.y,
+        tx: targetX, ty: targetY,
         isEcho, t: Date.now(),
       })
     }
@@ -1470,6 +1472,7 @@ export class DiveScene extends Phaser.Scene {
       this.roomRealtime.sendSkill({
         id: rt.player.id, skillId: skill,
         x: this.player.x, y: this.player.y,
+        tx: targetX, ty: targetY,
         isEcho, t: Date.now(),
       })
     }
@@ -1929,21 +1932,69 @@ export class DiveScene extends Phaser.Scene {
       this.roomRealtime!.onRemoteSkill((evt) => {
         const rt = getRuntimeState()
         if (evt.id === rt.player.id) return
-        if (evt.skillId === 'gun') {
-          // 普通射击：小弹光闪
-          const flash = this.add.circle(evt.x, evt.y, 5, 0xffeebb, 0.7)
-          this.tweens.add({
-            targets: flash, alpha: 0, scaleX: 3, scaleY: 3, duration: 180,
-            onComplete: () => flash.destroy(),
-          })
-        } else {
-          // 技能：元素脉冲圆圈
-          const pulse = this.add.circle(evt.x, evt.y, evt.isEcho ? 24 : 16, evt.isEcho ? 0x7fffd1 : 0xffcd8a, 0.35)
-          this.tweens.add({
-            targets: pulse, alpha: 0, scaleX: 2, scaleY: 2, duration: 500,
-            onComplete: () => pulse.destroy(),
-          })
+
+        const sx = evt.x, sy = evt.y
+        const tx2 = evt.tx ?? sx, ty2 = evt.ty ?? sy
+        const isInstant = evt.skillId === 'dash' || evt.skillId === 'teleport'
+          || evt.skillId === 'shadow_clone' || evt.skillId === 'void_pulse'
+
+        // ── 枪口闪光（所有技能都有）
+        const mfGfx = this.add.graphics().setDepth(50)
+        mfGfx.fillStyle(evt.isEcho ? 0x7fffd1 : 0xfff8c0, 0.8)
+        mfGfx.fillCircle(sx, sy, 5)
+        this.tweens.add({ targets: mfGfx, alpha: 0, duration: 100, onComplete: () => mfGfx.destroy() })
+
+        if (isInstant) {
+          // 即时技能：保留原来的脉冲圆
+          const pulse = this.add.circle(sx, sy, evt.isEcho ? 24 : 16, evt.isEcho ? 0x7fffd1 : 0xffcd8a, 0.35)
+          this.tweens.add({ targets: pulse, alpha: 0, scaleX: 2.5, scaleY: 2.5, duration: 500, onComplete: () => pulse.destroy() })
+          return
         }
+
+        // ── 投射物：从 (sx,sy) 飞向 (tx2,ty2)
+        const skillDefs: Record<string, { color: number; size: number; speed: number }> = {
+          gun:           { color: 0xfff8c0, size: 5,  speed: 540 },
+          burn_module:   { color: 0xff6030, size: 6,  speed: 600 },
+          headshot:      { color: 0xf8e860, size: 7,  speed: 800 },
+          lightning_bolt:{ color: 0xd0e8ff, size: 6,  speed: 600 },
+        }
+        const sd = skillDefs[evt.skillId] ?? { color: evt.isEcho ? 0x7fffd1 : 0xffcd8a, size: 7, speed: 500 }
+        const bulletColor = sd.color
+
+        // 用 graphics 模拟一颗移动子弹
+        const bGfx = this.add.graphics().setDepth(22)
+        bGfx.fillStyle(bulletColor, 0.9)
+        bGfx.fillCircle(0, 0, sd.size / 2 + 1)
+        bGfx.x = sx; bGfx.y = sy
+
+        const dist = Phaser.Math.Distance.Between(sx, sy, tx2, ty2)
+        const duration = Math.max(80, Math.min(dist / sd.speed * 1000, 1200))
+
+        // 飞行拖尾
+        const trailEvt = this.time.addEvent({
+          delay: 38, repeat: -1,
+          callback: () => {
+            if (!bGfx.active) { trailEvt.remove(); return }
+            const tg = this.add.graphics().setDepth(19)
+            tg.fillStyle(bulletColor, 0.4)
+            tg.fillCircle(bGfx.x, bGfx.y, sd.size / 2)
+            this.tweens.add({ targets: tg, alpha: 0, duration: 120, onComplete: () => tg.destroy() })
+          },
+        })
+
+        this.tweens.add({
+          targets: bGfx, x: tx2, y: ty2,
+          duration, ease: 'Linear',
+          onComplete: () => {
+            trailEvt.remove()
+            bGfx.destroy()
+            // 命中特效
+            const hitGfx = this.add.graphics().setDepth(75)
+            hitGfx.fillStyle(bulletColor, 0.6)
+            hitGfx.fillCircle(tx2, ty2, 7)
+            this.tweens.add({ targets: hitGfx, alpha: 0, scaleX: 3, scaleY: 3, duration: 180, onComplete: () => hitGfx.destroy() })
+          },
+        })
       })
 
       this.roomRealtime!.onEnemyDeath(({ enemyId, killerId }) => {
