@@ -108,7 +108,7 @@ export class ModeSelectScene extends Phaser.Scene {
     const cols = 3
     const cw = 286, ch = 148, gx = 12, gy = 10
     const sx = width / 2 - (cols * cw + (cols - 1) * gx) / 2 + cw / 2
-    const sy = 92
+    const sy = 116
 
     modes.forEach((m, i) => {
       const cx = sx + (i % cols) * (cw + gx)
