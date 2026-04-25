@@ -10,7 +10,7 @@
 
 import Phaser from 'phaser'
 import { audioManager } from '../systems/AudioManager'
-import { addTimeSand } from '../state/gameState'
+import { addTimeSand, getSpeedMultiplier } from '../state/gameState'
 import { PUZZLE_LEVELS } from '../config/puzzleLevels'
 import type { PuzzleLevel } from '../config/puzzleLevels'
 import { COMMUNITY_MAPS } from '../config/communityMaps'
@@ -43,6 +43,8 @@ interface TeleporterObj {
   targetId: string
   zone: Phaser.GameObjects.Zone
   cooldownUntil: number
+  cooldownMs: number
+  onZone: boolean
   color: number
   visual: Phaser.GameObjects.Graphics
 }
@@ -514,7 +516,7 @@ export class PuzzleScene extends Phaser.Scene {
     const zone = this.add.zone(x, y, 40, 40)
     this.physics.add.existing(zone, true)
     this.add.text(x, y + 28, '⇆', { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color }).setOrigin(0.5).setDepth(7)
-    this.teleporterObjs.push({ id, pos: { x, y }, targetId, zone, cooldownUntil: 0, color: col, visual })
+    this.teleporterObjs.push({ id, pos: { x, y }, targetId, zone, cooldownUntil: 0, cooldownMs: cooldown, onZone: false, color: col, visual })
   }
 
   private addBox(id: string | undefined, x: number, y: number, w: number, h: number) {
@@ -663,12 +665,13 @@ export class PuzzleScene extends Phaser.Scene {
   }
 
   private updateClassic(time: number) {
-    const vx1 = this.keys.a.isDown ? -200 : this.keys.d.isDown ? 200 : 0
-    const vy1 = this.keys.w.isDown ? -200 : this.keys.s.isDown ? 200 : 0
+    const spd = 200 * getSpeedMultiplier()
+    const vx1 = this.keys.a.isDown ? -spd : this.keys.d.isDown ? spd : 0
+    const vy1 = this.keys.w.isDown ? -spd : this.keys.s.isDown ? spd : 0
     this.player.setVelocity(vx1, vy1)
     if (this.player2 && this.keys2) {
-      const vx2 = this.keys2.left.isDown ? -200 : this.keys2.right.isDown ? 200 : 0
-      const vy2 = this.keys2.up.isDown   ? -200 : this.keys2.down.isDown  ? 200 : 0
+      const vx2 = this.keys2.left.isDown ? -spd : this.keys2.right.isDown ? spd : 0
+      const vy2 = this.keys2.up.isDown   ? -spd : this.keys2.down.isDown  ? spd : 0
       this.player2.setVelocity(vx2, vy2)
     }
     this.pads.forEach(pad => {
@@ -695,8 +698,9 @@ export class PuzzleScene extends Phaser.Scene {
 
   private updateCommunity(time: number, delta: number) {
     if (this.transitioning) return
-    const vx = this.keys.a.isDown ? -200 : this.keys.d.isDown ? 200 : 0
-    const vy = this.keys.w.isDown ? -200 : this.keys.s.isDown ? 200 : 0
+    const spd = 200 * getSpeedMultiplier()
+    const vx = this.keys.a.isDown ? -spd : this.keys.d.isDown ? spd : 0
+    const vy = this.keys.w.isDown ? -spd : this.keys.s.isDown ? spd : 0
     this.player.setVelocity(vx, vy)
     this.updateEchoPads(time)
     this.updateElevators(delta)
@@ -771,16 +775,21 @@ export class PuzzleScene extends Phaser.Scene {
   private updateTeleporters() {
     const now = this.time.now
     for (const tp of this.teleporterObjs) {
-      if (now < tp.cooldownUntil) continue
       const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, tp.pos.x, tp.pos.y)
-      if (d < 24) {
-        const target = this.teleporterObjs.find(t => t.id === tp.targetId)
-        if (target) {
-          this.player.setPosition(target.pos.x, target.pos.y)
-          tp.cooldownUntil = now + 1200; target.cooldownUntil = now + 1200
-          audioManager.playEcho(); this.cameras.main.flash(200, 0, 220, 200)
-          this.showStatus('⇆ 时空传送', '#00e8ff')
-        }
+      const inZone = d < 24
+      if (!inZone) { tp.onZone = false; continue }          // 玩家离开，重置入场状态
+      if (tp.onZone) continue                               // 玩家仍在区域内，不重复触发
+      if (now < tp.cooldownUntil) continue                  // 还在冷却中
+      tp.onZone = true
+      const target = this.teleporterObjs.find(t => t.id === tp.targetId)
+      if (target) {
+        this.player.setPosition(target.pos.x, target.pos.y)
+        // 目标传送点也标记为已占用，玩家需走出再走入才能再次触发
+        target.onZone = true
+        tp.cooldownUntil     = now + tp.cooldownMs
+        target.cooldownUntil = now + target.cooldownMs
+        audioManager.playEcho(); this.cameras.main.flash(200, 0, 220, 200)
+        this.showStatus('⇆ 时空传送', '#00e8ff')
       }
     }
   }
