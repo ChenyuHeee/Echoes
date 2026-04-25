@@ -139,7 +139,9 @@ export async function joinRoom(roomCode: string, playerId: string) {
     .select('*')
     .eq('room_code', roomCode.toUpperCase())
     .eq('status', 'waiting')
-    .single()
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (error || !room) return { data: null, error: error || new Error('房间不存在或已开始') }
 
