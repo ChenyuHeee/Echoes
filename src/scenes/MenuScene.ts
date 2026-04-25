@@ -66,10 +66,9 @@ export class MenuScene extends Phaser.Scene {
       }
     })
 
-    this.makeButton(width / 2, height * 0.68, '离线快速深潜（练习）', () => {
+    this.makeButton(width / 2, height * 0.68, '选择游戏模式', () => {
       audioManager.playClick()
-      this.scene.start('DiveScene', { offline: true })
-      this.scene.launch('HUDScene')
+      this.scene.start('ModeSelectScene')
     })
 
     this.makeButton(width / 2, height * 0.78, '进入回响庇护所', () => {

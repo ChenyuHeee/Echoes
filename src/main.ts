@@ -1,9 +1,13 @@
 import Phaser from 'phaser'
 import { BootScene } from './scenes/BootScene'
 import { MenuScene } from './scenes/MenuScene'
+import { ModeSelectScene } from './scenes/ModeSelectScene'
 import { LoginScene } from './scenes/LoginScene'
 import { LobbyScene } from './scenes/LobbyScene'
 import { DiveScene } from './scenes/DiveScene'
+import { StormScene } from './scenes/StormScene'
+import { RaceScene } from './scenes/RaceScene'
+import { PuzzleScene } from './scenes/PuzzleScene'
 import { SanctuaryScene } from './scenes/SanctuaryScene'
 import { HUDScene } from './scenes/HUDScene'
 import { FactionScene } from './scenes/FactionScene'
@@ -20,10 +24,14 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [
     BootScene,
     MenuScene,
+    ModeSelectScene,
     LoginScene,
     FactionScene,
     LobbyScene,
     DiveScene,
+    StormScene,
+    RaceScene,
+    PuzzleScene,
     SanctuaryScene,
     HUDScene,
   ],
