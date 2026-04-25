@@ -104,6 +104,7 @@ export class BootScene extends Phaser.Scene {
     }
 
     this.time.delayedCall(200, () => {
+      this.scene.launch('ChatScene')   // 聊天悬浮层：全局持久并行场景
       this.scene.start('MenuScene')
     })
   }

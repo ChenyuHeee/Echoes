@@ -11,6 +11,7 @@ import { PuzzleScene } from './scenes/PuzzleScene'
 import { SanctuaryScene } from './scenes/SanctuaryScene'
 import { HUDScene } from './scenes/HUDScene'
 import { FactionScene } from './scenes/FactionScene'
+import { ChatScene } from './scenes/ChatScene'
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -34,6 +35,7 @@ const config: Phaser.Types.Core.GameConfig = {
     PuzzleScene,
     SanctuaryScene,
     HUDScene,
+    ChatScene,
   ],
   physics: {
     default: 'arcade',
