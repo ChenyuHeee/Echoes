@@ -91,6 +91,10 @@ export class DiveScene extends Phaser.Scene {
   // 时序谜题状态
   private echoPuzzleSolved = false
 
+  // 连击系统
+  private comboCount = 0
+  private comboResetAt = 0
+
   constructor() {
     super('DiveScene')
   }
@@ -173,6 +177,7 @@ export class DiveScene extends Phaser.Scene {
     this.updateDots()
     this.updateVisuals(time)
     this.updateMinimap()
+    this.updatePickupMagnet()
 
     if (!this.offline && this.roomRealtime && time - this.lastMoveSyncAt > 100) {
       this.lastMoveSyncAt = time
@@ -631,6 +636,25 @@ export class DiveScene extends Phaser.Scene {
     }).setScrollFactor(0).setDepth(62)
   }
 
+  /** 磁吸拾取：120px 内时砂自动向玩家飞 */
+  private updatePickupMagnet() {
+    const MAGNET_RADIUS = 120
+    const MAGNET_SPEED = 280
+    this.pickups.children.each(child => {
+      const p = child as Phaser.Physics.Arcade.Image
+      if (!p.active) return true
+      const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, p.x, p.y)
+      if (dist < MAGNET_RADIUS) {
+        this.physics.moveToObject(p, this.player, MAGNET_SPEED)
+      } else {
+        // 超出范围：停止磁吸速度（悬浮动画仍由 tween 控制）
+        const body = p.body as Phaser.Physics.Arcade.Body
+        if (body) body.setVelocity(0, 0)
+      }
+      return true
+    })
+  }
+
   private updateMinimap() {
     if (!this.minimap) return
     const { width, height } = this.scale
@@ -806,12 +830,17 @@ export class DiveScene extends Phaser.Scene {
     })
 
     this.physics.add.overlap(this.player, this.pickups, (_, p) => {
-      p.destroy()
-      const gain = 18 + Math.floor(Math.random() * 12)
+      const pickup = p as Phaser.Physics.Arcade.Image
+      const baseGain: number = pickup.getData('sandValue') ?? (18 + Math.floor(Math.random() * 12))
+      // 连击加成：3连 +25%，6连 +60%，10连 +100%
+      const comboMult = this.comboCount >= 10 ? 2.0 : this.comboCount >= 6 ? 1.6 : this.comboCount >= 3 ? 1.25 : 1.0
+      const gain = Math.floor(baseGain * comboMult)
+      pickup.destroy()
       this.timeSand += gain
       addTimeSand(gain)
       audioManager.playPickup()
-      this.emitHud(`拾取时砂 +${gain}`)
+      const label = comboMult > 1 ? `时砂 +${gain}  ×${comboMult.toFixed(2)}` : `时砂 +${gain}`
+      this.emitHud(label)
     })
   }
 
@@ -1561,16 +1590,32 @@ export class DiveScene extends Phaser.Scene {
       })
     }
 
+    // 先读取所有数据，再 destroy（destroy 后 x/y/getData 会失效）
+    const isBoss = enemy.getData('isBoss') === true
+    const isElite = enemy.getData('isElite') === true
+    const dropX = enemy.x
+    const dropY = enemy.y
+
     enemy.destroy()
     audioManager.playEnemyDeath()
     this.diveKills += 1
 
+    // 连击系统：3 秒内连杀叠加倍率
+    const now = Date.now()
+    if (now < this.comboResetAt) {
+      this.comboCount++
+    } else {
+      this.comboCount = 1
+    }
+    this.comboResetAt = now + 3000
+    if (this.comboCount >= 3) {
+      const bonusTxt = this.comboCount >= 6 ? `连击 ×${this.comboCount}！` : `连击 ×${this.comboCount}`
+      this.emitHud(bonusTxt)
+    }
+
     // 小屏幕震动
     this.cameras.main.shake(80, 0.004)
-
     // Boss / 精英 掉落
-    const isBoss = enemy.getData('isBoss') === true
-    const isElite = enemy.getData('isElite') === true
     if (isBoss) {
       const crystalId = `crystal_${this.currentFragmentId}_${Date.now()}`
       addCrystal(crystalId)
@@ -1581,8 +1626,8 @@ export class DiveScene extends Phaser.Scene {
       for (let i = 0; i < 8; i++) {
         this.time.delayedCall(i * 60, () => {
           const ex = this.add.image(
-            enemy.x + (Math.random() - 0.5) * 80,
-            enemy.y + (Math.random() - 0.5) * 80,
+            dropX + (Math.random() - 0.5) * 80,
+            dropY + (Math.random() - 0.5) * 80,
             'effect_echo_ring'
           ).setScale(0.5 + Math.random() * 0.8).setTint(0xff6030)
           this.tweens.add({ targets: ex, alpha: 0, scaleX: 2, scaleY: 2, duration: 400, onComplete: () => ex.destroy() })
@@ -1597,13 +1642,20 @@ export class DiveScene extends Phaser.Scene {
     const dropChance = isBoss ? 1 : isElite ? 0.9 : 0.55
     if (Math.random() < dropChance) {
       const dropCount = isBoss ? 3 : isElite ? 2 : 1
+      // 基础时砂值：普通 18-29，精英 35-50，Boss 80-100
+      const baseValue = isBoss
+        ? 80 + Math.floor(Math.random() * 20)
+        : isElite
+          ? 35 + Math.floor(Math.random() * 15)
+          : 18 + Math.floor(Math.random() * 12)
       for (let i = 0; i < dropCount; i++) {
         const ox = (Math.random() - 0.5) * 60
         const oy = (Math.random() - 0.5) * 60
-        const p = this.physics.add.image(enemy.x + ox, enemy.y + oy, 'pickup')
-        p.setScale(1.5)
+        const p = this.physics.add.image(dropX + ox, dropY + oy, 'pickup')
+        p.setScale(isBoss ? 2.2 : isElite ? 1.8 : 1.5)
+        p.setData('sandValue', baseValue)
         this.pickups.add(p)
-        const shine = this.add.image(enemy.x + ox, enemy.y + oy, 'effect_pickup_shine').setScale(1.1)
+        const shine = this.add.image(dropX + ox, dropY + oy, 'effect_pickup_shine').setScale(isBoss ? 1.8 : 1.1)
         this.tweens.add({ targets: shine, alpha: 0, duration: 550, onComplete: () => shine.destroy() })
         this.tweens.add({ targets: p, y: p.y - 6, duration: 700, yoyo: true, repeat: -1 })
       }
