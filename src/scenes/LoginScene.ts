@@ -28,7 +28,7 @@ export class LoginScene extends Phaser.Scene {
         const username = (user.user_metadata?.username as string) || user.email || user.id.slice(0, 8)
         setPlayerIdentity(user.id, username)
         audioManager.playTransition()
-        this.scene.start('SanctuaryScene')
+        this.scene.start('MenuScene')
       } else {
         // 未登录，渲染完整 UI
         this.buildLoginUI()
@@ -59,7 +59,7 @@ export class LoginScene extends Phaser.Scene {
     this.makeBtn(width / 2 + 100, height * 0.50, '注册', 180, () => this.showRegisterPanel())
     this.makeBtn(width / 2, height * 0.62, '游客模式（仅本地）', 260, () => {
       audioManager.playClick()
-      this.scene.start('SanctuaryScene', { guest: true })
+      this.scene.start('MenuScene', { guest: true })
     })
     this.makeBtn(width / 2, height * 0.74, '返回主菜单', 200, () => {
       audioManager.playClick()

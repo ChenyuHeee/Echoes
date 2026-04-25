@@ -50,8 +50,7 @@ export class ModeSelectScene extends Phaser.Scene {
         tag: '可游玩',
         locked: false,
         action: () => {
-          this.scene.start('DiveScene', { offline: true })
-          this.scene.launch('HUDScene')
+          this.scene.start('LobbyScene')
         },
       },
       {
