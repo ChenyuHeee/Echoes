@@ -111,7 +111,7 @@ export class FactionScene extends Phaser.Scene {
       fontFamily: 'monospace',
       fontSize: '11px',
       color: '#9ab0c8',
-      wordWrap: { width: w - 32 },
+      wordWrap: { width: w - 32, useAdvancedWrap: true },
       align: 'center',
       lineSpacing: 4,
     }).setOrigin(0.5, 0)
@@ -122,7 +122,7 @@ export class FactionScene extends Phaser.Scene {
       fontSize: '10px',
       color: faction.color,
       fontStyle: 'italic',
-      wordWrap: { width: w - 32 },
+      wordWrap: { width: w - 32, useAdvancedWrap: true },
       align: 'center',
     }).setOrigin(0.5)
 
@@ -137,7 +137,7 @@ export class FactionScene extends Phaser.Scene {
       fontFamily: 'monospace',
       fontSize: '9px',
       color: '#5a7090',
-      wordWrap: { width: w - 32 },
+      wordWrap: { width: w - 32, useAdvancedWrap: true },
       align: 'center',
     }).setOrigin(0.5)
 
