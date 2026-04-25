@@ -81,6 +81,14 @@ export class DiveScene extends Phaser.Scene {
   // 玩家身上的「时砂印记」光环（显示当前记忆中的技能）
   private echoAuraGraphics!: Phaser.GameObjects.Graphics
 
+  // ✦ 枪械系统 — 核心：技能以装弹方式进入枪，扣动扳机才真正释放
+  private loadedSkill: SkillType | null = null  // 当前装填的模块
+  private loadedSkillExpire = 0                 // 装填过期时间（6秒后自动退出）
+  private muzzleGraphics!: Phaser.GameObjects.Graphics  // 枪口元素颜色指示器
+
+  // 时序谜题状态
+  private echoPuzzleSolved = false
+
   constructor() {
     super('DiveScene')
   }
@@ -117,6 +125,7 @@ export class DiveScene extends Phaser.Scene {
     this.spawnMapTiles()
     this.spawnPlayer()
     this.echoAuraGraphics = this.add.graphics().setDepth(30)
+    this.muzzleGraphics = this.add.graphics().setDepth(31)
     this.setupCombat()
     this.spawnPickupsAndExtraction()
     this.setupInput()
@@ -366,6 +375,8 @@ export class DiveScene extends Phaser.Scene {
 
     // 叙事碎片拾取物（3-4 个）
     this.spawnLorePickups()
+    // 时序共鸣之门（第4.6章：回响解谜）
+    this.spawnEchoPuzzle()
   }
 
   private spawnLorePickups() {
@@ -425,6 +436,157 @@ export class DiveScene extends Phaser.Scene {
         },
       })
     })
+  }
+
+  // ─────────────────── 时序共鸣之门 ────────────────────────
+  // 第4.6章：此谜题要求回响系统在1.5秒内击中两个感应器
+  // 回响的工作方式（A→B，B触发时A复现）天然满足条件
+  private spawnEchoPuzzle() {
+    if (this.echoPuzzleSolved) return
+
+    const doorX = 780, doorY = 480
+
+    // 门体
+    const doorImg = this.add.image(doorX, doorY, 'prop_terminal_broken')
+      .setScale(2.4).setAlpha(0.9).setTint(0x8040ff)
+    this.tweens.add({ targets: doorImg, alpha: 0.6, duration: 1100, yoyo: true, repeat: -1 })
+
+    // 说明文字
+    const label = this.add.text(doorX, doorY - 70, '时序共鸣之门', {
+      fontFamily: 'monospace', fontSize: '13px', color: '#a060ff',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5)
+    const subLabel = this.add.text(doorX, doorY - 52, '装填模块后开枪 — 回响将同时触发感应器', {
+      fontFamily: 'monospace', fontSize: '9px', color: '#604880',
+    }).setOrigin(0.5)
+
+    // 两个感应器（左右各一）
+    const s1Pos = { x: doorX - 55, y: doorY + 5 }
+    const s2Pos = { x: doorX + 55, y: doorY + 5 }
+
+    const s1 = this.add.rectangle(s1Pos.x, s1Pos.y, 22, 22, 0x6020c0, 0.75).setDepth(5)
+    const s2 = this.add.rectangle(s2Pos.x, s2Pos.y, 22, 22, 0x6020c0, 0.75).setDepth(5)
+    s1.setStrokeStyle(1.5, 0xb080ff, 0.9)
+    s2.setStrokeStyle(1.5, 0xb080ff, 0.9)
+
+    const s1Hint = this.add.text(s1Pos.x, s1Pos.y - 18, 'α', {
+      fontFamily: 'monospace', fontSize: '10px', color: '#8050d0',
+    }).setOrigin(0.5)
+    const s2Hint = this.add.text(s2Pos.x, s2Pos.y - 18, 'β', {
+      fontFamily: 'monospace', fontSize: '10px', color: '#8050d0',
+    }).setOrigin(0.5)
+
+    // 物理感应区
+    const zone1 = this.add.zone(s1Pos.x, s1Pos.y, 30, 30)
+    const zone2 = this.add.zone(s2Pos.x, s2Pos.y, 30, 30)
+    this.physics.add.existing(zone1, true)
+    this.physics.add.existing(zone2, true)
+
+    let s1HitAt = 0, s2HitAt = 0
+    const WINDOW = 1500 // 1.5秒时间窗口
+
+    const checkActivate = () => {
+      const now2 = Date.now()
+      if (s1HitAt > 0 && s2HitAt > 0 && Math.abs(s1HitAt - s2HitAt) <= WINDOW) {
+        this.openEchoDoor(doorImg, s1, s2, label, subLabel, s1Hint, s2Hint, doorX, doorY)
+      }
+    }
+
+    this.physics.add.overlap(this.bullets, zone1, () => {
+      s1HitAt = Date.now()
+      s1.setFillStyle(0xb060ff, 0.95)
+      this.tweens.add({ targets: s1, scaleX: 1.3, scaleY: 1.3, duration: 120, yoyo: true })
+      checkActivate()
+      this.time.delayedCall(WINDOW + 50, () => {
+        if (!this.echoPuzzleSolved) {
+          s1HitAt = 0
+          s1.setFillStyle(0x6020c0, 0.75)
+        }
+      })
+    })
+
+    this.physics.add.overlap(this.bullets, zone2, () => {
+      s2HitAt = Date.now()
+      s2.setFillStyle(0xb060ff, 0.95)
+      this.tweens.add({ targets: s2, scaleX: 1.3, scaleY: 1.3, duration: 120, yoyo: true })
+      checkActivate()
+      this.time.delayedCall(WINDOW + 50, () => {
+        if (!this.echoPuzzleSolved) {
+          s2HitAt = 0
+          s2.setFillStyle(0x6020c0, 0.75)
+        }
+      })
+    })
+  }
+
+  private openEchoDoor(
+    doorImg: Phaser.GameObjects.Image,
+    s1: Phaser.GameObjects.Rectangle, s2: Phaser.GameObjects.Rectangle,
+    label: Phaser.GameObjects.Text, subLabel: Phaser.GameObjects.Text,
+    s1Hint: Phaser.GameObjects.Text, s2Hint: Phaser.GameObjects.Text,
+    doorX: number, doorY: number,
+  ) {
+    if (this.echoPuzzleSolved) return
+    this.echoPuzzleSolved = true
+
+    s1.setFillStyle(0x40ffb0, 1)
+    s2.setFillStyle(0x40ffb0, 1)
+
+    const { width, height } = this.scale
+    const txt = this.add.text(width / 2, height / 2 - 55, '✦ 时序共鸣 ✦', {
+      fontFamily: 'monospace', fontSize: '28px', color: '#b080ff',
+      stroke: '#000000', strokeThickness: 5,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(200)
+    const sub = this.add.text(width / 2, height / 2 - 20, '回响的因果在此刻交汇，门锁应声而开', {
+      fontFamily: 'monospace', fontSize: '13px', color: '#9060cc',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(200)
+    this.tweens.add({
+      targets: [txt, sub], y: '-=40', alpha: 0,
+      duration: 2500, delay: 800,
+      onComplete: () => { txt.destroy(); sub.destroy() },
+    })
+
+    // 门开动画
+    this.tweens.add({
+      targets: doorImg, scaleX: 0, alpha: 0, duration: 600, ease: 'Back.easeIn',
+      onComplete: () => {
+        doorImg.destroy()
+        label.destroy(); subLabel.destroy(); s1Hint.destroy(); s2Hint.destroy()
+
+        // 奖励：完美回响水晶
+        const reward = this.add.image(doorX, doorY, 'prop_time_crystal').setScale(2).setTint(0xb080ff)
+        this.tweens.add({ targets: reward, y: doorY - 12, alpha: 0.7, duration: 900, yoyo: true, repeat: -1 })
+        const rewardHint = this.add.text(doorX, doorY - 48, '[F] 汲取完美回响', {
+          fontFamily: 'monospace', fontSize: '11px', color: '#b080ff',
+        }).setOrigin(0.5).setAlpha(0)
+
+        const KEY_F2 = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F)
+        const checkInterval2 = this.time.addEvent({
+          delay: 100, repeat: -1,
+          callback: () => {
+            if (!reward.active) return
+            const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, doorX, doorY)
+            if (dist < 80) {
+              rewardHint.setAlpha(1)
+              if (Phaser.Input.Keyboard.JustDown(KEY_F2)) {
+                reward.destroy(); rewardHint.destroy(); checkInterval2.remove()
+                const crystalId = `echo_puzzle_${this.currentFragmentId}`
+                addCrystal(crystalId)
+                const gain = 80
+                addTimeSand(gain)
+                this.timeSand += gain
+                audioManager.playPickup()
+                this.emitHud(`✦ 完美回响水晶 已汲取 +${gain} 时砂`)
+              }
+            } else {
+              rewardHint.setAlpha(0)
+            }
+          },
+        })
+      },
+    })
+    this.cameras.main.shake(240, 0.01)
+    audioManager.playEcho()
   }
 
   private setupMinimap() {
@@ -527,7 +689,8 @@ export class DiveScene extends Phaser.Scene {
 
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       if (this.tutorialActive) return
-      this.fireBasicShot(p.worldX, p.worldY)
+      if (p.rightButtonDown()) return   // 右键不射击
+      this.fireGun(p.worldX, p.worldY)
     })
   }
 
@@ -593,9 +756,9 @@ export class DiveScene extends Phaser.Scene {
       const enemy = b as EnemyBody
       const damage = Number(bullet.getData('damage') || 12)
       const isChain = bullet.getData('chain') === true
-      if (isChain) {
-        enemy.setData('chainTarget', true)
-      }
+      const burnOnHit = bullet.getData('burnOnHit') === true
+      if (isChain) enemy.setData('chainTarget', true)
+      if (burnOnHit) this.applyBurnDot(enemy, 12)
       this.damageEnemy(enemy, damage)
       bullet.destroy()
     })
@@ -664,6 +827,24 @@ export class DiveScene extends Phaser.Scene {
       this.echoAuraGraphics.strokeCircle(this.player.x, this.player.y, 26 + pulse * 10)
       this.echoAuraGraphics.lineStyle(1, colorHex, pulse * 0.5)
       this.echoAuraGraphics.strokeCircle(this.player.x, this.player.y, 36 + pulse * 14)
+    }
+
+    // 枪口颜色指示器 — 显示装填的技能模块
+    this.muzzleGraphics.clear()
+    const now = Date.now()
+    if (this.loadedSkill && now < this.loadedSkillExpire) {
+      const def2 = SKILL_DEFINITIONS[this.loadedSkill]
+      const loadColor = Phaser.Display.Color.HexStringToColor(def2.elementColor).color
+      const expire = this.loadedSkillExpire
+      const remaining = (expire - now) / 6000
+      // 拄机圆弧 — 随时间消退
+      this.muzzleGraphics.lineStyle(3, loadColor, 0.85)
+      this.muzzleGraphics.beginPath()
+      this.muzzleGraphics.arc(this.player.x, this.player.y, 18, 0, Math.PI * 2 * remaining, false)
+      this.muzzleGraphics.strokePath()
+      // 中心亮点
+      this.muzzleGraphics.fillStyle(loadColor, 0.7)
+      this.muzzleGraphics.fillCircle(this.player.x, this.player.y, 4)
     }
   }
 
@@ -770,55 +951,222 @@ export class DiveScene extends Phaser.Scene {
     }
   }
 
-  private fireBasicShot(targetX: number, targetY: number) {
-    const b = this.physics.add.image(this.player.x, this.player.y, 'bullet')
-    b.setScale(1.4)
-    b.setData('damage', 12)
-    b.rotation = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY)
-
-    const flash = this.add.image(this.player.x, this.player.y, 'effect_muzzle_flash').setScale(1.2)
-    flash.rotation = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY)
-    this.tweens.add({
-      targets: flash,
-      alpha: 0,
-      duration: 120,
-      onComplete: () => flash.destroy(),
-    })
-
-    this.bullets.add(b)
-    this.physics.moveTo(b, targetX, targetY, 500)
-    audioManager.playShoot()
-
-    this.time.delayedCall(1200, () => b.destroy())
-  }
-
   private tryCast(slotIndex: number) {
     const skills = getRuntimeState().player.skills
-    const skill = skills[slotIndex]
+    const skill = skills[slotIndex] as SkillType | undefined
     if (!skill) return
 
     const now = Date.now()
     const cooldown = this.cooldownUntil[skill] || 0
     if (now < cooldown) {
-      this.emitHud(`${SKILL_DEFINITIONS[skill].name} 冷却中`) 
+      const remaining = ((cooldown - now) / 1000).toFixed(1)
+      this.emitHud(`${SKILL_DEFINITIONS[skill].name} 冷却中 ${remaining}s`)
       return
     }
 
-    const result = this.echoSystem.onSkillUsed(skill)
-    this.castSkill(result.usedSkill, false)
+    const def = SKILL_DEFINITIONS[skill]
 
-    if (result.echoSkill) {
-      this.time.delayedCall(result.echoDelay, () => {
-        this.castSkill(result.echoSkill as SkillType, true)
-      })
+    // ── 即时技能（移动/功能型）直接施放 ──────────────────
+    if (skill === 'dash' || skill === 'teleport' || skill === 'shadow_clone' || skill === 'void_pulse') {
+      const result = this.echoSystem.onSkillUsed(skill)
+      this.castInstantSkill(skill, false)
+      if (result.echoSkill) {
+        this.time.delayedCall(result.echoDelay, () => {
+          if (SKILL_DEFINITIONS[result.echoSkill as SkillType]) {
+            this.castInstantSkill(result.echoSkill as SkillType, true)
+          }
+        })
+        this.emitHud(`${def.name}  ↩  回响：${SKILL_DEFINITIONS[result.echoSkill].name}`)
+      } else {
+        this.emitHud(`◈ ${def.name}`)
+      }
+      this.cooldownUntil[skill] = now + def.cooldown
+      audioManager.playSkill()
+      return
     }
 
-    this.cooldownUntil[skill] = now + SKILL_DEFINITIONS[skill].cooldown
+    // ── 武器模块：装填进枪，等待左键射击 ────────────────
+    this.loadedSkill = skill
+    this.loadedSkillExpire = now + 6000
+
+    const colorHex = Phaser.Display.Color.HexStringToColor(def.elementColor).color
+    this.player.setTint(colorHex)
+    this.time.delayedCall(140, () => { if (this.player.active) this.player.clearTint() })
+
+    // 显示时砂中存储的技能（回响预告）
+    const echoState = this.echoSystem.getState()
+    if (echoState.lastSkill) {
+      const echoDef = SKILL_DEFINITIONS[echoState.lastSkill]
+      this.emitHud(`◈ ${def.name} 已装填  ↩ 回响将复现：${echoDef.name}`)
+    } else {
+      this.emitHud(`◈ ${def.name} 已装填  ─  开枪触发`)
+    }
+    audioManager.playClick()
   }
 
-  private castSkill(skill: SkillType, isEcho: boolean) {
-    const pointer = this.input.activePointer
+  // ── 统一开枪入口 ─────────────────────────────────────
+  private fireGun(targetX: number, targetY: number) {
+    const now = Date.now()
+
+    if (this.loadedSkill && now < this.loadedSkillExpire) {
+      // ── 发射装填的技能模块 ─────────────────────────
+      const skill = this.loadedSkill
+      const def = SKILL_DEFINITIONS[skill]
+
+      const result = this.echoSystem.onSkillUsed(skill)
+      this.fireSkillBullet(skill, false, targetX, targetY)
+
+      if (result.echoSkill) {
+        const echoSk = result.echoSkill as SkillType
+        this.time.delayedCall(result.echoDelay, () => {
+          this.fireSkillBullet(echoSk, true, targetX, targetY)
+        })
+        // 延迟检查组合（让回响先落地）
+        this.time.delayedCall(result.echoDelay + 60, () => {
+          this.checkEchoCombo(echoSk)
+        })
+        this.emitHud(`◈ ${def.name}  ↩  回响：${SKILL_DEFINITIONS[echoSk].name}`)
+        audioManager.playEcho()
+      } else {
+        this.emitHud(`◈ ${def.name}`)
+        audioManager.playSkill()
+      }
+
+      this.cooldownUntil[skill] = now + def.cooldown
+      this.loadedSkill = null
+
+    } else {
+      // ── 普通弹 ─────────────────────────────────────
+      this.loadedSkill = null
+      const b = this.physics.add.image(this.player.x, this.player.y, 'bullet')
+      b.setScale(1.4)
+      b.setData('damage', 12)
+      b.rotation = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY)
+
+      const flash = this.add.image(this.player.x, this.player.y, 'effect_muzzle_flash').setScale(1.2)
+      flash.rotation = b.rotation
+      this.tweens.add({ targets: flash, alpha: 0, duration: 120, onComplete: () => flash.destroy() })
+
+      this.bullets.add(b)
+      this.physics.moveTo(b, targetX, targetY, 500)
+      audioManager.playShoot()
+      this.time.delayedCall(1200, () => b.destroy())
+    }
+  }
+
+  // ── 技能弹：从枪口发射带元素特性的子弹或落地AOE ──────
+  private fireSkillBullet(skill: SkillType, isEcho: boolean, targetX: number, targetY: number) {
     const def = SKILL_DEFINITIONS[skill]
+    const pointer = { worldX: targetX, worldY: targetY }
+
+    // 枪口特效
+    const ring = this.add.image(this.player.x, this.player.y, 'effect_echo_ring')
+      .setScale(isEcho ? 0.9 : 0.7)
+      .setTint(Phaser.Display.Color.HexStringToColor(def.elementColor).color)
+    this.tweens.add({
+      targets: ring, alpha: 0,
+      scaleX: isEcho ? 1.8 : 1.4, scaleY: isEcho ? 1.8 : 1.4,
+      duration: isEcho ? 480 : 320,
+      onComplete: () => ring.destroy(),
+    })
+
+    switch (skill) {
+      // ─ 抛射型技能：以子弹形式飞向目标 ─
+      case 'burn_module':
+      case 'headshot':
+      case 'lightning_bolt': {
+        const texture = isEcho ? 'bullet_echo' : 'bullet'
+        const b = this.physics.add.image(this.player.x, this.player.y, texture)
+        const tints: Record<string, number> = {
+          burn_module: 0xff6030,
+          headshot: 0xf8e860,
+          lightning_bolt: 0xf0e040,
+        }
+        b.setTint(tints[skill] || 0xffffff)
+        b.setScale(skill === 'headshot' ? 1.8 : skill === 'lightning_bolt' ? 1.6 : 1.5)
+        b.setData('damage', (def.damage || 22) * (isEcho ? 0.85 : 1))
+        if (skill === 'burn_module') b.setData('burnOnHit', true)
+        if (skill === 'lightning_bolt') b.setData('chain', true)
+        b.rotation = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY)
+        this.bullets.add(b)
+        this.physics.moveTo(b, targetX, targetY, skill === 'headshot' ? 800 : 600)
+        this.time.delayedCall(1400, () => b.destroy())
+        break
+      }
+
+      // ─ 落地型技能：飞到目标后在落点产生效果 ─
+      case 'plague_module':
+      case 'magnet_module':
+      case 'gravity_well':
+      case 'toxic_fog':
+      case 'cryo_field': {
+        // 先发射一颗投射物到目标点，命中/到达后产生AOE
+        const proj = this.add.image(this.player.x, this.player.y, 'bullet')
+        proj.setTint(Phaser.Display.Color.HexStringToColor(def.elementColor).color)
+        proj.setScale(1.8)
+        proj.rotation = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY)
+        proj.setDepth(20)
+
+        const travelTime = Phaser.Math.Distance.Between(this.player.x, this.player.y, targetX, targetY) / 0.55
+        this.tweens.add({
+          targets: proj,
+          x: targetX, y: targetY,
+          duration: Math.min(travelTime, 600),
+          ease: 'Linear',
+          onComplete: () => {
+            proj.destroy()
+            this.spawnAreaDamage(targetX, targetY, skill)
+            // cryo_field 额外冻结
+            if (skill === 'cryo_field') {
+              this.enemies.children.each(child => {
+                const enemy = child as EnemyBody
+                if (!enemy.active) return true
+                const d = Phaser.Math.Distance.Between(targetX, targetY, enemy.x, enemy.y)
+                if (d < (def.range || 200) * 0.4) this.applySlow(enemy, 3000)
+                return true
+              })
+            }
+          },
+        })
+        break
+      }
+
+      default: {
+        const texture2 = isEcho ? 'bullet_echo' : 'bullet'
+        const b2 = this.physics.add.image(this.player.x, this.player.y, texture2)
+        b2.setScale(1.55)
+        b2.setData('damage', (def.damage || 22) * (isEcho ? 0.85 : 1))
+        b2.rotation = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY)
+        this.bullets.add(b2)
+        this.physics.moveTo(b2, targetX, targetY, 600)
+        this.time.delayedCall(1300, () => b2.destroy())
+      }
+    }
+
+    if (!this.offline && this.roomRealtime) {
+      const rt = getRuntimeState()
+      this.roomRealtime.sendSkill({
+        id: rt.player.id, skillId: skill,
+        x: this.player.x, y: this.player.y,
+        isEcho, t: Date.now(),
+      })
+    }
+  }
+
+  // ── 即时技能（冲刺/瞬移/分身/虚空脉冲）─────────────────
+  private castInstantSkill(skill: SkillType, isEcho: boolean) {
+    const def = SKILL_DEFINITIONS[skill]
+    const pointer = this.input.activePointer
+
+    const ring = this.add.image(this.player.x, this.player.y, 'effect_echo_ring')
+      .setScale(isEcho ? 0.9 : 0.7)
+      .setTint(Phaser.Display.Color.HexStringToColor(def.elementColor).color)
+    this.tweens.add({
+      targets: ring, alpha: 0,
+      scaleX: isEcho ? 1.8 : 1.4, scaleY: isEcho ? 1.8 : 1.4,
+      duration: isEcho ? 480 : 320,
+      onComplete: () => ring.destroy(),
+    })
 
     switch (skill) {
       case 'dash':
@@ -827,105 +1175,67 @@ export class DiveScene extends Phaser.Scene {
         const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, pointer.worldX, pointer.worldY)
         const dist = Math.min(maxRange, Phaser.Math.Distance.Between(this.player.x, this.player.y, pointer.worldX, pointer.worldY))
         const flash = this.add.image(this.player.x, this.player.y, 'effect_teleport_flash').setScale(1.5)
-        this.tweens.add({
-          targets: flash,
-          alpha: 0,
-          duration: 260,
-          onComplete: () => flash.destroy(),
-        })
+        this.tweens.add({ targets: flash, alpha: 0, duration: 260, onComplete: () => flash.destroy() })
+        // 残影
+        const shadow = this.add.image(this.player.x, this.player.y, 'player_dash')
+          .setAlpha(0.5).setScale(2).setTint(0x8060ff)
+        this.tweens.add({ targets: shadow, alpha: 0, duration: 380, onComplete: () => shadow.destroy() })
         this.player.x += Math.cos(angle) * dist
         this.player.y += Math.sin(angle) * dist
-        this.dashVisualUntil = Date.now() + 180
-        break
-      }
-      case 'gravity_well':
-      case 'toxic_fog':
-      case 'plague_module':
-      case 'cryo_field':
-      case 'magnet_module': {
-        this.spawnAreaDamage(pointer.worldX, pointer.worldY, skill)
-        // cryo_field 额外冻结效果
-        if (skill === 'cryo_field') {
-          this.enemies.children.each(child => {
-            const enemy = child as EnemyBody
-            if (!enemy.active) return true
-            const d = Phaser.Math.Distance.Between(pointer.worldX, pointer.worldY, enemy.x, enemy.y)
-            if (d < (SKILL_DEFINITIONS[skill].range || 200) * 0.4) {
-              this.applySlow(enemy, 3000)
-            }
-            return true
-          })
-        }
-        break
-      }
-      case 'lightning_bolt': {
-        // 闪电：主目标 + 链式传导至3个最近敌人
-        const def = SKILL_DEFINITIONS[skill]
-        const b = this.physics.add.image(this.player.x, this.player.y, isEcho ? 'bullet_echo' : 'bullet')
-        b.setTint(0xf0e040)
-        b.setScale(1.6)
-        b.setData('damage', (def.damage || 45) * (isEcho ? 0.8 : 1))
-        b.setData('chain', true)
-        b.rotation = Phaser.Math.Angle.Between(this.player.x, this.player.y, pointer.worldX, pointer.worldY)
-        this.bullets.add(b)
-        this.physics.moveTo(b, pointer.worldX, pointer.worldY, 700)
-        this.time.delayedCall(1400, () => b.destroy())
+        this.dashVisualUntil = Date.now() + 200
         break
       }
       case 'shadow_clone': {
-        const clone = this.add.image(this.player.x, this.player.y, 'player_idle').setTint(0x7a84ff).setAlpha(0.6)
+        const clone = this.add.image(this.player.x, this.player.y, 'player_idle')
+          .setTint(0x7a84ff).setAlpha(0.65).setScale(2)
+        // 分身缓慢漂移吸引敌人
+        const driftAngle = Math.random() * Math.PI * 2
         this.tweens.add({
           targets: clone,
+          x: clone.x + Math.cos(driftAngle) * 80,
+          y: clone.y + Math.sin(driftAngle) * 80,
           alpha: 0,
-          duration: 1800,
+          duration: def.duration || 3500,
           onComplete: () => clone.destroy(),
         })
         break
       }
-      default: {
-        const texture = isEcho ? 'bullet_echo' : 'bullet'
-        const b = this.physics.add.image(this.player.x, this.player.y, texture)
-        b.setScale(1.55)
-        b.setData('damage', (def.damage || 22) * (isEcho ? 0.8 : 1))
-        b.rotation = Phaser.Math.Angle.Between(this.player.x, this.player.y, pointer.worldX, pointer.worldY)
-        this.bullets.add(b)
-        this.physics.moveTo(b, pointer.worldX, pointer.worldY, 600)
-        this.time.delayedCall(1300, () => b.destroy())
+      case 'void_pulse': {
+        // 以自身为圆心向四周推开所有敌人
+        this.enemies.children.each(child => {
+          const e = child as EnemyBody
+          if (!e.active) return true
+          const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, e.x, e.y)
+          if (d < (def.range || 300)) {
+            const angle2 = Phaser.Math.Angle.Between(this.player.x, this.player.y, e.x, e.y)
+            e.setVelocity(Math.cos(angle2) * 500, Math.sin(angle2) * 500)
+            this.damageEnemy(e, def.damage || 60)
+          }
+          return true
+        })
+        this.cameras.main.shake(200, 0.014)
+        const pulse = this.add.image(this.player.x, this.player.y, 'effect_echo_ring')
+          .setScale(0.3).setTint(0xb860ff).setDepth(60)
+        this.tweens.add({
+          targets: pulse, scaleX: 6, scaleY: 6, alpha: 0,
+          duration: 500, onComplete: () => pulse.destroy(),
+        })
+        break
       }
     }
+  }
 
-    if (!this.offline && this.roomRealtime) {
-      const rt = getRuntimeState()
-      this.roomRealtime.sendSkill({
-        id: rt.player.id,
-        skillId: skill,
-        x: this.player.x,
-        y: this.player.y,
-        isEcho,
-        t: Date.now(),
-      })
-    }
+  // ── 已废弃的旧方法保留兼容 ───────────────────────────
+  private fireBasicShot(targetX: number, targetY: number) {
+    this.fireGun(targetX, targetY)
+  }
 
-    const ring = this.add.image(this.player.x, this.player.y, 'effect_echo_ring').setScale(isEcho ? 0.9 : 0.7)
-    this.tweens.add({
-      targets: ring,
-      alpha: 0,
-      scaleX: isEcho ? 1.8 : 1.4,
-      scaleY: isEcho ? 1.8 : 1.4,
-      duration: isEcho ? 480 : 320,
-      onComplete: () => ring.destroy(),
-    })
-
-    // 回响激活时检查技能组合
-    if (isEcho) {
-      this.checkEchoCombo(skill)
-    }
-
-    this.emitHud(`${isEcho ? '回响' : '施放'}：${def.name}`)
-    if (isEcho) {
-      audioManager.playEcho()
+  private castSkill(skill: SkillType, isEcho: boolean) {
+    const pointer = this.input.activePointer
+    if (skill === 'dash' || skill === 'teleport' || skill === 'shadow_clone' || skill === 'void_pulse') {
+      this.castInstantSkill(skill, isEcho)
     } else {
-      audioManager.playSkill()
+      this.fireSkillBullet(skill, isEcho, pointer.worldX, pointer.worldY)
     }
   }
 
@@ -1478,16 +1788,24 @@ export class DiveScene extends Phaser.Scene {
         body: 'WASD 键控制方向\n鼠标方向决定角色朝向',
       },
       {
-        icon: '◆ 射击',
-        body: '鼠标左键 发射子弹\n枪口指向鼠标光标',
+        icon: '◆ 枪即是你的一切',
+        body: '鼠标左键 开枪\n\n普通弹道，基础伤害\n枪法即你战术执行的精准度',
       },
       {
-        icon: '◆ 技能与回响',
-        body: '按 1 / 2 / 3 使用技能槽\n\n连续使用不同技能将触发「回响」\n前一个技能的因果残余将再次结算\n这就是你的核心战术',
+        icon: '◆ 装填技能模块',
+        body: '按 1 / 2 / 3 将技能模块装填入枪\n枪口出现元素光环\n\n然后左键开枪 —— 发射该模块\n枪口就是技能的落点',
+      },
+      {
+        icon: '◆ 回响 —— 时砂的记忆',
+        body: '时砂会「记住」你上一次装填的模块\n\n当你开枪发射新模块时\n时砂自动将上一个模块「复现」\n两个效果在同一瞬间同时生效\n\n这就是「回响」— 次序与节奏的艺术',
+      },
+      {
+        icon: '◆ 技能组合',
+        body: '灼烧弹 → 瘟疫弹 → 开枪\n回响的灼烧引爆毒云 ✦ 毒爆炎浪\n\n引力阱 → 闪电弹 → 开枪\n回响的引力将敌人再拽入电击中心 ✦ 电磁涡流\n\n你的战术签名，由你定义',
       },
       {
         icon: '◆ 撤离',
-        body: '找到地图上的金色撤离信标\n进入范围内按 E 键安全撤出\n\n带着时砂平安回家！',
+        body: '找到地图上的金色撤离信标\n进入范围内按 E 键安全撤出\n\n【隐藏】地图中有时序共鸣之门\n用回响同时击中两个感应器可以打开它',
       },
     ]
 

@@ -84,7 +84,7 @@ export class HUDScene extends Phaser.Scene {
     // ─── 右上：提示区 ─────────────────────────────────────────
     this.add.rectangle(width - 200, 14, 392, 28, 0x060810, 0.78)
       .setScrollFactor(0).setDepth(9)
-    this.hintText = this.add.text(width - 8, 5, 'WASD移动  鼠标瞄准  左键射击  1/2/3技能  E撤离', {
+    this.hintText = this.add.text(width - 8, 5, 'WASD移动  1/2/3装填模块  左键开枪  E撤离', {
       fontFamily: 'monospace',
       fontSize: '11px',
       color: '#4a6080',
@@ -166,6 +166,13 @@ export class HUDScene extends Phaser.Scene {
         fontSize: '10px',
         color: '#384858',
       }).setScrollFactor(0).setDepth(11)
+
+      // 装填提示
+      this.add.text(x + slotW / 2 - 6, y - slotH / 2 + 6, '装填', {
+        fontFamily: 'monospace',
+        fontSize: '8px',
+        color: '#2a3a4a',
+      }).setOrigin(1, 0).setScrollFactor(0).setDepth(11)
 
       // 技能名
       const label = this.add.text(x, y - 6, def ? def.name : '—', {
