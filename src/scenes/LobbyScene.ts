@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { FRAGMENT_OPTIONS, FRAGMENT_THEMES, type FragmentId } from '../config/fragments'
-import { createRoom, getCurrentUser, joinRoom } from '../lib/supabase'
+import { closeRoom, closeRoomBeacon, createRoom, getCurrentUser, joinRoom } from '../lib/supabase'
 import { getRuntimeState, setRoom, setSelectedFragment } from '../state/gameState'
 import { audioManager } from '../systems/AudioManager'
 
@@ -9,6 +9,9 @@ export class LobbyScene extends Phaser.Scene {
   private selectedIdx = 0
   private fragCards: Phaser.GameObjects.Container[] = []
   private overlay: HTMLDivElement | null = null
+  /** 本局创建的房间 ID（用于清理） */
+  private createdRoomId: string | null = null
+  private _unloadHandler: (() => void) | null = null
 
   constructor() {
     super('LobbyScene')
@@ -65,8 +68,8 @@ export class LobbyScene extends Phaser.Scene {
       this.scene.start('SanctuaryScene')
     })
 
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.removeOverlay())
-    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.removeOverlay())
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanupRoom())
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.cleanupRoom())
   }
 
   // ─────────────────── 碎片卡片 ────────────────────────
@@ -187,6 +190,10 @@ export class LobbyScene extends Phaser.Scene {
     }
 
     setRoom({ id: data.id, code: data.room_code, hostId, mapFragment })
+    this.createdRoomId = data.id as string
+    // 注册 beforeunload：关闭浏览器时自动关闭房间
+    this._unloadHandler = () => closeRoomBeacon(this.createdRoomId!)
+    window.addEventListener('beforeunload', this._unloadHandler)
     this.statusText.setText(`✦ 房间已创建  ${data.room_code}  —  点击"离线深潜"以房主身份开始`)
     this.showRoomCodePanel(data.room_code, mapFragment)
   }
@@ -343,6 +350,19 @@ export class LobbyScene extends Phaser.Scene {
 
   private removeOverlay() {
     if (this.overlay) { this.overlay.remove(); this.overlay = null }
+  }
+
+  private cleanupRoom() {
+    this.removeOverlay()
+    if (this._unloadHandler) {
+      window.removeEventListener('beforeunload', this._unloadHandler)
+      this._unloadHandler = null
+    }
+    // 正常离开时（未跳转到 DiveScene）关闭房间
+    if (this.createdRoomId && !this.scene.isActive('DiveScene')) {
+      void closeRoom(this.createdRoomId)
+      this.createdRoomId = null
+    }
   }
 
   // ─────────────────── 辅助 ────────────────────────────

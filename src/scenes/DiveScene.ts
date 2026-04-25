@@ -4,7 +4,7 @@ import { EchoSystem } from '../systems/EchoSystem'
 import { SKILL_DEFINITIONS } from '../config/skills'
 import { ENEMY_DEFINITIONS } from '../config/enemies'
 import { PROLOGUE_LINES } from '../config/lore'
-import { getCurrentUser, saveDiveRecord } from '../lib/supabase'
+import { closeRoomBeacon, getCurrentUser, saveDiveRecord } from '../lib/supabase'
 import { audioManager } from '../systems/AudioManager'
 import { voiceManager, getSpeakerRole } from '../systems/VoiceManager'
 import { RoomRealtime } from '../net/realtime'
@@ -62,6 +62,8 @@ export class DiveScene extends Phaser.Scene {
   private diveFinished = false
   private currentFragmentId: FragmentId = 'steam_district'
   private currentTheme: FragmentTheme = FRAGMENT_THEMES.steam_district
+  /** 关闭浏览器时自动关闭在线房间 */
+  private _unloadHandler: (() => void) | null = null
 
   // 波次系统
   private waveNumber = 0
@@ -144,6 +146,19 @@ export class DiveScene extends Phaser.Scene {
 
     if (!this.offline && this.roomCode) {
       void this.setupRealtime()
+      // 关闭浏览器时自动关闭房间
+      const rt2 = getRuntimeState()
+      if (rt2.room?.id) {
+        const roomId = rt2.room.id
+        this._unloadHandler = () => closeRoomBeacon(roomId)
+        window.addEventListener('beforeunload', this._unloadHandler)
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+          if (this._unloadHandler) {
+            window.removeEventListener('beforeunload', this._unloadHandler)
+            this._unloadHandler = null
+          }
+        })
+      }
     }
 
     patchRuntimeState({ diveStartAt: Date.now() })
@@ -1714,6 +1729,18 @@ export class DiveScene extends Phaser.Scene {
 
     this.roomRealtime?.disconnect()
     this.roomRealtime = null
+
+    // 正常结束深潜时关闭在线房间，并反注册 beforeunload
+    if (!this.offline) {
+      const rt2 = getRuntimeState()
+      if (rt2.room?.id) {
+        void import('../lib/supabase').then(m => m.closeRoom(rt2.room!.id))
+      }
+      if (this._unloadHandler) {
+        window.removeEventListener('beforeunload', this._unloadHandler)
+        this._unloadHandler = null
+      }
+    }
 
     const user = await getCurrentUser()
     if (user) {

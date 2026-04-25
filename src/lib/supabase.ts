@@ -169,6 +169,34 @@ export async function leaveRoom(roomId: string, playerId: string) {
     .eq('player_id', playerId)
 }
 
+/** 关闭房间（房主离开/浏览器关闭时调用） */
+export async function closeRoom(roomId: string) {
+  return supabase
+    .from('game_rooms')
+    .update({ status: 'finished', updated_at: new Date().toISOString() })
+    .eq('id', roomId)
+}
+
+/**
+ * 在 beforeunload 中调用，使用 keepalive fetch 确保请求在页面卸载时仍能发出。
+ * 直接走 Supabase REST API，不依赖 JS client 的异步队列。
+ */
+export function closeRoomBeacon(roomId: string) {
+  if (!supabaseUrl || supabaseUrl.includes('placeholder')) return
+  const url = `${supabaseUrl}/rest/v1/game_rooms?id=eq.${encodeURIComponent(roomId)}`
+  void fetch(url, {
+    method: 'PATCH',
+    keepalive: true,
+    headers: {
+      'apikey': supabaseAnonKey,
+      'Authorization': `Bearer ${supabaseAnonKey}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal',
+    },
+    body: JSON.stringify({ status: 'finished', updated_at: new Date().toISOString() }),
+  })
+}
+
 // 排行榜
 export async function getLeaderboard(season: number = 1, limit: number = 50) {
   return supabase
