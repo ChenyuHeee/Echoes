@@ -17,6 +17,8 @@ import {
   recordDiveComplete,
   addCrystal,
   addLoreEntry,
+  getDamageMultiplier,
+  getSpeedMultiplier,
 } from '../state/gameState'
 import { LORE_ENTRIES } from '../config/lore'
 import type { SkillType } from '../types/game.types'
@@ -920,7 +922,7 @@ export class DiveScene extends Phaser.Scene {
     if (this.keys.a.isDown || this.cursors.left.isDown) move.x -= 1
     if (this.keys.d.isDown || this.cursors.right.isDown) move.x += 1
 
-    move.normalize().scale(210)
+    move.normalize().scale(210 * getSpeedMultiplier())
     this.player.setVelocity(move.x, move.y)
 
     this.player.setRotation(0)
@@ -1748,9 +1750,10 @@ export class DiveScene extends Phaser.Scene {
   }
 
   private damageEnemy(enemy: EnemyBody, amount: number, showNumber = true) {
-    enemy.hp -= amount
+    const finalAmount = Math.round(amount * getDamageMultiplier())
+    enemy.hp -= finalAmount
     if (showNumber) {
-      this.spawnDamageNumber(enemy.x, enemy.y - 20, amount, '#f0e050')
+      this.spawnDamageNumber(enemy.x, enemy.y - 20, finalAmount, '#f0e050')
     }
 
     if (enemy.hp > 0) {
@@ -2109,7 +2112,7 @@ export class DiveScene extends Phaser.Scene {
       },
       diveStartAt: null,
     })
-    recordDiveComplete(this.diveKills)
+    recordDiveComplete(this.diveKills, result === 'success')
 
     // 保存引用以供后续广播结算使用
     const liveRealtime = this.roomRealtime

@@ -2,6 +2,23 @@ import type { FragmentId } from '../config/fragments'
 import type { FactionId } from '../config/factions'
 import type { SkillType } from '../types/game.types'
 
+export interface DailyProgress {
+  date: string
+  kills: number
+  dives: number
+  extractions: number
+  killsRewarded: boolean
+  divesRewarded: boolean
+  extractionsRewarded: boolean
+}
+
+export interface PlayerUpgrades {
+  maxHp: number      // 0-8，每级 +15 HP
+  stability: number  // 0-8，每级 +10 稳定度
+  damage: number     // 0-8，每级 +5% 伤害
+  speed: number      // 0-8，每级 +5% 速度
+}
+
 export interface RuntimePlayer {
   id: string
   username: string
@@ -17,8 +34,11 @@ export interface RuntimePlayer {
   crystalsFound: string[]
   loreCollected: string[]
   level: number
+  exp: number
   totalDives: number
   totalKills: number
+  upgrades: PlayerUpgrades
+  dailyProgress: DailyProgress
 }
 
 export interface RuntimeRoom {
@@ -59,8 +79,11 @@ function createDefaultState(): RuntimeState {
       crystalsFound: [],
       loreCollected: [],
       level: 1,
+      exp: 0,
       totalDives: 0,
       totalKills: 0,
+      upgrades: { maxHp: 0, stability: 0, damage: 0, speed: 0 },
+      dailyProgress: { date: '', kills: 0, dives: 0, extractions: 0, killsRewarded: false, divesRewarded: false, extractionsRewarded: false },
     },
     room: null,
     diveStartAt: null,
@@ -225,18 +248,102 @@ export function addLoreEntry(loreId: string) {
   persistState()
 }
 
-export function recordDiveComplete(kills: number) {
-  const level = Math.floor(1 + (runtimeState.player.totalDives + 1) / 5)
+function computeMaxHp(level: number, upgradeLevel: number): number {
+  return 120 + (level - 1) * 8 + upgradeLevel * 15
+}
+function computeMaxStability(level: number, upgradeLevel: number): number {
+  return 100 + (level - 1) * 6 + upgradeLevel * 10
+}
+
+export function recordDiveComplete(kills: number, extracted: boolean) {
+  // ── 每日进度 ──
+  const today = new Date().toISOString().slice(0, 10)
+  const dp = runtimeState.player.dailyProgress
+  const newDp: DailyProgress = dp.date === today
+    ? { ...dp }
+    : { date: today, kills: 0, dives: 0, extractions: 0, killsRewarded: false, divesRewarded: false, extractionsRewarded: false }
+  newDp.kills += kills
+  newDp.dives += 1
+  if (extracted) newDp.extractions += 1
+
+  // ── 经验值 / 升级 ──
+  const EXP_PER_KILL = 15
+  const EXP_EXTRACT_BONUS = 50
+  let { exp, level } = runtimeState.player
+  exp += kills * EXP_PER_KILL + (extracted ? EXP_EXTRACT_BONUS : 10)
+  const MAX_LEVEL = 20
+  while (level < MAX_LEVEL) {
+    const needed = level * 150
+    if (exp >= needed) { exp -= needed; level++ } else break
+  }
+  if (level >= MAX_LEVEL) exp = 0
+
+  const upgrades = runtimeState.player.upgrades
   runtimeState = {
     ...runtimeState,
     player: {
       ...runtimeState.player,
       totalDives: runtimeState.player.totalDives + 1,
       totalKills: runtimeState.player.totalKills + kills,
-      level: Math.max(runtimeState.player.level, level),
-      maxHp: 120 + (level - 1) * 10,
-      maxStability: 100 + (level - 1) * 8,
+      level,
+      exp,
+      maxHp: computeMaxHp(level, upgrades.maxHp),
+      maxStability: computeMaxStability(level, upgrades.stability),
+      dailyProgress: newDp,
     },
   }
   persistState()
+}
+
+// 每升一级属性强化费用 = (当前等级+1) * 30 时砂
+export const UPGRADE_MAX_LEVEL = 8
+export const UPGRADE_COST_PER_LEVEL = 30
+
+export function upgradeAttribute(attr: keyof PlayerUpgrades): boolean {
+  const upgrades = { ...runtimeState.player.upgrades }
+  if (upgrades[attr] >= UPGRADE_MAX_LEVEL) return false
+  const cost = (upgrades[attr] + 1) * UPGRADE_COST_PER_LEVEL
+  if (runtimeState.player.timeSand < cost) return false
+  upgrades[attr] += 1
+  const { level } = runtimeState.player
+  runtimeState = {
+    ...runtimeState,
+    player: {
+      ...runtimeState.player,
+      timeSand: runtimeState.player.timeSand - cost,
+      upgrades,
+      maxHp: computeMaxHp(level, upgrades.maxHp),
+      maxStability: computeMaxStability(level, upgrades.stability),
+    },
+  }
+  persistState()
+  return true
+}
+
+export function claimDailyQuest(quest: 'kills' | 'dives' | 'extractions'): number {
+  const today = new Date().toISOString().slice(0, 10)
+  const dp = { ...runtimeState.player.dailyProgress }
+  if (dp.date !== today) return 0
+  const REWARDS = { kills: 20, dives: 25, extractions: 30 } as const
+  const rewardedKey = (quest + 'Rewarded') as 'killsRewarded' | 'divesRewarded' | 'extractionsRewarded'
+  if (dp[rewardedKey]) return 0
+  dp[rewardedKey] = true
+  const reward = REWARDS[quest]
+  runtimeState = {
+    ...runtimeState,
+    player: {
+      ...runtimeState.player,
+      timeSand: runtimeState.player.timeSand + reward,
+      dailyProgress: dp,
+    },
+  }
+  persistState()
+  return reward
+}
+
+export function getDamageMultiplier(): number {
+  return 1 + runtimeState.player.upgrades.damage * 0.05
+}
+export function getSpeedMultiplier(): number {
+  return 1 + runtimeState.player.upgrades.speed * 0.05
 }

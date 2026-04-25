@@ -6,13 +6,18 @@ import {
   setLastHarvestAt,
   unlockSkill,
   setEquippedSkills,
+  upgradeAttribute,
+  claimDailyQuest,
+  UPGRADE_MAX_LEVEL,
+  UPGRADE_COST_PER_LEVEL,
 } from '../state/gameState'
 import { audioManager } from '../systems/AudioManager'
 import { SKILL_DEFINITIONS } from '../config/skills'
 import { FACTION_DEFINITIONS } from '../config/factions'
 import type { SkillType } from '../types/game.types'
+import type { PlayerUpgrades } from '../state/gameState'
 
-type TabId = 'overview' | 'workshop' | 'character' | 'lore'
+type TabId = 'overview' | 'workshop' | 'upgrade' | 'character' | 'lore'
 
 export class SanctuaryScene extends Phaser.Scene {
   private tipText!: Phaser.GameObjects.Text
@@ -56,6 +61,7 @@ export class SanctuaryScene extends Phaser.Scene {
     const TABS: Array<{ id: TabId; label: string }> = [
       { id: 'overview', label: '概览' },
       { id: 'workshop', label: '技能工坊' },
+      { id: 'upgrade', label: '属性强化' },
       { id: 'character', label: '角色档案' },
       { id: 'lore', label: '残响档案' },
     ]
@@ -108,6 +114,7 @@ export class SanctuaryScene extends Phaser.Scene {
     switch (tab) {
       case 'overview': this.buildOverview(); break
       case 'workshop': this.buildWorkshop(); break
+      case 'upgrade': this.buildUpgrade(); break
       case 'character': this.buildCharacter(); break
       case 'lore': this.buildLore(); break
     }
@@ -117,25 +124,159 @@ export class SanctuaryScene extends Phaser.Scene {
   private buildOverview() {
     const { width, height } = this.scale
     const rt = getRuntimeState()
-    const cy = (height - 108) / 2  // 内容区中心
+    const cw = 700
+    const leftX = width / 2 - cw / 2
 
-    // NPC 对话
-    const dialogue = SANCTUARY_LINES
-      .map(l => `${l.speaker}：${l.text}`)
-      .join('\n\n')
+    let y = 12
+
+    // ── NPC 对话（精简，只显示一条） ─────────────────────────
+    const line = SANCTUARY_LINES[0]
     this.contentLayer.add(this.make.text({
-      x: width / 2,
-      y: cy - 110,
-      text: dialogue,
+      x: width / 2, y,
+      text: `${line.speaker}：${line.text}`,
       style: {
-        fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#b8d0e8',
-        wordWrap: { width: 700 }, lineSpacing: 5, align: 'center',
+        fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#7090a8',
+        wordWrap: { width: cw }, align: 'center',
       },
       add: false,
-    }).setOrigin(0.5))
+    }).setOrigin(0.5, 0))
+    y += 30
 
-    // 温室收取按钮
-    this.contentLayer.add(this.makeBtn(width / 2 - 160, cy + 40, '收取温室时砂 +20', 200, () => {
+    // ── 等级 & 经验条 ─────────────────────────────────────
+    const { level, exp } = rt.player
+    const expNeeded = level * 150
+    const expFrac = Math.min(1, exp / expNeeded)
+    const BAR_W = cw
+    const BAR_H = 18
+
+    // 背景板
+    const levelBg = this.add.rectangle(width / 2, y + 28, cw + 16, 66, 0x0a1020)
+    levelBg.setStrokeStyle(1, 0x2a4060, 0.5)
+    this.contentLayer.add(levelBg)
+
+    this.contentLayer.add(this.make.text({
+      x: leftX, y: y + 6,
+      text: `Lv.${level}`,
+      style: { fontFamily: '"Silkscreen", monospace', fontSize: '20px', color: '#c8d8ff' },
+      add: false,
+    }))
+    this.contentLayer.add(this.make.text({
+      x: leftX + 70, y: y + 10,
+      text: `${exp} / ${expNeeded} XP`,
+      style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#6080a0' },
+      add: false,
+    }))
+    // 经验条轨道
+    this.contentLayer.add(this.add.rectangle(width / 2, y + 38, BAR_W, BAR_H, 0x0c1828))
+    const xpFill = this.add.rectangle(leftX + BAR_W * expFrac / 2, y + 38, BAR_W * expFrac, BAR_H, 0x3060c0)
+    this.contentLayer.add(xpFill)
+    this.contentLayer.add(this.make.text({
+      x: width / 2, y: y + 38,
+      text: `${Math.round(expFrac * 100)}%`,
+      style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#90b8e0' },
+      add: false,
+    }).setOrigin(0.5))
+    y += 76
+
+    // ── 每日任务 ──────────────────────────────────────────
+    const today = new Date().toISOString().slice(0, 10)
+    const dp = rt.player.dailyProgress
+    const isToday = dp.date === today
+    const QUESTS = [
+      { key: 'kills' as const,      label: '今日击杀 20 敌人',    goal: 20,  progress: isToday ? dp.kills : 0,      rewarded: isToday && dp.killsRewarded,      reward: 20 },
+      { key: 'dives' as const,      label: '今日深潜 2 次',        goal: 2,   progress: isToday ? dp.dives : 0,       rewarded: isToday && dp.divesRewarded,       reward: 25 },
+      { key: 'extractions' as const, label: '今日成功撤离 1 次',   goal: 1,   progress: isToday ? dp.extractions : 0, rewarded: isToday && dp.extractionsRewarded, reward: 30 },
+    ]
+
+    this.contentLayer.add(this.make.text({
+      x: leftX, y,
+      text: '每日任务',
+      style: { fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#c8a850' },
+      add: false,
+    }))
+    y += 18
+
+    QUESTS.forEach(q => {
+      const done = q.progress >= q.goal
+      const cardH = 40
+      const bg = this.add.rectangle(width / 2, y + cardH / 2, cw, cardH, q.rewarded ? 0x0a1808 : 0x080e1a)
+      bg.setStrokeStyle(1, q.rewarded ? 0x1a4020 : (done ? 0x405020 : 0x1a2838), 0.7)
+      this.contentLayer.add(bg)
+
+      // 任务名
+      this.contentLayer.add(this.make.text({
+        x: leftX + 10, y: y + 12,
+        text: q.label,
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: q.rewarded ? '#3a6030' : '#8090a8' },
+        add: false,
+      }))
+      // 进度
+      this.contentLayer.add(this.make.text({
+        x: leftX + 10, y: y + 24,
+        text: `${Math.min(q.progress, q.goal)} / ${q.goal}`,
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: done ? '#a0c840' : '#405060' },
+        add: false,
+      }))
+
+      // 奖励按钮 / 状态
+      if (q.rewarded) {
+        this.contentLayer.add(this.make.text({
+          x: width / 2 + cw / 2 - 80, y: y + cardH / 2,
+          text: '✦ 已领取',
+          style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#3a6030' },
+          add: false,
+        }).setOrigin(0.5))
+      } else if (done) {
+        const claimBg = this.add.rectangle(width / 2 + cw / 2 - 80, y + cardH / 2, 120, 26, 0x1a3010)
+        claimBg.setStrokeStyle(1, 0x60a030, 0.7)
+        claimBg.setInteractive({ useHandCursor: true })
+        this.contentLayer.add(claimBg)
+        this.contentLayer.add(this.make.text({
+          x: width / 2 + cw / 2 - 80, y: y + cardH / 2,
+          text: `领取 +${q.reward}时砂`,
+          style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#90d040' },
+          add: false,
+        }).setOrigin(0.5))
+        claimBg.on('pointerdown', () => {
+          audioManager.playHarvest()
+          const gained = claimDailyQuest(q.key)
+          if (gained > 0) {
+            this.tipText.setText(`✦ 任务完成 +${gained} 时砂！`)
+            this.switchTab('overview')
+          }
+        })
+        claimBg.on('pointerover', () => claimBg.setFillStyle(0x243a18, 1))
+        claimBg.on('pointerout', () => claimBg.setFillStyle(0x1a3010, 1))
+      } else {
+        // 进度条
+        const PW = 120
+        this.contentLayer.add(this.add.rectangle(width / 2 + cw / 2 - 80, y + cardH / 2, PW, 8, 0x0c1828))
+        const pFrac = q.goal > 0 ? q.progress / q.goal : 0
+        if (pFrac > 0) {
+          this.contentLayer.add(this.add.rectangle(
+            width / 2 + cw / 2 - 80 - PW / 2 + PW * pFrac / 2, y + cardH / 2,
+            PW * pFrac, 8, 0x205040))
+        }
+      }
+      y += cardH + 6
+    })
+
+    y += 10
+
+    // ── 温室收取 & 时砂 ─────────────────────────────────
+    const harvestBg = this.add.rectangle(width / 2 - 180, y + 19, 220, 38, 0x080e1a)
+    harvestBg.setStrokeStyle(1, 0x305060, 0.55)
+    harvestBg.setInteractive({ useHandCursor: true })
+    this.contentLayer.add(harvestBg)
+    this.contentLayer.add(this.make.text({
+      x: width / 2 - 180, y: y + 19,
+      text: '收取温室时砂  +20',
+      style: { fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#70a0c0' },
+      add: false,
+    }).setOrigin(0.5))
+    harvestBg.on('pointerover', () => harvestBg.setFillStyle(0x0c1828, 1))
+    harvestBg.on('pointerout', () => harvestBg.setFillStyle(0x080e1a, 1))
+    harvestBg.on('pointerdown', () => {
       const now = Date.now()
       const state = getRuntimeState()
       const COOLDOWN = 4 * 60 * 60 * 1000
@@ -150,26 +291,26 @@ export class SanctuaryScene extends Phaser.Scene {
       setLastHarvestAt(now)
       audioManager.playHarvest()
       this.tipText.setText(`✦ +20 时砂  当前：${getRuntimeState().player.timeSand}`)
-    }))
+      this.switchTab('overview')
+    })
 
-    // 当前时砂
-    const sandTxt = this.make.text({
-      x: width / 2,
-      y: cy + 90,
-      text: `当前时砂：${rt.player.timeSand}`,
+    // 时砂显示
+    this.contentLayer.add(this.make.text({
+      x: width / 2, y: y + 19,
+      text: `⌛ ${rt.player.timeSand} 时砂`,
       style: { fontFamily: '"Silkscreen", monospace', fontSize: '14px', color: '#e8d080' },
       add: false,
-    }).setOrigin(0.5)
-    this.contentLayer.add(sandTxt)
+    }).setOrigin(0.5))
 
-    // 前往深潜
-    this.contentLayer.add(this.makeBtn(width / 2 + 160, cy + 40, '选择游戏模式', 200, () => {
+    // 选择模式
+    this.contentLayer.add(this.makeBtn(width / 2 + 180, y + 19, '▶ 选择游戏模式', 200, () => {
       audioManager.playClick()
       this.scene.start('ModeSelectScene')
     }))
+    y += 54
 
     // 返回菜单
-    this.contentLayer.add(this.makeBtn(width / 2, cy + 130, '返回主菜单', 180, () => {
+    this.contentLayer.add(this.makeBtn(width / 2, y + 10, '返回主菜单', 180, () => {
       audioManager.playClick()
       this.scene.start('MenuScene')
     }))
@@ -324,6 +465,140 @@ export class SanctuaryScene extends Phaser.Scene {
         bg.setFillStyle(isEquipped ? 0x162030 : isUnlocked ? 0x0c1520 : 0x080c12, 1)
       })
     })
+  }
+
+  // ─────────────────── TAB: 属性强化 ──────────────────
+  private buildUpgrade() {
+    const { width } = this.scale
+    const rt = getRuntimeState()
+    const cx = width / 2
+    let y = 8
+
+    // 顶部说明
+    this.contentLayer.add(this.make.text({
+      x: cx, y,
+      text: '消耗时砂强化基础属性，永久生效并作用于所有深潜',
+      style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#506070' },
+      add: false,
+    }).setOrigin(0.5, 0))
+    y += 22
+
+    const ATTRS: Array<{
+      key: keyof PlayerUpgrades
+      name: string
+      desc: string
+      perLevelText: (lv: number) => string
+      color: string
+    }> = [
+      { key: 'maxHp',     name: '生命上限',  desc: '增加最大 HP',          perLevelText: lv => `+${lv * 15} HP（当前 +${rt.player.upgrades.maxHp * 15}）`,    color: '#d06060' },
+      { key: 'stability', name: '稳定度上限', desc: '增加最大时间稳定度',   perLevelText: lv => `+${lv * 10} 稳（当前 +${rt.player.upgrades.stability * 10}）`,  color: '#60a0d0' },
+      { key: 'damage',    name: '伤害加成',   desc: '提升所有技能/子弹伤害', perLevelText: lv => `+${lv * 5}%（当前 +${rt.player.upgrades.damage * 5}%）`,       color: '#d08030' },
+      { key: 'speed',     name: '移动速度',   desc: '提升角色移动速度',      perLevelText: lv => `+${lv * 5}%（当前 +${rt.player.upgrades.speed * 5}%）`,        color: '#60c080' },
+    ]
+
+    const CARD_W = 640
+    const CARD_H = 70
+    const GAP = 10
+
+    ATTRS.forEach(attr => {
+      const curLv = rt.player.upgrades[attr.key]
+      const maxed = curLv >= UPGRADE_MAX_LEVEL
+      const cost = (curLv + 1) * UPGRADE_COST_PER_LEVEL
+      const canAfford = !maxed && rt.player.timeSand >= cost
+      const attrColor = Phaser.Display.Color.HexStringToColor(attr.color).color
+
+      // 卡片背景
+      const bg = this.add.rectangle(cx, y + CARD_H / 2, CARD_W, CARD_H, 0x080e1a)
+      bg.setStrokeStyle(1, maxed ? 0x302808 : 0x1a2838, 0.8)
+      this.contentLayer.add(bg)
+
+      // 左色条
+      this.contentLayer.add(this.add.rectangle(cx - CARD_W / 2 + 3, y + CARD_H / 2, 4, CARD_H - 4, attrColor, maxed ? 0.4 : 0.8))
+
+      // 名称
+      this.contentLayer.add(this.make.text({
+        x: cx - CARD_W / 2 + 16, y: y + 8,
+        text: attr.name,
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '15px', color: maxed ? '#706040' : attr.color },
+        add: false,
+      }))
+      // 描述
+      this.contentLayer.add(this.make.text({
+        x: cx - CARD_W / 2 + 16, y: y + 28,
+        text: attr.desc + '  ' + attr.perLevelText(UPGRADE_MAX_LEVEL),
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#405060' },
+        add: false,
+      }))
+
+      // 等级进度格（8格）
+      for (let i = 0; i < UPGRADE_MAX_LEVEL; i++) {
+        const filled = i < curLv
+        const bx = cx - CARD_W / 2 + 16 + i * 28
+        const by = y + CARD_H - 14
+        this.contentLayer.add(this.add.rectangle(bx, by, 24, 10, filled ? attrColor : 0x0c1828, filled ? 0.8 : 1)
+          .setStrokeStyle(1, filled ? attrColor : 0x1a2838, filled ? 0.3 : 0.6))
+      }
+
+      // 升级按钮 / 状态
+      const btnX = cx + CARD_W / 2 - 80
+      const btnY = y + CARD_H / 2
+      if (maxed) {
+        this.contentLayer.add(this.make.text({
+          x: btnX, y: btnY,
+          text: '★ MAX',
+          style: { fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#806030' },
+          add: false,
+        }).setOrigin(0.5))
+      } else {
+        const btnBg = this.add.rectangle(btnX, btnY, 140, 36, canAfford ? 0x0c1828 : 0x080a10)
+        btnBg.setStrokeStyle(1, canAfford ? attrColor : 0x1a2030, canAfford ? 0.7 : 0.3)
+        this.contentLayer.add(btnBg)
+        this.contentLayer.add(this.make.text({
+          x: btnX, y: btnY - 8,
+          text: `Lv.${curLv} → Lv.${curLv + 1}`,
+          style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: canAfford ? attr.color : '#2a3840' },
+          add: false,
+        }).setOrigin(0.5))
+        this.contentLayer.add(this.make.text({
+          x: btnX, y: btnY + 6,
+          text: `${cost} 时砂`,
+          style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: canAfford ? '#e8d060' : '#2a3038' },
+          add: false,
+        }).setOrigin(0.5))
+        if (canAfford) {
+          btnBg.setInteractive({ useHandCursor: true })
+          btnBg.on('pointerover', () => btnBg.setFillStyle(0x142030, 1))
+          btnBg.on('pointerout', () => btnBg.setFillStyle(0x0c1828, 1))
+          btnBg.on('pointerdown', () => {
+            audioManager.playPickup()
+            const success = upgradeAttribute(attr.key)
+            if (success) {
+              this.tipText.setText(`✦ ${attr.name} 强化至 Lv.${getRuntimeState().player.upgrades[attr.key]}`)
+              this.buildUpgrade()
+            } else {
+              this.tipText.setText('时砂不足！')
+            }
+          })
+        } else if (!maxed) {
+          this.contentLayer.add(this.make.text({
+            x: btnX, y: btnY + 20,
+            text: `差 ${cost - rt.player.timeSand} 时砂`,
+            style: { fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#3a4858' },
+            add: false,
+          }).setOrigin(0.5))
+        }
+      }
+
+      y += CARD_H + GAP
+    })
+
+    // 当前时砂
+    this.contentLayer.add(this.make.text({
+      x: cx, y: y + 8,
+      text: `当前时砂：${rt.player.timeSand}`,
+      style: { fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#e8d080' },
+      add: false,
+    }).setOrigin(0.5))
   }
 
   // ─────────────────── TAB: 角色档案 ──────────────────
