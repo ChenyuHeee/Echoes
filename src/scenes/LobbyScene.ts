@@ -249,7 +249,7 @@ export class LobbyScene extends Phaser.Scene {
       leaveRect.on('pointerdown', () => {
         audioManager.playClick()
         this.cleanupAll()
-        this.scene.start('LobbyScene')
+        this.scene.start('SanctuaryScene')
       })
     }
 
@@ -325,13 +325,13 @@ export class LobbyScene extends Phaser.Scene {
         const selfId = getRuntimeState().player.id
         if (p.targetId === selfId) {
           this.cleanupAll()
-          this.scene.start('LobbyScene')
+          this.scene.start('SanctuaryScene')
         }
       })
       .on('broadcast', { event: 'dissolve' }, () => {
         if (!this.isHost) {
           this.cleanupAll()
-          this.scene.start('LobbyScene')
+          this.scene.start('SanctuaryScene')
         }
       })
       .on('broadcast', { event: 'remind_ready' }, () => {
@@ -478,7 +478,7 @@ export class LobbyScene extends Phaser.Scene {
     audioManager.playClick()
     void this.lobbyChannel?.send({ type: 'broadcast', event: 'dissolve', payload: {} })
     this.cleanupAll()
-    this.scene.start('LobbyScene')
+    this.scene.start('SanctuaryScene')
   }
 
   private remindReady() {
