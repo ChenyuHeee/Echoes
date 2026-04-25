@@ -131,6 +131,7 @@ export class DiveScene extends Phaser.Scene {
     this.muzzleGraphics = this.add.graphics().setDepth(31)
     this.spawnPickupsAndExtraction()  // 必须在 setupCombat() 之前，确保 this.pickups 已初始化
     this.setupCombat()
+    this.spawnEchoPuzzle()            // 必须在 setupCombat() 之后，因为依赖 this.bullets
     this.setupInput()
     this.setupMinimap()
     if (!localStorage.getItem('echoes.tutorial.v1')) {
@@ -401,8 +402,7 @@ export class DiveScene extends Phaser.Scene {
 
     // 叙事碎片拾取物（3-4 个）
     this.spawnLorePickups()
-    // 时序共鸣之门（第4.6章：回响解谜）
-    this.spawnEchoPuzzle()
+    // 注意：spawnEchoPuzzle() 依赖 this.bullets，必须在 setupCombat() 之后调用
   }
 
   private spawnLorePickups() {
