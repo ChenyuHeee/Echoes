@@ -66,10 +66,10 @@ export class ChatScene extends Phaser.Scene {
 
     this.buildUI()
 
-    // T 键切换（仅在 chat 关闭时由 Phaser 捕获；打开时 DOM input 劫持键盘）
+    // T 键切换（仅在 chat 关闭且已连接房间时响应；打开时 DOM input 劫持键盘）
     this.tKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.T)
     this.tKey.on('down', () => {
-      if (!this.expanded) this.openPanel()
+      if (!this.expanded && chatManager.connected) this.openPanel()
     })
 
     // 订阅 chatManager
@@ -164,18 +164,18 @@ export class ChatScene extends Phaser.Scene {
     ).setScrollFactor(0).setDepth(depth + 1).setVisible(false)
     this.inputBg.setStrokeStyle(1, 0x203040, 0.7)
 
-    // 收起药丸（始终可见）
+    // 收起药丸（仅在 connected 时可见，由 refreshPill 控制）
     this.pillText = this.add.text(
       PANEL_X + 10, BOTTOM_Y - PANEL_H_COLL / 2,
       '[T] 聊天',
       { fontFamily: 'monospace', fontSize: '10px', color: '#253545' },
-    ).setOrigin(0, 0.5).setScrollFactor(0).setDepth(depth + 2)
+    ).setOrigin(0, 0.5).setScrollFactor(0).setDepth(depth + 2).setVisible(false)
 
     this.unreadBadge = this.add.text(
       PANEL_X + 88, BOTTOM_Y - PANEL_H_COLL / 2,
       '',
       { fontFamily: 'monospace', fontSize: '10px', color: '#c06030' },
-    ).setOrigin(0, 0.5).setScrollFactor(0).setDepth(depth + 2)
+    ).setOrigin(0, 0.5).setScrollFactor(0).setDepth(depth + 2).setVisible(false)
   }
 
   // ── 展开 / 收起 ─────────────────────────────────────
@@ -237,8 +237,14 @@ export class ChatScene extends Phaser.Scene {
 
   private refreshPill() {
     if (this.expanded) return
-    const badge = this.unread > 0 ? ` +${this.unread}` : ''
-    this.unreadBadge.setText(badge)
+    // 仅在已连接房间时显示药丸
+    const show = chatManager.connected
+    this.pillText.setVisible(show)
+    this.unreadBadge.setVisible(show)
+    if (show) {
+      const badge = this.unread > 0 ? ` +${this.unread}` : ''
+      this.unreadBadge.setText(badge)
+    }
   }
 
   private updateStatusDot() {
