@@ -1945,7 +1945,9 @@ export class DiveScene extends Phaser.Scene {
         sand: this.timeSand,
         duration,
       }
-      this.onlineDiveResults = [myResult]
+      // 保留已收到的队友结果，只替换/插入自己的条目
+      this.onlineDiveResults = this.onlineDiveResults.filter(r => r.id !== myResult.id)
+      this.onlineDiveResults.unshift(myResult)
       liveRealtime.sendDiveResult(myResult)
       // 等待最多 6 秒收集其他玩家结果
       this.time.delayedCall(6000, () => {
