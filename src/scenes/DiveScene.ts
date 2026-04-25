@@ -124,6 +124,7 @@ export class DiveScene extends Phaser.Scene {
 
     this.spawnMapTiles()
     this.spawnPlayer()
+    this.spawnEnemies()
     this.echoAuraGraphics = this.add.graphics().setDepth(30)
     this.muzzleGraphics = this.add.graphics().setDepth(31)
     this.setupCombat()
