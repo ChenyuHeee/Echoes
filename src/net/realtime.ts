@@ -36,14 +36,18 @@ export interface NetDiveResult {
 export class RoomRealtime {
   private channel: RealtimeChannel | null = null
 
-  async connect(roomCode: string) {
+  /** 步骤1：创建 channel（不订阅），之后可以注册 on() 监听 */
+  prepare(roomCode: string) {
     this.disconnect()
     this.channel = supabase.channel(`room:${roomCode}`, {
       config: {
         broadcast: { self: false },
       },
     })
+  }
 
+  /** 步骤2：注册所有监听后再调用此方法完成订阅 */
+  async subscribe(): Promise<void> {
     await new Promise<void>((resolve, reject) => {
       this.channel!
         .subscribe((status) => {

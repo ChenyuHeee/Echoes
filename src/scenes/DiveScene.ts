@@ -1718,8 +1718,10 @@ export class DiveScene extends Phaser.Scene {
     this.roomRealtime = new RoomRealtime()
 
     try {
-      await this.roomRealtime.connect(this.roomCode)
+      // 步骤1：先创建 channel（不订阅）
+      this.roomRealtime.prepare(this.roomCode)
 
+      // 步骤2：注册所有监听（必须在 subscribe 之前）
       this.roomRealtime.onRemoteMove((p) => {
         const rt = getRuntimeState()
         if (p.id === rt.player.id) return
@@ -1782,6 +1784,9 @@ export class DiveScene extends Phaser.Scene {
           this.onlineDiveResults.push(res)
         }
       })
+
+      // 步骤3：所有监听注册完毕后再订阅
+      await this.roomRealtime.subscribe()
 
       this.emitHud(`在线同步已连接：${this.roomCode}`)
     } catch {
