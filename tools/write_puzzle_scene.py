@@ -1,3 +1,12 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Write the new PuzzleScene.ts"""
+import os, pathlib
+
+ROOT = pathlib.Path(__file__).parent.parent
+OUT  = ROOT / 'src' / 'scenes' / 'PuzzleScene.ts'
+
+CONTENT = '''\
 /**
  * PuzzleScene — 时序密室（动作冒险模式）
  *
@@ -120,7 +129,7 @@ export class PuzzleScene extends Phaser.Scene {
       fontFamily: 'monospace', fontSize: '10px', color: '#304860',
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(31)
 
-    const back = this.add.text(14, 8, '<- \u8fd4\u56de', {
+    const back = this.add.text(14, 8, '<- \\u8fd4\\u56de', {
       fontFamily: 'monospace', fontSize: '12px', color: '#304050',
     }).setOrigin(0, 0).setScrollFactor(0).setDepth(31)
     back.setInteractive({ useHandCursor: true })
@@ -128,7 +137,7 @@ export class PuzzleScene extends Phaser.Scene {
     back.on('pointerout',  () => back.setColor('#304050'))
     back.on('pointerdown', () => { audioManager.playClick(); this.scene.start('ModeSelectScene') })
 
-    this.echoText = this.add.text(700, 8, 'P1\u56de\u54cd\uff1a\u7a7a', {
+    this.echoText = this.add.text(700, 8, 'P1\\u56de\\u54cd\\uff1a\\u7a7a', {
       fontFamily: 'monospace', fontSize: '11px', color: '#384850',
     }).setOrigin(0, 0).setScrollFactor(0).setDepth(31)
 
@@ -207,7 +216,7 @@ export class PuzzleScene extends Phaser.Scene {
         const cnt = d.requiredPads.filter(r => r === id).length
         return cnt > 1 ? `${id}x${cnt}` : id
       }).join('+')
-      const label = this.add.text(d.x, d.y + d.h / 2 + 10, `${reqStr}\n${d.windowMs}ms`, {
+      const label = this.add.text(d.x, d.y + d.h / 2 + 10, `${reqStr}\\n${d.windowMs}ms`, {
         fontFamily: 'monospace', fontSize: '9px', color: '#8850d0', align: 'center',
       }).setOrigin(0.5, 0).setDepth(9)
       this.doors.push({ sprite, label, open: false, requiredPads: d.requiredPads, windowMs: d.windowMs })
@@ -239,7 +248,7 @@ export class PuzzleScene extends Phaser.Scene {
       left:  kb.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT),
       right: kb.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT),
     }
-    this.echo2Text = this.add.text(700, 25, 'P2\u56de\u54cd\uff1a\u7a7a', {
+    this.echo2Text = this.add.text(700, 25, 'P2\\u56de\\u54cd\\uff1a\\u7a7a', {
       fontFamily: 'monospace', fontSize: '10px', color: '#7a6020',
     }).setOrigin(0, 0).setScrollFactor(0).setDepth(31)
   }
@@ -256,11 +265,11 @@ export class PuzzleScene extends Phaser.Scene {
     this.exitGfx.lineStyle(2, 0xffd060, 0.9)
     this.exitGfx.strokeCircle(level.exitX, level.exitY, 26)
 
-    this.exitTxt = this.add.text(level.exitX, level.exitY - 36, '\u51fa\u53e3', {
+    this.exitTxt = this.add.text(level.exitX, level.exitY - 36, '\\u51fa\\u53e3', {
       fontFamily: 'monospace', fontSize: '12px', color: '#ffd060',
     }).setOrigin(0.5, 1).setDepth(13)
     this.tweens.add({ targets: this.exitTxt, y: this.exitTxt.y - 6, duration: 800, yoyo: true, repeat: -1 })
-    this.showStatus('\u2746 \u51fa\u53e3\u5df2\u5f00\u542f \u2014 \u8d70\u5165\u91d1\u8272\u4f20\u9001\u95e8', '#ffd060')
+    this.showStatus('\\u2746 \\u51fa\\u53e3\\u5df2\\u5f00\\u542f \\u2014 \\u8d70\\u5165\\u91d1\\u8272\\u4f20\\u9001\\u95e8', '#ffd060')
   }
 
   private checkDoors(now: number) {
@@ -299,13 +308,13 @@ export class PuzzleScene extends Phaser.Scene {
   private openDoor(door: DoorObj) {
     door.open = true
     this.tweens.add({ targets: door.sprite, alpha: 0.08, scaleY: 0.08, duration: 480, ease: 'Power2' })
-    door.label.setColor('#50e8a0').setText('\u2713')
+    door.label.setColor('#50e8a0').setText('\\u2713')
     audioManager.playEcho()
     this.cameras.main.flash(280, 80, 220, 140)
     const gain = Math.floor(this.currentLevel.sandReward * 0.4)
     this.totalSand += gain
     addTimeSand(gain)
-    this.showStatus(`\u2746 \u95e8\u5df2\u5f00\u542f  +${gain} \u65f6\u7802`, '#50e8a0')
+    this.showStatus(`\\u2746 \\u95e8\\u5df2\\u5f00\\u542f  +${gain} \\u65f6\\u7802`, '#50e8a0')
   }
 
   private activatePad(pad: PadObj, time: number, isPlayer2 = false) {
@@ -331,7 +340,7 @@ export class PuzzleScene extends Phaser.Scene {
           const ring = this.add.image(prevPad.sprite.x, prevPad.sprite.y, 'effect_echo_ring')
             .setScale(0.4).setTint(0xc060ff).setDepth(15)
           this.tweens.add({ targets: ring, alpha: 0, scaleX: 2.4, scaleY: 2.4, duration: 380, onComplete: () => ring.destroy() })
-          const who = isPlayer2 ? 'P2\u56de\u54cd' : '\u56de\u54cd'
+          const who = isPlayer2 ? 'P2\\u56de\\u54cd' : '\\u56de\\u54cd'
           this.showStatus(`${who}  ${prevId}`, '#c060ff')
           this.checkDoors(echoTime)
         }
@@ -345,10 +354,10 @@ export class PuzzleScene extends Phaser.Scene {
   }
 
   private updateEchoDisplay() {
-    this.echoText.setText(this.echoMemory ? `P1\u56de\u54cd\uff1a${this.echoMemory}` : 'P1\u56de\u54cd\uff1a\u7a7a')
+    this.echoText.setText(this.echoMemory ? `P1\\u56de\\u54cd\\uff1a${this.echoMemory}` : 'P1\\u56de\\u54cd\\uff1a\\u7a7a')
       .setColor(this.echoMemory ? '#c060ff' : '#384850')
     if (this.echo2Text) {
-      this.echo2Text.setText(this.echo2Memory ? `P2\u56de\u54cd\uff1a${this.echo2Memory}` : 'P2\u56de\u54cd\uff1a\u7a7a')
+      this.echo2Text.setText(this.echo2Memory ? `P2\\u56de\\u54cd\\uff1a${this.echo2Memory}` : 'P2\\u56de\\u54cd\\uff1a\\u7a7a')
         .setColor(this.echo2Memory ? '#ffb030' : '#4a3818')
     }
   }
@@ -373,7 +382,7 @@ export class PuzzleScene extends Phaser.Scene {
       this.finished = true
       this.time.delayedCall(500, () => this.showVictory())
     } else {
-      this.showStatus(`\u8fdb\u5165 ${PUZZLE_LEVELS[this.levelIndex]?.name ?? '\u4e0b\u4e00\u5ba4'}`, '#ffd060')
+      this.showStatus(`\\u8fdb\\u5165 ${PUZZLE_LEVELS[this.levelIndex]?.name ?? '\\u4e0b\\u4e00\\u5ba4'}`, '#ffd060')
       this.time.delayedCall(700, () => this.buildLevel())
     }
   }
@@ -382,18 +391,18 @@ export class PuzzleScene extends Phaser.Scene {
     const W = 960, H = 540
     this.add.rectangle(W / 2, H / 2, 510, 250, 0x040810, 0.97)
       .setScrollFactor(0).setDepth(120).setStrokeStyle(2, 0x50e8a0)
-    this.add.text(W / 2, H / 2 - 85, '\u2746 \u65f6\u5e8f\u8c1c\u9898\u5168\u90e8\u7834\u89e3 \u2746', {
+    this.add.text(W / 2, H / 2 - 85, '\\u2746 \\u65f6\\u5e8f\\u8c1c\\u9898\\u5168\\u90e8\\u7834\\u89e3 \\u2746', {
       fontFamily: 'monospace', fontSize: '22px', color: '#50e8a0',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(121)
 
     const totalLevels = this.isCoop ? 5 : 30
-    this.add.text(W / 2, H / 2 - 50, `\u901a\u5173 ${totalLevels} \u4e2a\u5173\u5361`, {
+    this.add.text(W / 2, H / 2 - 50, `\\u901a\\u5173 ${totalLevels} \\u4e2a\\u5173\\u5361`, {
       fontFamily: 'monospace', fontSize: '14px', color: '#507090',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(121)
-    this.add.text(W / 2, H / 2 - 18, `\u83b7\u5f97\u65f6\u7802  ${this.totalSand}`, {
+    this.add.text(W / 2, H / 2 - 18, `\\u83b7\\u5f97\\u65f6\\u7802  ${this.totalSand}`, {
       fontFamily: 'monospace', fontSize: '18px', color: '#c8e060',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(121)
-    this.add.text(W / 2, H / 2 + 14, '\u56de\u54cd\u4e0d\u6b62\u4e8e\u6218\u6597\u2014\u2014\u5b83\u662f\u65f6\u95f4\u672c\u8eab\u7684\u8bed\u8a00', {
+    this.add.text(W / 2, H / 2 + 14, '\\u56de\\u54cd\\u4e0d\\u6b62\\u4e8e\\u6218\\u6597\\u2014\\u2014\\u5b83\\u662f\\u65f6\\u95f4\\u672c\\u8eab\\u7684\\u8bed\\u8a00', {
       fontFamily: 'monospace', fontSize: '12px', color: '#384850',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(121)
 
@@ -410,8 +419,8 @@ export class PuzzleScene extends Phaser.Scene {
         fontFamily: 'monospace', fontSize: '14px', color: hex,
       }).setOrigin(0.5).setScrollFactor(0).setDepth(122)
     }
-    mkBtn(W / 2 - 100, '\u518d\u6b21\u6311\u6218', 0x50e8a0, () => this.scene.restart())
-    mkBtn(W / 2 + 100, '\u8fd4\u56de\u5927\u5385', 0x607080, () => this.scene.start('ModeSelectScene'))
+    mkBtn(W / 2 - 100, '\\u518d\\u6b21\\u6311\\u6218', 0x50e8a0, () => this.scene.restart())
+    mkBtn(W / 2 + 100, '\\u8fd4\\u56de\\u5927\\u5385', 0x607080, () => this.scene.start('ModeSelectScene'))
   }
 
   update(time: number) {
@@ -474,3 +483,8 @@ export class PuzzleScene extends Phaser.Scene {
     this.exitGfx.strokeCircle(exitX, exitY, 27)
   }
 }
+'''
+
+with open(str(OUT), 'w', encoding='utf-8') as f:
+    f.write(CONTENT)
+print(f'Written {len(CONTENT.splitlines())} lines to {OUT}')
