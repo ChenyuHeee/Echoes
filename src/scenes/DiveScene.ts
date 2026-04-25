@@ -223,11 +223,21 @@ export class DiveScene extends Phaser.Scene {
   private spawnMapTiles() {
     const tileTextures = this.currentTheme.tileKeys
 
-    for (let x = 0; x < 1800; x += 32) {
-      for (let y = 0; y < 1200; y += 32) {
-        const tileKey = Phaser.Utils.Array.GetRandom(tileTextures)
-        const tile = this.add.image(x + 16, y + 16, tileKey).setOrigin(0.5)
-        tile.setAlpha((x + y) % 64 === 0 ? 0.95 : 0.88)
+    // ✦ TileSprite 替代逐格 image — 从 2166 个对象降到 2-3 个，消除卡顿
+    // 底层地砖：覆盖整个世界
+    this.add.tileSprite(900, 600, 1800, 1200, tileTextures[0])
+      .setAlpha(0.88).setDepth(0)
+    // 第二层：叠加第二种地砖纹理增加变化感（半透明叠加）
+    if (tileTextures[1]) {
+      this.add.tileSprite(900, 600, 1800, 1200, tileTextures[1])
+        .setAlpha(0.22).setDepth(1)
+    }
+    // 第三层：稀疏的亮斑（每 64px 一格，仅 28×19 = 532 个小点用 Graphics 绘制一次）
+    const accentGfx = this.add.graphics().setDepth(2)
+    accentGfx.fillStyle(0xffffff, 0.06)
+    for (let x = 32; x < 1800; x += 64) {
+      for (let y = 32; y < 1200; y += 64) {
+        accentGfx.fillRect(x, y, 4, 4)
       }
     }
 
@@ -237,7 +247,7 @@ export class DiveScene extends Phaser.Scene {
       fontFamily: 'monospace',
       fontSize: '22px',
       color: this.currentTheme.ambientColor,
-    })
+    }).setDepth(3)
   }
 
   private spawnPlayer() {
