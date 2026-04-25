@@ -16,12 +16,14 @@ export class RaceScene extends Phaser.Scene {
   private sands!: Phaser.Physics.Arcade.Group
   private tunnelGfx!: Phaser.GameObjects.Graphics
 
-  private speed = 300       // 当前赛道滚动速度（随距离增加）
+  private speed = 300       // 当前赛道滚动速度（随距离持续增加，无上限）
   private distance = 0      // 已穿越距离
   private sandCount = 0     // 本局收集时砂
   private alive = false
   private finished = false
   private countdownDone = false
+  private bestDistance = 0  // 本局最远距离
+  private obstacleTimer: Phaser.Time.TimerEvent | null = null
 
   private dashCooldown = 0
   private echoCooldown = 0
@@ -56,6 +58,8 @@ export class RaceScene extends Phaser.Scene {
     this.dashCooldown = 0
     this.echoCooldown = 0
     this.dashActive = false
+    this.bestDistance = 0
+    this.obstacleTimer = null
 
     this.cameras.main.setBackgroundColor('#030508')
     audioManager.startMenuBgm()
@@ -105,13 +109,13 @@ export class RaceScene extends Phaser.Scene {
       skill2: kb.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
     }
 
-    // 定期生成障碍和时砂
-    this.time.addEvent({ delay: 1050, callback: this.spawnObstacle, callbackScope: this, loop: true })
+    // 定期生成障碍和时砂（障碍间隔会随速度缩短）
+    this.obstacleTimer = this.time.addEvent({ delay: 1050, callback: this.spawnObstacle, callbackScope: this, loop: true })
     this.time.addEvent({ delay: 1650, callback: this.spawnSandPickup, callbackScope: this, loop: true })
 
     // HUD
     this.add.rectangle(width / 2, 18, width, 36, 0x030508, 0.94).setDepth(20)
-    this.distText = this.add.text(14, 8, '距离   0 / 3000m', {
+    this.distText = this.add.text(14, 8, '距离   0 m', {
       fontFamily: 'monospace', fontSize: '12px', color: '#c060ff',
     }).setDepth(21)
     this.sandText = this.add.text(260, 8, '时砂 +0', {
@@ -207,29 +211,27 @@ export class RaceScene extends Phaser.Scene {
     if (this.finished) return
     this.finished = true
     const { width, height } = this.scale
-    const borderColor = success ? 0xc060ff : 0xff4040
-    const bg = this.add.rectangle(width / 2, height / 2, 490, 220, 0x040810, 0.97).setDepth(70)
-    bg.setStrokeStyle(2, borderColor)
-    this.add.text(width / 2, height / 2 - 74, success ? '✦ 时隙穿越完成 ✦' : '时隙崩解', {
-      fontFamily: 'monospace', fontSize: '26px',
-      color: success ? '#c060ff' : '#ff5030',
+    const bg = this.add.rectangle(width / 2, height / 2, 490, 240, 0x040810, 0.97).setDepth(70)
+    bg.setStrokeStyle(2, 0xff4040)
+    this.add.text(width / 2, height / 2 - 84, '时隙崩解', {
+      fontFamily: 'monospace', fontSize: '28px', color: '#ff5030',
     }).setOrigin(0.5).setDepth(71)
-    this.add.text(width / 2, height / 2 - 36, `穿越距离　${Math.floor(this.distance)} m`, {
-      fontFamily: 'monospace', fontSize: '16px', color: '#9090b0',
+    this.add.text(width / 2, height / 2 - 44, `穿越距离　${Math.floor(this.distance)} m`, {
+      fontFamily: 'monospace', fontSize: '18px', color: '#c060ff',
     }).setOrigin(0.5).setDepth(71)
-    this.add.text(width / 2, height / 2 - 10, `最高速度　${Math.floor(this.speed)} px/s`, {
+    this.add.text(width / 2, height / 2 - 14, `最高速度　${Math.floor(this.speed)} px/s`, {
       fontFamily: 'monospace', fontSize: '14px', color: '#506070',
     }).setOrigin(0.5).setDepth(71)
-    this.add.text(width / 2, height / 2 + 16, `收集时砂　${this.sandCount}`, {
+    this.add.text(width / 2, height / 2 + 14, `收集时砂　${this.sandCount}`, {
       fontFamily: 'monospace', fontSize: '16px', color: '#c8e060',
     }).setOrigin(0.5).setDepth(71)
 
-    const retry = this.add.text(width / 2 - 92, height / 2 + 72, '[ 再次挑战 ]', {
+    const retry = this.add.text(width / 2 - 92, height / 2 + 82, '[ 再次挑战 ]', {
       fontFamily: 'monospace', fontSize: '15px', color: '#c060ff',
     }).setOrigin(0.5).setDepth(71)
     retry.setInteractive({ useHandCursor: true }).on('pointerdown', () => { audioManager.playClick(); this.scene.restart() })
 
-    const back = this.add.text(width / 2 + 92, height / 2 + 72, '[ 返回大厅 ]', {
+    const back = this.add.text(width / 2 + 92, height / 2 + 82, '[ 返回大厅 ]', {
       fontFamily: 'monospace', fontSize: '15px', color: '#607080',
     }).setOrigin(0.5).setDepth(71)
     back.setInteractive({ useHandCursor: true }).on('pointerdown', () => { audioManager.playClick(); this.scene.start('ModeSelectScene') })
@@ -284,10 +286,19 @@ export class RaceScene extends Phaser.Scene {
       this.tweens.add({ targets: ring2, alpha: 0, scaleX: 3.5, scaleY: 3.5, duration: 450, onComplete: () => ring2.destroy() })
     }
 
-    // 推进距离与加速
+    // 推进距离与加速（无上限，越跑越快）
     this.distance += this.speed * dt
-    this.speed = Math.min(820, 300 + this.distance * 0.115)
-    this.distText.setText(`距离   ${Math.floor(this.distance)} / 3000m`)
+    this.speed = 300 + this.distance * 0.18   // 比原来更陡的加速曲线
+    this.distText.setText(`距离   ${Math.floor(this.distance)} m`)
+
+    // 障碍生成间隔随速度缩短（最短 320ms）
+    if (this.obstacleTimer) {
+      const targetDelay = Math.max(320, 1050 - (this.speed - 300) * 0.6)
+      if (Math.abs(this.obstacleTimer.delay - targetDelay) > 60) {
+        this.obstacleTimer.remove()
+        this.obstacleTimer = this.time.addEvent({ delay: targetDelay, callback: this.spawnObstacle, callbackScope: this, loop: true })
+      }
+    }
 
     // 同步障碍速度
     this.obstacles.children.each(obs => {
@@ -305,11 +316,7 @@ export class RaceScene extends Phaser.Scene {
       return true
     })
 
-    // 胜利条件：穿越 3000m
-    if (this.distance >= 3000 && !this.finished) {
-      this.alive = false
-      this.showResult(true)
-    }
+    // 无终点条件，只有坠毁才结束
   }
 
   /** 时隙隧道视觉效果：彩色光线 + 边缘暗影 */
