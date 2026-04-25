@@ -19,6 +19,9 @@ export class HUDScene extends Phaser.Scene {
   private hudText!: Phaser.GameObjects.Text
   private hintText!: Phaser.GameObjects.Text
   private echoText!: Phaser.GameObjects.Text
+  private echoPanel!: Phaser.GameObjects.Rectangle
+  private echoIcon!: Phaser.GameObjects.Text
+  private echoElementBar!: Phaser.GameObjects.Rectangle
 
   // HP / Stability 条
   private hpBar!: Phaser.GameObjects.Rectangle
@@ -90,12 +93,23 @@ export class HUDScene extends Phaser.Scene {
     // ─── 底部：技能槽 ─────────────────────────────────────────
     this.buildSkillBar(width, height)
 
-    // ─── 回响指示器（技能槽正上方） ─────────────────────────
-    this.echoText = this.add.text(width / 2, height - 80, '↩  ECHO  —', {
+    // ─── 回响指示器（技能槽正上方，显著展示时砂内存储的技能） ─────────────
+    const echoPanelY = height - 80
+    this.echoPanel = this.add.rectangle(width / 2, echoPanelY, 240, 30, 0x0a0612, 0.9)
+      .setScrollFactor(0).setDepth(9)
+    this.echoPanel.setStrokeStyle(1, 0x3a1860, 0.6)
+    this.echoElementBar = this.add.rectangle(width / 2 - 120, echoPanelY - 14, 0, 2, 0x8a50e0, 0.8)
+      .setOrigin(0, 0.5).setScrollFactor(0).setDepth(10)
+
+    this.echoIcon = this.add.text(width / 2 - 105, echoPanelY, '↩', {
+      fontFamily: 'monospace', fontSize: '14px', color: '#4a3060',
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10)
+
+    this.echoText = this.add.text(width / 2 - 82, echoPanelY, '时砂未记忆任何技能', {
       fontFamily: 'monospace',
       fontSize: '12px',
-      color: '#4a3060',
-    }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(10)
+      color: '#2a1840',
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10)
 
     this.updateHud({
       hp: rt.player.hp,
@@ -223,18 +237,35 @@ export class HUDScene extends Phaser.Scene {
     if (this.echoText?.active) {
       if (payload.echoSkill) {
         const def = SKILL_DEFINITIONS[payload.echoSkill as SkillType]
-        this.echoText.setText(`↩  ECHO  ${def?.name || payload.echoSkill}`)
+        const colorVal = def ? Phaser.Display.Color.HexStringToColor(def.elementColor).color : 0x8a50e0
+
+        this.echoText.setText(def?.name || payload.echoSkill)
         this.echoText.setColor(def?.elementColor || '#8a50e0')
+        this.echoIcon.setText('↩').setColor(def?.elementColor || '#8a50e0')
+        this.echoPanel.setFillStyle(0x0a0612, 0.92)
+        this.echoPanel.setStrokeStyle(1, colorVal, 0.75)
+        this.echoElementBar.setDisplaySize(240, 2).setFillStyle(colorVal, 0.9)
+
+        // 光晒闪烁
+        this.tweens.killTweensOf(this.echoText)
         this.tweens.add({
-          targets: this.echoText,
-          alpha: 0.4,
-          duration: 280,
-          yoyo: true,
-          ease: 'Sine.easeInOut',
+          targets: [this.echoText, this.echoIcon],
+          alpha: { from: 0.4, to: 1 },
+          duration: 300,
+          ease: 'Sine.easeOut',
+        })
+        this.tweens.add({
+          targets: this.echoPanel,
+          scaleX: { from: 1.04, to: 1 },
+          scaleY: { from: 1.1, to: 1 },
+          duration: 300,
+          ease: 'Back.easeOut',
         })
       } else {
-        this.echoText.setText('↩  ECHO  —')
-        this.echoText.setColor('#4a3060')
+        this.echoText.setText('时砂未记忆任何技能').setColor('#2a1840')
+        this.echoIcon.setText('↩').setColor('#2a1840')
+        this.echoPanel.setStrokeStyle(1, 0x3a1860, 0.4)
+        this.echoElementBar.setDisplaySize(0, 2)
       }
     }
 

@@ -76,6 +76,11 @@ export class DiveScene extends Phaser.Scene {
   // 小地图
   private minimap!: Phaser.GameObjects.Graphics
 
+  // 回响系统 — 追踪活跃的AOE效果区域（用于技能组合协同）
+  private activeEffectZones: Array<{skill: SkillType; x: number; y: number; radius: number; expireAt: number}> = []
+  // 玩家身上的「时砂印记」光环（显示当前记忆中的技能）
+  private echoAuraGraphics!: Phaser.GameObjects.Graphics
+
   constructor() {
     super('DiveScene')
   }
@@ -111,6 +116,7 @@ export class DiveScene extends Phaser.Scene {
 
     this.spawnMapTiles()
     this.spawnPlayer()
+    this.echoAuraGraphics = this.add.graphics().setDepth(30)
     this.setupCombat()
     this.spawnPickupsAndExtraction()
     this.setupInput()
@@ -646,6 +652,19 @@ export class DiveScene extends Phaser.Scene {
     }
 
     this.extractionHint.setAlpha(Math.floor(time / 400) % 2 === 0 ? 1 : 0.6)
+
+    // 时砂印记光环 — 显示当前存储在时砂中的技能
+    this.echoAuraGraphics.clear()
+    const storedSkill = this.echoSystem.getState().lastSkill
+    if (storedSkill) {
+      const def = SKILL_DEFINITIONS[storedSkill]
+      const colorHex = Phaser.Display.Color.HexStringToColor(def.elementColor).color
+      const pulse = 0.25 + 0.2 * Math.sin(time / 260)
+      this.echoAuraGraphics.lineStyle(2.5, colorHex, 0.5 + pulse)
+      this.echoAuraGraphics.strokeCircle(this.player.x, this.player.y, 26 + pulse * 10)
+      this.echoAuraGraphics.lineStyle(1, colorHex, pulse * 0.5)
+      this.echoAuraGraphics.strokeCircle(this.player.x, this.player.y, 36 + pulse * 14)
+    }
   }
 
   private updateEnemies(time: number) {
@@ -897,6 +916,11 @@ export class DiveScene extends Phaser.Scene {
       onComplete: () => ring.destroy(),
     })
 
+    // 回响激活时检查技能组合
+    if (isEcho) {
+      this.checkEchoCombo(skill)
+    }
+
     this.emitHud(`${isEcho ? '回响' : '施放'}：${def.name}`)
     if (isEcho) {
       audioManager.playEcho()
@@ -908,12 +932,14 @@ export class DiveScene extends Phaser.Scene {
   private spawnAreaDamage(x: number, y: number, skill: SkillType) {
     const def = SKILL_DEFINITIONS[skill]
     const radius = (def.range || 220) * 0.4
+    const duration = def.duration || 650
+
+    // 注册活跃区域（保证它能被回响捕捉到）
+    this.activeEffectZones.push({ skill, x, y, radius, expireAt: Date.now() + Math.max(duration, 2000) })
 
     const effectTexture = skill === 'gravity_well' ? 'effect_gravity_well' : 'effect_toxic_cloud'
     const fx = this.add.image(x, y, effectTexture).setDisplaySize(radius * 2, radius * 2)
     fx.setAlpha(skill === 'gravity_well' ? 0.85 : 0.78)
-
-    const duration = def.duration || 650
 
     // gravity_well：持续吸引敌人
     if (skill === 'gravity_well') {
@@ -1001,6 +1027,160 @@ export class DiveScene extends Phaser.Scene {
       if (enemy.active) enemy.clearTint()
       this.slowUntil.delete(enemy)
     })
+  }
+
+  // ─────────────────── 回响协同系统 ─────────────────────────────
+  private checkEchoCombo(echoSkill: SkillType) {
+    const now = Date.now()
+    // 清理过期区域
+    this.activeEffectZones = this.activeEffectZones.filter(z => z.expireAt > now)
+
+    // ✦ 组合1：毒爆炎浪 ── 回响灼烧 × 活跃毒云
+    // "火焰弹 → 瘟疫弹 → 回响的火焰弹引爆瘟疫，造成持续高伤"
+    if (echoSkill === 'burn_module') {
+      const toxicZones = this.activeEffectZones.filter(
+        z => z.skill === 'toxic_fog' || z.skill === 'plague_module',
+      )
+      if (toxicZones.length > 0) {
+        toxicZones.forEach(zone => {
+          this.triggerCombo('toxic_inferno', zone.x, zone.y, zone.radius * 1.5)
+        })
+        this.activeEffectZones = this.activeEffectZones.filter(
+          z => z.skill !== 'toxic_fog' && z.skill !== 'plague_module',
+        )
+        return
+      }
+    }
+
+    // ✦ 组合2：电磁涡流 ── 回响闪电/引力 × 另一个存在
+    // "引力阱 → 闪电弹 → 回响的引力阱将敌人再次拽入雷击中心"
+    if (echoSkill === 'gravity_well') {
+      const gravZones = this.activeEffectZones.filter(z => z.skill === 'gravity_well')
+      if (gravZones.length > 0) {
+        // 双重引力共鸣 → 磁场暴走
+        this.triggerCombo('electro_vortex', gravZones[0].x, gravZones[0].y, gravZones[0].radius * 2)
+        return
+      }
+    }
+    if (echoSkill === 'lightning_bolt') {
+      const gravZones = this.activeEffectZones.filter(z => z.skill === 'gravity_well')
+      if (gravZones.length > 0) {
+        // 回响闪电打进引力阱
+        this.triggerCombo('electro_vortex', gravZones[0].x, gravZones[0].y, gravZones[0].radius * 1.8)
+        return
+      }
+    }
+
+    // ✦ 组合3：寒冰炙化 ── 回响冰场 × 燃烧中的敌人
+    if (echoSkill === 'cryo_field') {
+      const burningList: EnemyBody[] = []
+      this.enemies.children.each(child => {
+        const e = child as EnemyBody
+        if (e.active && this.burnDots.has(e)) burningList.push(e)
+        return true
+      })
+      if (burningList.length > 0) {
+        burningList.forEach(e => {
+          this.triggerCombo('steam_burst', e.x, e.y, 100)
+          this.burnDots.delete(e)
+        })
+        return
+      }
+    }
+
+    // ✦ 组合4：时砂共鸣 ── 连续3次回响触发大爆发
+    if (this.echoSystem.getState().echoCount >= 3) {
+      this.triggerCombo('resonance', this.player.x, this.player.y, 220)
+    }
+  }
+
+  private triggerCombo(
+    type: 'toxic_inferno' | 'electro_vortex' | 'steam_burst' | 'resonance',
+    x: number, y: number, radius: number,
+  ) {
+    const cfg = {
+      toxic_inferno: { name: '✦ 毒爆炎浪 ✦', color: '#50ff80', tint: 0x30ff60, damage: 80 },
+      electro_vortex: { name: '✦ 电磁涡流 ✦', color: '#f0f040', tint: 0xf0d820, damage: 70 },
+      steam_burst:    { name: '✦ 寒冰炙化 ✦', color: '#80d4ff', tint: 0x60c8ff, damage: 65 },
+      resonance:      { name: '✦ 时砂共鸣 ✦', color: '#d0a8ff', tint: 0xb870ff, damage: 55 },
+    }[type]
+
+    const { width, height } = this.scale
+
+    // 大型组合名称文字
+    const txt = this.add.text(width / 2, height / 2 - 55, cfg.name, {
+      fontFamily: 'monospace',
+      fontSize: '28px',
+      color: cfg.color,
+      stroke: '#000000',
+      strokeThickness: 5,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(200)
+    this.tweens.add({
+      targets: txt,
+      y: height / 2 - 100,
+      alpha: 0,
+      duration: 1600,
+      ease: 'Power2',
+      onComplete: () => txt.destroy(),
+    })
+
+    // 爆炸波环（3层叠加）
+    for (let i = 0; i < 3; i++) {
+      this.time.delayedCall(i * 90, () => {
+        const ring = this.add.image(x, y, 'effect_echo_ring')
+          .setScale(0.2)
+          .setTint(cfg.tint)
+          .setAlpha(0.95)
+          .setDepth(85)
+        this.tweens.add({
+          targets: ring,
+          scaleX: radius / 32,
+          scaleY: radius / 32,
+          alpha: 0,
+          duration: 700,
+          ease: 'Power2',
+          onComplete: () => ring.destroy(),
+        })
+      })
+    }
+
+    // 粒子辉光（电磁涡流：先吸后炸）
+    if (type === 'electro_vortex') {
+      this.enemies.children.each(child => {
+        const e = child as EnemyBody
+        if (!e.active) return true
+        if (Phaser.Math.Distance.Between(x, y, e.x, e.y) <= radius) {
+          // 先吸引到中心
+          const angle = Phaser.Math.Angle.Between(e.x, e.y, x, y)
+          e.setVelocity(Math.cos(angle) * 600, Math.sin(angle) * 600)
+        }
+        return true
+      })
+      // 延迟后在中心爆炸
+      this.time.delayedCall(250, () => {
+        this.enemies.children.each(child => {
+          const e = child as EnemyBody
+          if (!e.active) return true
+          if (Phaser.Math.Distance.Between(x, y, e.x, e.y) <= radius * 0.7) {
+            this.damageEnemy(e, cfg.damage)
+          }
+          return true
+        })
+      })
+    } else {
+      // 即时范围伤害
+      this.enemies.children.each(child => {
+        const e = child as EnemyBody
+        if (!e.active) return true
+        if (Phaser.Math.Distance.Between(x, y, e.x, e.y) <= radius) {
+          this.damageEnemy(e, cfg.damage)
+        }
+        return true
+      })
+    }
+
+    this.cameras.main.shake(180, 0.01)
+    audioManager.playEcho()
   }
 
   private damageEnemy(enemy: EnemyBody, amount: number, showNumber = true) {
