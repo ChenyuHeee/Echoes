@@ -211,6 +211,7 @@ export class DiveScene extends Phaser.Scene {
   }
 
   update(time: number) {
+    if (this.diveFinished) return
     this.movePlayer()
     this.updateEnemies(time)
     this.updateDots()
@@ -2088,6 +2089,14 @@ export class DiveScene extends Phaser.Scene {
   private async finishDive(result: 'success' | 'death') {
     if (this.diveFinished) return
     this.diveFinished = true
+
+    // 立即冻结玩家和敌人
+    this.player.setVelocity(0, 0)
+    this.player.setActive(false)
+    this.physics.world.pause()
+    if (result === 'death') {
+      this.player.setAlpha(0.3)
+    }
 
     const duration = Math.floor((Date.now() - this.diveStart) / 1000)
     const rt = getRuntimeState()
