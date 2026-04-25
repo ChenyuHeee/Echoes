@@ -66,7 +66,7 @@ export class LoginScene extends Phaser.Scene {
       this.scene.start('MenuScene')
     })
 
-    this.add.text(width / 2, height * 0.88, '终端已接入庇护所边缘网络  ·  注册后需邮件激活', {
+    this.add.text(width / 2, height * 0.88, '终端已接入庇护所边缘网络  ·  注册即登录，无需邮件验证', {
       fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#304050',
     }).setOrigin(0.5)
   }
@@ -250,7 +250,9 @@ export class LoginScene extends Phaser.Scene {
       return
     }
     setPlayerIdentity(data.user.id, username)
-    this.statusText.setText('✦ 注册成功 — 请检查邮箱并点击激活链接')
+    audioManager.playTransition()
+    this.statusText.setText(`✦ 注册成功，欢迎 ${username}`)
+    this.time.delayedCall(600, () => this.scene.start('SanctuaryScene'))
   }
 
   private makeBtn(x: number, y: number, label: string, w: number, onClick: () => void) {
