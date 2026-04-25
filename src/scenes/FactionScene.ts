@@ -41,8 +41,8 @@ export class FactionScene extends Phaser.Scene {
 
     this.add.text(width / 2, height * 0.17, '这将决定你的起始技能与世界观立场 · 之后可在庇护所修改世界观但不影响技能', {
       fontFamily: '"Silkscreen", monospace',
-      fontSize: '11px',
-      color: '#506070',
+      fontSize: '12px',
+      color: '#6070a0',
     }).setOrigin(0.5)
 
     // 三阵营卡片
@@ -61,8 +61,8 @@ export class FactionScene extends Phaser.Scene {
     // 底部提示
     this.add.text(width / 2, height * 0.93, '每个阵营都可以学习全部技能 — 阵营只影响起点与被动特性', {
       fontFamily: '"Silkscreen", monospace',
-      fontSize: '11px',
-      color: '#405060',
+      fontSize: '12px',
+      color: '#607080',
     }).setOrigin(0.5)
   }
 
@@ -105,15 +105,15 @@ export class FactionScene extends Phaser.Scene {
       fontFamily: '"Silkscreen", monospace',
       fontSize: '10px',
       color: faction.color,
-      }).setOrigin(0.5).setAlpha(0.7)
+    }).setOrigin(0.5).setAlpha(0.9)
 
     this.add.text(cx, cy - h / 2 + 118, faction.description, {
       fontFamily: '"Silkscreen", monospace',
-      fontSize: '11px',
-      color: '#9ab0c8',
+      fontSize: '12px',
+      color: '#b0c8e0',
       wordWrap: { width: w - 32, useAdvancedWrap: true },
       align: 'center',
-      lineSpacing: 4,
+      lineSpacing: 5,
     }).setOrigin(0.5, 0)
 
     // 哲学语录
@@ -121,7 +121,6 @@ export class FactionScene extends Phaser.Scene {
       fontFamily: '"Silkscreen", monospace',
       fontSize: '10px',
       color: faction.color,
-      fontStyle: 'italic',
       wordWrap: { width: w - 32, useAdvancedWrap: true },
       align: 'center',
     }).setOrigin(0.5)
@@ -133,10 +132,10 @@ export class FactionScene extends Phaser.Scene {
       color: '#dce9ff',
     }).setOrigin(0.5)
 
-    this.add.text(cx, cy + 70, faction.passiveDescription, {
+    this.add.text(cx, cy + 72, faction.passiveDescription, {
       fontFamily: '"Silkscreen", monospace',
-      fontSize: '9px',
-      color: '#5a7090',
+      fontSize: '10px',
+      color: '#708090',
       wordWrap: { width: w - 32, useAdvancedWrap: true },
       align: 'center',
     }).setOrigin(0.5)

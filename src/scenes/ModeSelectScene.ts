@@ -29,7 +29,7 @@ export class ModeSelectScene extends Phaser.Scene {
       fontFamily: '"Silkscreen", monospace', fontSize: '24px', color: '#c8a96e',
     }).setOrigin(0.5, 0)
     this.add.text(width / 2, 36, 'ECHOES: FRACTURED TIME  ·  六种回响，六种宿命', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#364858',
+      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#506878',
     }).setOrigin(0.5, 0)
 
     const back = this.add.text(16, height - 12, '← 返回主菜单', {
@@ -145,14 +145,14 @@ export class ModeSelectScene extends Phaser.Scene {
 
     // 副标题
     this.add.text(lx, y - h / 2 + 28, m.sub, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#364858',
+      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#5a7088',
     }).setOrigin(0, 0).setDepth(3)
 
     // 描述
     this.add.text(lx, y - h / 2 + 46, m.desc, {
       fontFamily: '"Silkscreen", monospace', fontSize: '11px',
-      color: m.locked ? '#28353f' : '#6e8098',
-      lineSpacing: 3,
+      color: m.locked ? '#28353f' : '#8aA0b8',
+      lineSpacing: 4,
     }).setOrigin(0, 0).setDepth(3)
 
     if (!m.locked) {

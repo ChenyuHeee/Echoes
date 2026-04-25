@@ -103,9 +103,18 @@ export class BootScene extends Phaser.Scene {
       window.setTimeout(() => loadingScreen.remove(), 350)
     }
 
-    this.time.delayedCall(200, () => {
-      this.scene.launch('ChatScene')   // 聊天悬浮层：全局持久并行场景
-      this.scene.start('MenuScene')
-    })
+    // 等待 Silkscreen 像素字体加载完毕，再启动场景
+    // 否则 Phaser 会用系统 monospace 渲染文字（模糊），加载后不会自动重绘
+    const startScenes = () => {
+      this.time.delayedCall(200, () => {
+        this.scene.launch('ChatScene')   // 聊天悬浮层：全局持久并行场景
+        this.scene.start('MenuScene')
+      })
+    }
+
+    Promise.race([
+      document.fonts.load('16px "Silkscreen"'),
+      new Promise<void>(resolve => window.setTimeout(resolve, 2500)), // 最多等 2.5s
+    ]).then(startScenes).catch(startScenes)
   }
 }
