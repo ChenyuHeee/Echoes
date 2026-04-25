@@ -514,8 +514,8 @@ export class DiveScene extends Phaser.Scene {
       onComplete: () => flash.destroy(),
     })
 
-    this.physics.moveTo(b, targetX, targetY, 500)
     this.bullets.add(b)
+    this.physics.moveTo(b, targetX, targetY, 500)
     audioManager.playShoot()
 
     this.time.delayedCall(1200, () => b.destroy())
@@ -588,8 +588,8 @@ export class DiveScene extends Phaser.Scene {
         const b = this.physics.add.image(this.player.x, this.player.y, texture)
         b.setScale(1.55)
         b.setData('damage', (def.damage || 22) * (isEcho ? 0.8 : 1))
-        this.physics.moveTo(b, pointer.worldX, pointer.worldY, 600)
         this.bullets.add(b)
+        this.physics.moveTo(b, pointer.worldX, pointer.worldY, 600)
         this.time.delayedCall(1300, () => b.destroy())
       }
     }
