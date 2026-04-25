@@ -49,14 +49,9 @@ const config: Phaser.Types.Core.GameConfig = {
     autoCenter: Phaser.Scale.CENTER_BOTH,
     zoom: 1,
   },
-  render: {
-    pixelArt: true,
-    antialias: false,
-    antialiasGL: false,
-    // 高 DPI 屏幕 (Retina devicePixelRatio=2) 时以物理像素密度渲染，防止文字模糊
-    // @ts-expect-error Phaser 运行时支持此字段，TS 类型定义滞后
-    resolution: window.devicePixelRatio || 1,
-  }
+  // 高 DPI/Retina 屏以物理像素密度渲染，防止文字模糊
+  // 用 unknown 绕过 TS 类型（Phaser 运行时支持 resolution，TS 定义滞后）
+  ...({ render: { pixelArt: true, antialias: false, antialiasGL: false, resolution: window.devicePixelRatio || 1 } } as unknown as Phaser.Types.Core.GameConfig),
 }
 
 const game = new Phaser.Game(config)
