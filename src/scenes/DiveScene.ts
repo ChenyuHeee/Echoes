@@ -7,7 +7,7 @@ import { PROLOGUE_LINES } from '../config/lore'
 import { closeRoomBeacon, getCurrentUser, saveDiveRecord } from '../lib/supabase'
 import { audioManager } from '../systems/AudioManager'
 import { voiceManager, getSpeakerRole } from '../systems/VoiceManager'
-import { RoomRealtime } from '../net/realtime'
+import { RoomRealtime, type NetEnemyDeath, type NetDiveResult } from '../net/realtime'
 import {
   addTimeSand,
   getRuntimeState,
@@ -45,7 +45,15 @@ export class DiveScene extends Phaser.Scene {
   private readonly echoSystem = new EchoSystem()
   private cooldownUntil: Record<string, number> = {}
   private remotePlayers = new Map<string, Phaser.GameObjects.Image>()
+  private remotePlayerLabels = new Map<string, Phaser.GameObjects.Text>()
   private roomRealtime: RoomRealtime | null = null
+
+  // 多人同步
+  private isHost = false
+  private enemyIdCounter = 0
+  private killedEnemyIds = new Set<number>()
+  private onlineDiveResults: NetDiveResult[] = []
+  private lastHpSyncAt = 0
 
   private offline = true
   private roomCode = ''
@@ -102,9 +110,14 @@ export class DiveScene extends Phaser.Scene {
   init(data: DiveInit) {
     this.offline = data.offline ?? true
     this.roomCode = data.roomCode || ''
+    this.enemyIdCounter = 0
+    this.killedEnemyIds.clear()
+    this.onlineDiveResults = []
+    this.lastHpSyncAt = 0
     const runtime = getRuntimeState()
     this.currentFragmentId = data.mapFragment || runtime.room?.mapFragment || runtime.selectedFragment
     this.currentTheme = FRAGMENT_THEMES[this.currentFragmentId]
+    this.isHost = !this.offline && (runtime.player.id === (runtime.room?.hostId || ''))
   }
 
   create() {
@@ -191,7 +204,6 @@ export class DiveScene extends Phaser.Scene {
         t: Date.now(),
       })
     }
-
     if (Phaser.Input.Keyboard.JustDown(this.keys.digit1)) {
       this.tryCast(0)
     }
@@ -339,6 +351,7 @@ export class DiveScene extends Phaser.Scene {
     e.setData('aiMode', this.pickAiMode(enemyType))
     e.setData('lastShot', 0)
     e.setData('wanderAngle', Math.random() * Math.PI * 2)
+    e.setData('enemyId', ++this.enemyIdCounter)
 
     if (isBoss) {
       e.setTint(0xff6040)
@@ -1595,6 +1608,15 @@ export class DiveScene extends Phaser.Scene {
     const isElite = enemy.getData('isElite') === true
     const dropX = enemy.x
     const dropY = enemy.y
+    const enemyId = enemy.getData('enemyId') as number
+
+    // 联机：广播敌人死亡
+    if (!this.offline && this.roomRealtime && enemyId) {
+      if (!this.killedEnemyIds.has(enemyId)) {
+        this.killedEnemyIds.add(enemyId)
+        this.roomRealtime.sendEnemyDeath({ enemyId, killerId: getRuntimeState().player.id })
+      }
+    }
 
     enemy.destroy()
     audioManager.playEnemyDeath()
@@ -1696,33 +1718,68 @@ export class DiveScene extends Phaser.Scene {
 
     try {
       await this.roomRealtime.connect(this.roomCode)
+
       this.roomRealtime.onRemoteMove((p) => {
         const rt = getRuntimeState()
         if (p.id === rt.player.id) return
 
         let sprite = this.remotePlayers.get(p.id)
         if (!sprite) {
-          sprite = this.add.image(p.x, p.y, 'teammate').setScale(2)
+          sprite = this.add.image(p.x, p.y, 'teammate').setScale(2).setDepth(25)
           this.remotePlayers.set(p.id, sprite)
+          // 创建名字+血量标签
+          const label = this.add.text(p.x, p.y - 28, '', {
+            fontFamily: 'monospace', fontSize: '10px', color: '#7ce0bc',
+            stroke: '#000000', strokeThickness: 2,
+          }).setOrigin(0.5).setDepth(26)
+          this.remotePlayerLabels.set(p.id, label)
         }
 
         sprite.x = Phaser.Math.Linear(sprite.x, p.x, 0.8)
         sprite.y = Phaser.Math.Linear(sprite.y, p.y, 0.8)
+
+        const label = this.remotePlayerLabels.get(p.id)
+        if (label) {
+          label.setText(`${p.username}  HP:${p.hp}`)
+          label.x = sprite.x
+          label.y = sprite.y - 28
+        }
       })
 
       this.roomRealtime.onRemoteSkill((evt) => {
         const rt = getRuntimeState()
         if (evt.id === rt.player.id) return
-
         const pulse = this.add.circle(evt.x, evt.y, evt.isEcho ? 24 : 16, evt.isEcho ? 0x7fffd1 : 0xffcd8a, 0.35)
         this.tweens.add({
-          targets: pulse,
-          alpha: 0,
-          scaleX: 2,
-          scaleY: 2,
-          duration: 500,
+          targets: pulse, alpha: 0, scaleX: 2, scaleY: 2, duration: 500,
           onComplete: () => pulse.destroy(),
         })
+      })
+
+      this.roomRealtime.onEnemyDeath(({ enemyId, killerId }) => {
+        const rt = getRuntimeState()
+        if (killerId === rt.player.id) return  // 自己杀的，已经处理
+        if (this.killedEnemyIds.has(enemyId)) return  // 已消灭
+        this.killedEnemyIds.add(enemyId)
+        this.enemies.children.each(child => {
+          const e = child as EnemyBody
+          if (e.active && (e.getData('enemyId') as number) === enemyId) {
+            // 显示死亡特效再销毁
+            const fx = this.add.circle(e.x, e.y, 18, 0xff6040, 0.5)
+            this.tweens.add({ targets: fx, alpha: 0, scaleX: 2.5, scaleY: 2.5, duration: 300, onComplete: () => fx.destroy() })
+            e.destroy()
+            audioManager.playEnemyDeath()
+          }
+          return true
+        })
+      })
+
+      this.roomRealtime.onDiveResult((res) => {
+        const rt = getRuntimeState()
+        if (res.id === rt.player.id) return
+        if (!this.onlineDiveResults.find(r => r.id === res.id)) {
+          this.onlineDiveResults.push(res)
+        }
       })
 
       this.emitHud(`在线同步已连接：${this.roomCode}`)
@@ -1789,6 +1846,8 @@ export class DiveScene extends Phaser.Scene {
     })
     recordDiveComplete(this.diveKills)
 
+    // 保存引用以供后续广播结算使用
+    const liveRealtime = this.roomRealtime
     this.roomRealtime?.disconnect()
     this.roomRealtime = null
 
@@ -1819,7 +1878,122 @@ export class DiveScene extends Phaser.Scene {
       })
     }
 
-    this.showDiveResult(result, duration, this.diveKills, this.timeSand)
+    // 联机：广播结算并等待其他玩家
+    if (!this.offline && liveRealtime) {
+      const rt = getRuntimeState()
+      const myResult: NetDiveResult = {
+        id: rt.player.id,
+        username: rt.player.username,
+        result,
+        kills: this.diveKills,
+        sand: this.timeSand,
+        duration,
+      }
+      this.onlineDiveResults = [myResult]
+      liveRealtime.sendDiveResult(myResult)
+      // 等待最多 6 秒收集其他玩家结果
+      this.time.delayedCall(6000, () => {
+        if (this.scene.isActive()) this.showMultiplayerSettlement(this.onlineDiveResults)
+      })
+    } else {
+      this.showDiveResult(result, duration, this.diveKills, this.timeSand)
+    }
+  }
+
+  private showMultiplayerSettlement(results: NetDiveResult[]) {
+    const { width, height } = this.scale
+    audioManager.stopBgm()
+    const hasSuccess = results.some(r => r.result === 'success')
+    if (hasSuccess) audioManager.playExtract()
+    else audioManager.playDeath()
+
+    this.add.rectangle(0, 0, width, height, 0x000000, 0.88)
+      .setOrigin(0).setScrollFactor(0).setDepth(200)
+
+    this.add.text(width / 2, 50, '✦  小队结算  ✦', {
+      fontFamily: 'monospace', fontSize: '28px', color: '#c8a96e',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
+
+    // 标题行
+    const COL = [width / 2 - 180, width / 2 - 40, width / 2 + 60, width / 2 + 140, width / 2 + 200]
+    const HEADER_Y = 100
+    const HEADERS = ['玩家', '结果', '击杀', '时砂', '耗时']
+    HEADERS.forEach((h, i) => {
+      this.add.text(COL[i], HEADER_Y, h, {
+        fontFamily: 'monospace', fontSize: '11px', color: '#4a6a8a',
+      }).setOrigin(i === 0 ? 0 : 0.5).setScrollFactor(0).setDepth(201)
+    })
+    this.add.rectangle(width / 2, HEADER_Y + 16, 420, 1, 0x2a4060, 0.6)
+      .setScrollFactor(0).setDepth(201)
+
+    const sorted = [...results].sort((a, b) => b.sand - a.sand)
+    const selfId = getRuntimeState().player.id
+
+    sorted.forEach((r, i) => {
+      const rowY = 135 + i * 52
+      const isMe = r.id === selfId
+      const isSuccess = r.result === 'success'
+      const rowBg = this.add.rectangle(width / 2, rowY + 10, 440, 44,
+        isMe ? 0x0c1828 : 0x060c18, 1)
+      if (isMe) rowBg.setStrokeStyle(1, 0x3a6090, 0.6)
+      rowBg.setScrollFactor(0).setDepth(200)
+
+      // 名次
+      const rankColors = ['#f0c040', '#c0c8d8', '#c08050']
+      this.add.text(width / 2 - 215, rowY + 10,
+        i < 3 ? ['①', '②', '③'][i] : `${i + 1}`, {
+        fontFamily: 'monospace', fontSize: '14px', color: rankColors[i] || '#506070',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
+
+      // 玩家名
+      this.add.text(COL[0], rowY + 10, `${r.username}${isMe ? ' ★' : ''}`, {
+        fontFamily: 'monospace', fontSize: '13px', color: isMe ? '#e8f0ff' : '#8090a8',
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(201)
+
+      // 结果
+      this.add.text(COL[1], rowY + 10, isSuccess ? '撤离' : '阵亡', {
+        fontFamily: 'monospace', fontSize: '13px', color: isSuccess ? '#7ce0bc' : '#e07c7c',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
+
+      // 击杀
+      this.add.text(COL[2], rowY + 10, String(r.kills), {
+        fontFamily: 'monospace', fontSize: '13px', color: '#d8c880',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
+
+      // 时砂
+      this.add.text(COL[3], rowY + 10, String(r.sand), {
+        fontFamily: 'monospace', fontSize: '13px', color: '#80c8f0',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
+
+      // 耗时
+      this.add.text(COL[4], rowY + 10, `${r.duration}s`, {
+        fontFamily: 'monospace', fontSize: '12px', color: '#506070',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
+    })
+
+    const returnY = 135 + Math.max(sorted.length, 1) * 52 + 40
+    let sec = 8
+    const cntText = this.add.text(width / 2, returnY, `${sec} 秒后返回庇护所…`, {
+      fontFamily: 'monospace', fontSize: '12px', color: '#405060',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
+
+    this.time.addEvent({
+      delay: 1000, repeat: 7,
+      callback: () => { sec--; if (cntText.active) cntText.setText(`${Math.max(0, sec)} 秒后返回庇护所…`) },
+    })
+
+    const backBtn = this.add.rectangle(width / 2, returnY + 36, 180, 32, 0x0c1828, 1)
+    backBtn.setStrokeStyle(1, 0x3a5878, 0.7).setScrollFactor(0).setDepth(201)
+    backBtn.setInteractive({ useHandCursor: true })
+    backBtn.on('pointerdown', () => { this.scene.stop('HUDScene'); this.scene.start('SanctuaryScene') })
+    this.add.text(width / 2, returnY + 36, '返回庇护所', {
+      fontFamily: 'monospace', fontSize: '13px', color: '#7090b8',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(202)
+
+    this.time.delayedCall(8200, () => {
+      this.scene.stop('HUDScene')
+      this.scene.start('SanctuaryScene')
+    })
   }
 
   private showDiveResult(result: 'success' | 'death', duration: number, kills: number, sand: number) {

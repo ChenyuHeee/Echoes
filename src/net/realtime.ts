@@ -19,6 +19,20 @@ export interface NetSkillEvent {
   isEcho: boolean
 }
 
+export interface NetEnemyDeath {
+  enemyId: number
+  killerId: string
+}
+
+export interface NetDiveResult {
+  id: string
+  username: string
+  result: string
+  kills: number
+  sand: number
+  duration: number
+}
+
 export class RoomRealtime {
   private channel: RealtimeChannel | null = null
 
@@ -66,6 +80,28 @@ export class RoomRealtime {
       type: 'broadcast',
       event: 'skill',
       payload: event,
+    })
+  }
+
+  sendEnemyDeath(payload: NetEnemyDeath) {
+    this.channel?.send({ type: 'broadcast', event: 'enemy_death', payload })
+  }
+
+  onEnemyDeath(handler: (p: NetEnemyDeath) => void) {
+    if (!this.channel) return
+    this.channel.on('broadcast', { event: 'enemy_death' }, ({ payload }) => {
+      handler(payload as NetEnemyDeath)
+    })
+  }
+
+  sendDiveResult(payload: NetDiveResult) {
+    this.channel?.send({ type: 'broadcast', event: 'dive_result', payload })
+  }
+
+  onDiveResult(handler: (p: NetDiveResult) => void) {
+    if (!this.channel) return
+    this.channel.on('broadcast', { event: 'dive_result' }, ({ payload }) => {
+      handler(payload as NetDiveResult)
     })
   }
 
