@@ -39,6 +39,10 @@ export class LobbyScene extends Phaser.Scene {
   private readyBtnRect: Phaser.GameObjects.Rectangle | null = null
   private readyBtnText: Phaser.GameObjects.Text | null = null
   private waitingStatusText: Phaser.GameObjects.Text | null = null
+  private broadcastChannel: RealtimeChannel | null = null
+  private isBroadcasting = false
+  private broadcastBtnRect: Phaser.GameObjects.Rectangle | null = null
+  private broadcastBtnText: Phaser.GameObjects.Text | null = null
 
   constructor() {
     super('LobbyScene')
@@ -58,6 +62,10 @@ export class LobbyScene extends Phaser.Scene {
     this.readyBtnRect = null
     this.readyBtnText = null
     this.waitingStatusText = null
+    this.broadcastChannel = null
+    this.isBroadcasting = false
+    this.broadcastBtnRect = null
+    this.broadcastBtnText = null
     // If host in waiting mode, remember room id for cleanup
     if (this.mode === 'waiting' && this.isHost) {
       this.createdRoomId = getRuntimeState().room?.id ?? null
@@ -195,18 +203,53 @@ export class LobbyScene extends Phaser.Scene {
       })
     }
 
-    // 取消/返回
-    const backTxt = this.add.text(20, height - 12, '← 取消', {
-      fontFamily: 'monospace', fontSize: '12px', color: '#405060',
-    }).setOrigin(0, 1)
-    backTxt.setInteractive({ useHandCursor: true })
-    backTxt.on('pointerover', () => backTxt.setColor('#7090b0'))
-    backTxt.on('pointerout', () => backTxt.setColor('#405060'))
-    backTxt.on('pointerdown', () => {
-      audioManager.playClick()
-      this.cleanupLobbyChannel()
-      this.scene.start('LobbyScene')   // 重启为选择模式
-    })
+    // ── 房主控制行：广播 / 催促 / 解散 ─────────────────
+    if (this.isHost) {
+      this.broadcastBtnRect = this.add.rectangle(width / 2 - 160, height - 44, 162, 30, 0x080f1c, 1)
+      this.broadcastBtnRect.setStrokeStyle(1, 0x2a5078, 0.6)
+      this.broadcastBtnRect.setInteractive({ useHandCursor: true })
+      this.broadcastBtnText = this.add.text(width / 2 - 160, height - 44, '广播到大厅', {
+        fontFamily: 'monospace', fontSize: '11px', color: '#4a7a9a',
+      }).setOrigin(0.5)
+      this.broadcastBtnRect.on('pointerdown', () => this.toggleBroadcast())
+      this.broadcastBtnRect.on('pointerover', () => this.broadcastBtnRect?.setFillStyle(0x0c1828, 1))
+      this.broadcastBtnRect.on('pointerout', () => this.broadcastBtnRect?.setFillStyle(this.isBroadcasting ? 0x081820 : 0x080f1c, 1))
+
+      const remindRect = this.add.rectangle(width / 2, height - 44, 130, 30, 0x080f1c, 1)
+      remindRect.setStrokeStyle(1, 0x2a5040, 0.6)
+      remindRect.setInteractive({ useHandCursor: true })
+      this.add.text(width / 2, height - 44, '催促准备', {
+        fontFamily: 'monospace', fontSize: '11px', color: '#4a7a5a',
+      }).setOrigin(0.5)
+      remindRect.on('pointerdown', () => this.remindReady())
+      remindRect.on('pointerover', () => remindRect.setFillStyle(0x0c1a10, 1))
+      remindRect.on('pointerout', () => remindRect.setFillStyle(0x080f1c, 1))
+
+      const dissolveRect = this.add.rectangle(width / 2 + 148, height - 44, 130, 30, 0x100808, 1)
+      dissolveRect.setStrokeStyle(1, 0x602020, 0.6)
+      dissolveRect.setInteractive({ useHandCursor: true })
+      this.add.text(width / 2 + 148, height - 44, '解散房间', {
+        fontFamily: 'monospace', fontSize: '11px', color: '#904040',
+      }).setOrigin(0.5)
+      dissolveRect.on('pointerdown', () => this.dissolveRoom())
+      dissolveRect.on('pointerover', () => dissolveRect.setFillStyle(0x1c0c0c, 1))
+      dissolveRect.on('pointerout', () => dissolveRect.setFillStyle(0x100808, 1))
+    }
+
+    // 取消/返回（仅非房主；房主用解散房间）
+    if (!this.isHost) {
+      const backTxt = this.add.text(20, height - 12, '← 离开', {
+        fontFamily: 'monospace', fontSize: '12px', color: '#405060',
+      }).setOrigin(0, 1)
+      backTxt.setInteractive({ useHandCursor: true })
+      backTxt.on('pointerover', () => backTxt.setColor('#7090b0'))
+      backTxt.on('pointerout', () => backTxt.setColor('#405060'))
+      backTxt.on('pointerdown', () => {
+        audioManager.playClick()
+        this.cleanupAll()
+        this.scene.start('LobbyScene')
+      })
+    }
 
     this.subscribeToLobby()
   }
@@ -273,6 +316,33 @@ export class LobbyScene extends Phaser.Scene {
         this.waitingStatusText?.setText(allDone ? '✦ 所有人已就绪！' : '等待所有玩家准备...')
         this.waitingStatusText?.setColor(allDone ? '#7ce0bc' : '#405060')
       })
+      .on('broadcast', { event: 'kick' }, ({ payload }) => {
+        const p = payload as { targetId: string }
+        const selfId = getRuntimeState().player.id
+        if (p.targetId === selfId) {
+          this.cleanupAll()
+          this.scene.start('LobbyScene')
+        }
+      })
+      .on('broadcast', { event: 'dissolve' }, () => {
+        if (!this.isHost) {
+          this.cleanupAll()
+          this.scene.start('LobbyScene')
+        }
+      })
+      .on('broadcast', { event: 'remind_ready' }, () => {
+        if (!this.selfReady) {
+          this.waitingStatusText?.setText('⚡ 房主催你准备！').setColor('#e0d060')
+          this.readyBtnRect?.setStrokeStyle(2, 0xe0d060, 1)
+          this.time.delayedCall(2500, () => {
+            if (this.waitingStatusText?.active) {
+              this.waitingStatusText.setText('等待所有玩家准备...')
+              this.waitingStatusText.setColor('#405060')
+              this.readyBtnRect?.setStrokeStyle(1, 0x3a7090, 0.7)
+            }
+          })
+        }
+      })
       .on('broadcast', { event: 'game_start' }, ({ payload }) => {
         const mapFrag = (payload as { mapFragment: FragmentId }).mapFragment
         this.startingGame = true
@@ -327,13 +397,28 @@ export class LobbyScene extends Phaser.Scene {
       this.playerListContainer!.add(nameText)
 
       // 准备标志
+      const badgeX = (this.isHost && !isMe) ? width / 2 + 155 : width / 2 + 210
       const badge = this.make.text({
-        x: width / 2 + 210, y,
+        x: badgeX, y,
         text: player.ready ? '✓ 已准备' : '等待中',
         style: { fontFamily: 'monospace', fontSize: '12px', color: player.ready ? '#5adc9a' : '#404c5a' },
         add: false,
       }).setOrigin(1, 0.5)
       this.playerListContainer!.add(badge)
+
+      // 踢人按钮（仅房主，非自己）
+      if (this.isHost && !isMe) {
+        const kickBtn = this.make.text({
+          x: width / 2 + 163, y,
+          text: '[踢]',
+          style: { fontFamily: 'monospace', fontSize: '10px', color: '#703030' },
+          add: false,
+        }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true })
+        kickBtn.on('pointerover', () => kickBtn.setColor('#d06060'))
+        kickBtn.on('pointerout', () => kickBtn.setColor('#703030'))
+        kickBtn.on('pointerdown', () => this.kickPlayer(id, player.username))
+        this.playerListContainer!.add(kickBtn)
+      }
 
       idx++
     }
@@ -345,6 +430,80 @@ export class LobbyScene extends Phaser.Scene {
     this.startBtnRect.setFillStyle(ready ? 0x0c2038 : 0x060810, 1)
     this.startBtnRect.setStrokeStyle(1, ready ? 0x3a7090 : 0x203040, ready ? 0.8 : 0.4)
     this.startBtnText.setColor(ready ? '#70d0f0' : '#304050')
+  }
+
+  // ─────────────────── 房主控制逻辑 ────────────────────
+
+  private async toggleBroadcast() {
+    audioManager.playClick()
+    if (this.isBroadcasting) {
+      await this.broadcastChannel?.untrack()
+      this.broadcastChannel?.unsubscribe()
+      this.broadcastChannel = null
+      this.isBroadcasting = false
+      this.broadcastBtnRect?.setFillStyle(0x080f1c, 1)
+      this.broadcastBtnRect?.setStrokeStyle(1, 0x2a5078, 0.6)
+      this.broadcastBtnText?.setText('广播到大厅').setColor('#4a7a9a')
+    } else {
+      const rt = getRuntimeState()
+      const theme = FRAGMENT_THEMES[this.mapFragment]
+      this.broadcastChannel = supabase.channel('public:lobby_broadcast', {
+        config: { presence: { key: this.roomCode } },
+      })
+      this.broadcastChannel
+        .on('presence', { event: 'sync' }, () => {})
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await this.broadcastChannel?.track({
+              roomCode: this.roomCode,
+              hostUsername: rt.player.username,
+              mapFragment: this.mapFragment,
+              mapName: theme.name,
+              playerCount: this.players.size,
+            })
+            this.isBroadcasting = true
+            this.broadcastBtnRect?.setFillStyle(0x081820, 1)
+            this.broadcastBtnRect?.setStrokeStyle(1, 0x3a9060, 0.8)
+            this.broadcastBtnText?.setText('✦ 广播中  取消').setColor('#5adc9a')
+          }
+        })
+    }
+  }
+
+  private dissolveRoom() {
+    audioManager.playClick()
+    void this.lobbyChannel?.send({ type: 'broadcast', event: 'dissolve', payload: {} })
+    this.time.delayedCall(300, () => {
+      this.cleanupAll()
+      this.scene.start('LobbyScene')
+    })
+  }
+
+  private remindReady() {
+    audioManager.playClick()
+    void this.lobbyChannel?.send({ type: 'broadcast', event: 'remind_ready', payload: {} })
+    this.waitingStatusText?.setText('✦ 已催促所有人准备').setColor('#e0d060')
+    this.time.delayedCall(2000, () => {
+      if (this.waitingStatusText?.active) {
+        this.waitingStatusText.setText('等待所有玩家准备...')
+        this.waitingStatusText.setColor('#405060')
+      }
+    })
+  }
+
+  private kickPlayer(targetId: string, username: string) {
+    audioManager.playClick()
+    void this.lobbyChannel?.send({ type: 'broadcast', event: 'kick', payload: { targetId } })
+    this.players.delete(targetId)
+    this.renderPlayerList()
+    this.updateStartBtn()
+    this.waitingStatusText?.setText(`已踢出 ${username}`).setColor('#d06060')
+    this.time.delayedCall(2000, () => {
+      if (this.waitingStatusText?.active) {
+        this.waitingStatusText.setText('等待所有玩家准备...')
+        this.waitingStatusText.setColor('#405060')
+      }
+    })
   }
 
   // ─────────────────── 碎片卡片 ────────────────────────
@@ -489,8 +648,8 @@ export class LobbyScene extends Phaser.Scene {
     const panel = document.createElement('div')
     panel.style.cssText = [
       'background:#090d1a', 'border:1px solid #2a4060',
-      'padding:32px 40px', 'min-width:300px', 'display:flex',
-      'flex-direction:column', 'gap:14px',
+      'padding:24px 32px', 'width:480px', 'display:flex',
+      'flex-direction:column', 'gap:12px',
     ].join(';')
 
     const title = document.createElement('div')
@@ -498,10 +657,34 @@ export class LobbyScene extends Phaser.Scene {
     title.style.cssText = 'color:#c8a96e;font-size:18px;letter-spacing:2px'
     panel.appendChild(title)
 
+    // ── 标签栏 ─────────────────────────────────────────
+    const tabRow = document.createElement('div')
+    tabRow.style.cssText = 'display:flex;gap:0;border-bottom:1px solid #1a2a3a'
+    const tabStyle = (active: boolean) => [
+      'background:none', 'border:none',
+      `border-bottom:2px solid ${active ? '#c8a96e' : 'transparent'}`,
+      `color:${active ? '#c8a96e' : '#405060'}`,
+      'font-family:monospace', 'font-size:12px',
+      'padding:6px 16px', 'cursor:pointer', 'margin-bottom:-1px',
+    ].join(';')
+    const tabCode = document.createElement('button')
+    tabCode.textContent = '输入房间码'
+    tabCode.style.cssText = tabStyle(true)
+    const tabBrowse = document.createElement('button')
+    tabBrowse.textContent = '浏览公开房间'
+    tabBrowse.style.cssText = tabStyle(false)
+    tabRow.appendChild(tabCode)
+    tabRow.appendChild(tabBrowse)
+    panel.appendChild(tabRow)
+
+    // ── 输入房间码区域 ──────────────────────────────────
+    const codeSection = document.createElement('div')
+    codeSection.style.cssText = 'display:flex;flex-direction:column;gap:10px'
+
     const label = document.createElement('label')
     label.textContent = '房间码（4-6位）'
     label.style.cssText = 'color:#4a6a8a;font-size:12px'
-    panel.appendChild(label)
+    codeSection.appendChild(label)
 
     const inp = document.createElement('input')
     inp.type = 'text'
@@ -513,61 +696,183 @@ export class LobbyScene extends Phaser.Scene {
       'letter-spacing:8px', 'text-align:center', 'outline:none', 'width:100%', 'box-sizing:border-box',
     ].join(';')
     inp.addEventListener('input', () => { inp.value = inp.value.toUpperCase() })
-    panel.appendChild(inp)
+    codeSection.appendChild(inp)
 
     const statusEl = document.createElement('div')
     statusEl.style.cssText = 'color:#c06060;font-size:12px;min-height:18px'
-    panel.appendChild(statusEl)
+    codeSection.appendChild(statusEl)
 
-    const btnRow = document.createElement('div')
-    btnRow.style.cssText = 'display:flex;gap:12px'
-
+    const codeRowBtns = document.createElement('div')
+    codeRowBtns.style.cssText = 'display:flex;gap:12px'
     const joinBtn = document.createElement('button')
     joinBtn.textContent = '加入'
     joinBtn.style.cssText = [
       'flex:1', 'background:#0c1828', 'border:1px solid #4080b0',
-      'color:#90c8e8', 'font-family:monospace', 'font-size:14px',
-      'padding:10px', 'cursor:pointer',
+      'color:#90c8e8', 'font-family:monospace', 'font-size:14px', 'padding:10px', 'cursor:pointer',
     ].join(';')
     joinBtn.addEventListener('click', async () => {
       const code = inp.value.trim().toUpperCase()
       if (code.length < 4) { statusEl.textContent = '房间码无效'; return }
       statusEl.textContent = '连接中...'
+      joinBtn.disabled = true
       const user = await getCurrentUser()
       const playerId = user?.id || getRuntimeState().player.id
       const { data, error } = await joinRoom(code, playerId)
       if (error || !data) {
         statusEl.textContent = `加入失败：${error?.message || '房间不存在'}`
+        joinBtn.disabled = false
         return
       }
       const roomId = data.room.id as string
       const mapFrag = data.room.map_fragment as FragmentId
-      const hostId = data.room.host_id as string
-      setRoom({ id: roomId, code, hostId, mapFragment: mapFrag })
-      this.removeOverlay()
+      setRoom({ id: roomId, code, hostId: data.room.host_id as string, mapFragment: mapFrag })
+      cleanup()
       this.scene.start('LobbyScene', { mode: 'waiting', roomCode: code, isHost: false, mapFragment: mapFrag })
     })
-
     const cancelBtn = document.createElement('button')
     cancelBtn.textContent = '取消'
     cancelBtn.style.cssText = [
       'flex:1', 'background:#060810', 'border:1px solid #2a3a4a',
-      'color:#405060', 'font-family:monospace', 'font-size:14px',
-      'padding:10px', 'cursor:pointer',
+      'color:#405060', 'font-family:monospace', 'font-size:14px', 'padding:10px', 'cursor:pointer',
     ].join(';')
-    cancelBtn.addEventListener('click', () => this.removeOverlay())
+    cancelBtn.addEventListener('click', () => cleanup())
+    codeRowBtns.appendChild(joinBtn)
+    codeRowBtns.appendChild(cancelBtn)
+    codeSection.appendChild(codeRowBtns)
+    panel.appendChild(codeSection)
 
-    btnRow.appendChild(joinBtn)
-    btnRow.appendChild(cancelBtn)
-    panel.appendChild(btnRow)
+    // ── 浏览公开房间区域 ────────────────────────────────
+    const browseSection = document.createElement('div')
+    browseSection.style.cssText = 'display:none;flex-direction:column;gap:8px'
+
+    const browseHint = document.createElement('div')
+    browseHint.style.cssText = 'color:#304050;font-size:11px'
+    browseHint.textContent = '正在获取公开房间列表...'
+    browseSection.appendChild(browseHint)
+
+    const roomList = document.createElement('div')
+    roomList.style.cssText = 'display:flex;flex-direction:column;gap:6px;min-height:160px;max-height:260px;overflow-y:auto'
+    browseSection.appendChild(roomList)
+
+    const browseCancelBtn = document.createElement('button')
+    browseCancelBtn.textContent = '取消'
+    browseCancelBtn.style.cssText = [
+      'background:#060810', 'border:1px solid #2a3a4a',
+      'color:#405060', 'font-family:monospace', 'font-size:14px', 'padding:10px', 'cursor:pointer',
+    ].join(';')
+    browseCancelBtn.addEventListener('click', () => cleanup())
+    browseSection.appendChild(browseCancelBtn)
+    panel.appendChild(browseSection)
+
     overlay.appendChild(panel)
     document.body.appendChild(overlay)
     this.overlay = overlay
-    setTimeout(() => inp.focus(), 60)
-    panel.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') joinBtn.click()
-      if (e.key === 'Escape') this.removeOverlay()
+
+    // ── Presence 频道逻辑 ──────────────────────────────
+    let browseChannel: ReturnType<typeof supabase.channel> | null = null
+
+    type RoomPresence = { roomCode: string; hostUsername: string; mapName: string; playerCount: number }
+
+    const renderRooms = (rooms: RoomPresence[]) => {
+      roomList.innerHTML = ''
+      if (rooms.length === 0) {
+        const empty = document.createElement('div')
+        empty.style.cssText = 'color:#304050;font-size:12px;text-align:center;padding:30px 0'
+        empty.textContent = '暂无公开房间'
+        roomList.appendChild(empty)
+        return
+      }
+      rooms.forEach(r => {
+        const row = document.createElement('div')
+        row.style.cssText = [
+          'display:flex', 'align-items:center', 'gap:10px',
+          'background:#060b16', 'border:1px solid #1a2a3a', 'padding:8px 12px',
+        ].join(';')
+
+        const info = document.createElement('div')
+        info.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:2px'
+        const codeLine = document.createElement('div')
+        codeLine.style.cssText = 'color:#7ce0bc;font-size:15px;letter-spacing:4px'
+        codeLine.textContent = r.roomCode
+        const detail = document.createElement('div')
+        detail.style.cssText = 'color:#405060;font-size:11px'
+        detail.textContent = `房主：${r.hostUsername}  ·  ${r.mapName}  ·  ${r.playerCount} 人`
+        info.appendChild(codeLine)
+        info.appendChild(detail)
+        row.appendChild(info)
+
+        const joinRowBtn = document.createElement('button')
+        joinRowBtn.textContent = '加入'
+        joinRowBtn.style.cssText = [
+          'background:#0c1828', 'border:1px solid #4080b0',
+          'color:#90c8e8', 'font-family:monospace', 'font-size:12px',
+          'padding:6px 14px', 'cursor:pointer', 'white-space:nowrap',
+        ].join(';')
+        joinRowBtn.addEventListener('click', async () => {
+          joinRowBtn.textContent = '连接中...'
+          joinRowBtn.disabled = true
+          const user = await getCurrentUser()
+          const playerId = user?.id || getRuntimeState().player.id
+          const { data, error } = await joinRoom(r.roomCode, playerId)
+          if (error || !data) {
+            joinRowBtn.textContent = '失败'
+            joinRowBtn.style.color = '#c06060'
+            return
+          }
+          const roomId = data.room.id as string
+          const mapFrag = data.room.map_fragment as FragmentId
+          setRoom({ id: roomId, code: r.roomCode, hostId: data.room.host_id as string, mapFragment: mapFrag })
+          cleanup()
+          this.scene.start('LobbyScene', { mode: 'waiting', roomCode: r.roomCode, isHost: false, mapFragment: mapFrag })
+        })
+        row.appendChild(joinRowBtn)
+        roomList.appendChild(row)
+      })
+    }
+
+    const startBrowse = () => {
+      browseHint.textContent = '正在连接...'
+      browseChannel = supabase.channel('public:lobby_broadcast')
+      browseChannel
+        .on('presence', { event: 'sync' }, () => {
+          const state = browseChannel!.presenceState<RoomPresence>()
+          const rooms = Object.values(state).flat()
+          browseHint.textContent = `${rooms.length} 个公开房间`
+          renderRooms(rooms)
+        })
+        .subscribe()
+    }
+
+    const stopBrowse = () => {
+      if (browseChannel) { browseChannel.unsubscribe(); browseChannel = null }
+    }
+
+    const cleanup = () => { stopBrowse(); this.removeOverlay() }
+
+    // ── 标签切换 ───────────────────────────────────────
+    tabCode.addEventListener('click', () => {
+      tabCode.style.cssText = tabStyle(true)
+      tabBrowse.style.cssText = tabStyle(false)
+      codeSection.style.display = 'flex'
+      browseSection.style.display = 'none'
+      stopBrowse()
+      setTimeout(() => inp.focus(), 60)
     })
+    tabBrowse.addEventListener('click', () => {
+      tabCode.style.cssText = tabStyle(false)
+      tabBrowse.style.cssText = tabStyle(true)
+      codeSection.style.display = 'none'
+      browseSection.style.display = 'flex'
+      startBrowse()
+    })
+
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup() })
+    panel.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && codeSection.style.display !== 'none') joinBtn.click()
+      if (e.key === 'Escape') cleanup()
+    })
+
+    setTimeout(() => inp.focus(), 60)
   }
 
   // ─────────────────── 辅助 ────────────────────────────
@@ -585,6 +890,11 @@ export class LobbyScene extends Phaser.Scene {
   private cleanupAll() {
     this.removeOverlay()
     this.cleanupLobbyChannel()
+    if (this.broadcastChannel) {
+      void this.broadcastChannel.untrack()
+      this.broadcastChannel.unsubscribe()
+      this.broadcastChannel = null
+    }
     if (this._unloadHandler) {
       window.removeEventListener('beforeunload', this._unloadHandler)
       this._unloadHandler = null
