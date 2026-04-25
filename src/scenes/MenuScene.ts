@@ -50,11 +50,11 @@ export class MenuScene extends Phaser.Scene {
     const onlineBtn = this.makeButton(width / 2, height * 0.58, '读取中...', () => {})
     void getCurrentUser().then(user => {
       if (user) {
-        onlineBtn.label.setText('进入房间大厅')
+        onlineBtn.label.setText('选择游戏模式')
         onlineBtn.bg.removeAllListeners('pointerdown')
         onlineBtn.bg.on('pointerdown', () => {
           audioManager.playClick()
-          this.scene.start('LobbyScene')
+          this.scene.start('ModeSelectScene')
         })
       } else {
         onlineBtn.label.setText('登录 / 注册')
@@ -66,12 +66,7 @@ export class MenuScene extends Phaser.Scene {
       }
     })
 
-    this.makeButton(width / 2, height * 0.68, '选择游戏模式', () => {
-      audioManager.playClick()
-      this.scene.start('ModeSelectScene')
-    })
-
-    this.makeButton(width / 2, height * 0.78, '进入回响庇护所', () => {
+    this.makeButton(width / 2, height * 0.68, '进入回响庇护所', () => {
       audioManager.playClick()
       this.scene.start('SanctuaryScene')
     })

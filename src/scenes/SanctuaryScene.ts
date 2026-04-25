@@ -163,9 +163,9 @@ export class SanctuaryScene extends Phaser.Scene {
     this.contentLayer.add(sandTxt)
 
     // 前往深潜
-    this.contentLayer.add(this.makeBtn(width / 2 + 160, cy + 40, '前往深潜大厅', 200, () => {
+    this.contentLayer.add(this.makeBtn(width / 2 + 160, cy + 40, '选择游戏模式', 200, () => {
       audioManager.playClick()
-      this.scene.start('LobbyScene')
+      this.scene.start('ModeSelectScene')
     }))
 
     // 返回菜单
