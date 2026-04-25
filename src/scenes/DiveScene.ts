@@ -120,8 +120,6 @@ export class DiveScene extends Phaser.Scene {
   init(data: DiveInit) {
     this.offline = data.offline ?? true
     this.roomCode = data.roomCode || ''
-    this.enemyIdCounter = 0
-    this.killedEnemyIds.clear()
     // 用 roomCode 的字符编码初始化种子，离线时用固定值
     let seed = 0x12345678
     const rc = this.roomCode || 'offline'
@@ -129,6 +127,19 @@ export class DiveScene extends Phaser.Scene {
     this._rngState = seed
     this.onlineDiveResults = []
     this.lastHpSyncAt = 0
+    this.diveFinished = false
+    this.waveNumber = 0
+    this.waveInProgress = false
+    this.bossAlive = false
+    this.enemyIdCounter = 0
+    this.killedEnemyIds.clear()
+    this.loadedSkill = null
+    this.loadedSkillExpire = 0
+    this.comboCount = 0
+    this.comboResetAt = 0
+    this.activeEffectZones = []
+    this.burnDots.clear()
+    this.slowUntil.clear()
     const runtime = getRuntimeState()
     this.currentFragmentId = data.mapFragment || runtime.room?.mapFragment || runtime.selectedFragment
     this.currentTheme = FRAGMENT_THEMES[this.currentFragmentId]
