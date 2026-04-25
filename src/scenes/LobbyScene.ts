@@ -401,14 +401,18 @@ export class LobbyScene extends Phaser.Scene {
         style: {
           fontFamily: 'monospace', fontSize: '11px',
           color: isSelected ? '#8090a8' : '#304050',
-          wordWrap: { width: CARD_W - 32 }, align: 'center', lineSpacing: 4,
+          wordWrap: { width: CARD_W - 28, useAdvancedWrap: true }, align: 'center', lineSpacing: 4,
         },
         add: false,
       }).setOrigin(0.5, 0))
 
       container.add(this.make.text({
-        x: 0, y: -CARD_H / 2 + 175, text: `敌人：${theme.enemyPool.slice(0, 3).join('  ')}`,
-        style: { fontFamily: 'monospace', fontSize: '10px', color: isSelected ? '#5a7090' : '#2a3840' },
+        x: 0, y: -CARD_H / 2 + 175, text: `敌人：${theme.enemyPool.slice(0, 3).join(' / ')}`,
+        style: {
+          fontFamily: 'monospace', fontSize: '10px',
+          color: isSelected ? '#5a7090' : '#2a3840',
+          wordWrap: { width: CARD_W - 24, useAdvancedWrap: true }, align: 'center',
+        },
         add: false,
       }).setOrigin(0.5))
 
