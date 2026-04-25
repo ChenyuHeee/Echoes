@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { getRuntimeState } from '../state/gameState'
+import { getCurrentUser } from '../lib/supabase'
 import { audioManager } from '../systems/AudioManager'
 
 export class MenuScene extends Phaser.Scene {
@@ -45,16 +46,34 @@ export class MenuScene extends Phaser.Scene {
       color: '#dbebff',
     }).setOrigin(0.5)
 
-    this.makeButton(width / 2, height * 0.58, '进入登录与房间大厅', () => {
-      this.scene.start('LoginScene')
+    // 异步检查登录状态，动态显示"进入房间大厅"或"登录/注册"
+    const onlineBtn = this.makeButton(width / 2, height * 0.58, '读取中...', () => {})
+    void getCurrentUser().then(user => {
+      if (user) {
+        onlineBtn.label.setText('进入房间大厅')
+        onlineBtn.bg.removeAllListeners('pointerdown')
+        onlineBtn.bg.on('pointerdown', () => {
+          audioManager.playClick()
+          this.scene.start('LobbyScene')
+        })
+      } else {
+        onlineBtn.label.setText('登录 / 注册')
+        onlineBtn.bg.removeAllListeners('pointerdown')
+        onlineBtn.bg.on('pointerdown', () => {
+          audioManager.playClick()
+          this.scene.start('LoginScene')
+        })
+      }
     })
 
     this.makeButton(width / 2, height * 0.68, '离线快速深潜（练习）', () => {
+      audioManager.playClick()
       this.scene.start('DiveScene', { offline: true })
       this.scene.launch('HUDScene')
     })
 
     this.makeButton(width / 2, height * 0.78, '进入回响庇护所', () => {
+      audioManager.playClick()
       this.scene.start('SanctuaryScene')
     })
   }

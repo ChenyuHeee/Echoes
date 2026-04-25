@@ -16,6 +16,32 @@ export class LoginScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#0b1122')
     this.add.image(width / 2, height / 2, 'bg_login').setDisplaySize(width, height).setAlpha(0.9)
 
+    // 先显示检查中状态，异步检测登录
+    const checkingText = this.add.text(width / 2, height / 2, '正在检查登录状态...', {
+      fontFamily: 'monospace', fontSize: '16px', color: '#4a6a8a',
+    }).setOrigin(0.5)
+
+    void getCurrentUser().then(user => {
+      checkingText.destroy()
+      if (user) {
+        // 已登录，直接跳转
+        const username = (user.user_metadata?.username as string) || user.email || user.id.slice(0, 8)
+        setPlayerIdentity(user.id, username)
+        audioManager.playTransition()
+        this.scene.start('SanctuaryScene')
+      } else {
+        // 未登录，渲染完整 UI
+        this.buildLoginUI()
+      }
+    })
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.removeOverlay())
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.removeOverlay())
+  }
+
+  private buildLoginUI() {
+    const { width, height } = this.scale
+
     this.add.text(width / 2, height * 0.14, '认证终端', {
       fontFamily: 'monospace', fontSize: '36px', color: '#c8a96e',
     }).setOrigin(0.5)
@@ -43,10 +69,6 @@ export class LoginScene extends Phaser.Scene {
     this.add.text(width / 2, height * 0.88, '终端已接入庇护所边缘网络  ·  注册后需邮件激活', {
       fontFamily: 'monospace', fontSize: '11px', color: '#304050',
     }).setOrigin(0.5)
-
-    this.refreshUser()
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.removeOverlay())
-    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.removeOverlay())
   }
 
   // ─── HTML 输入覆盖层 ──────────────────────────────────
@@ -197,7 +219,7 @@ export class LoginScene extends Phaser.Scene {
     if (user) {
       const username = (user.user_metadata?.username as string) || user.email || user.id.slice(0, 8)
       setPlayerIdentity(user.id, username)
-      this.statusText.setText(`状态：已登录 ${username}`)
+      this.statusText?.setText(`状态：已登录 ${username}`)
     }
   }
 
