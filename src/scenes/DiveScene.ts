@@ -1249,6 +1249,10 @@ export class DiveScene extends Phaser.Scene {
   private castInstantSkill(skill: SkillType, isEcho: boolean) {
     const def = SKILL_DEFINITIONS[skill]
     const pointer = this.input.activePointer
+    // pointer.worldX/worldY 只在指针移动时更新；摄像机滚动后需手动折算
+    const cam = this.cameras.main
+    const targetX = pointer.x / cam.zoom + cam.scrollX
+    const targetY = pointer.y / cam.zoom + cam.scrollY
 
     const ring = this.add.image(this.player.x, this.player.y, 'effect_echo_ring')
       .setScale(isEcho ? 0.9 : 0.7)
@@ -1264,8 +1268,8 @@ export class DiveScene extends Phaser.Scene {
       case 'dash':
       case 'teleport': {
         const maxRange = def.range || 260
-        const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, pointer.worldX, pointer.worldY)
-        const dist = Math.min(maxRange, Phaser.Math.Distance.Between(this.player.x, this.player.y, pointer.worldX, pointer.worldY))
+        const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY)
+        const dist = Math.min(maxRange, Phaser.Math.Distance.Between(this.player.x, this.player.y, targetX, targetY))
         const flash = this.add.image(this.player.x, this.player.y, 'effect_teleport_flash').setScale(1.5)
         this.tweens.add({ targets: flash, alpha: 0, duration: 260, onComplete: () => flash.destroy() })
         // 残影
