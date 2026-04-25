@@ -22,6 +22,9 @@ const config: Phaser.Types.Core.GameConfig = {
   pixelArt: true,
   antialias: false,
   roundPixels: true,
+  // 高 DPI 屏幕（Retina）的 devicePixelRatio=2，Phaser 内部以物理像素密度渲染，
+  // 文字纹理不再因 CSS 放大而模糊；sprite 仍由 image-rendering:pixelated 保持锐利像素风
+  resolution: window.devicePixelRatio || 1,
   scene: [
     BootScene,
     MenuScene,
