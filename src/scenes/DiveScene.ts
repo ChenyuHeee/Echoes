@@ -848,6 +848,34 @@ export class DiveScene extends Phaser.Scene {
       const burnOnHit = bullet.getData('burnOnHit') === true
       if (isChain) enemy.setData('chainTarget', true)
       if (burnOnHit) this.applyBurnDot(enemy, 12)
+
+      // ── 命中爆炸特效 ─────────────────────────────
+      const tint = bullet.getData('elementTint') as number | undefined
+      const hitColor = tint ?? 0xfff4cc
+      // 主爆炸圆
+      const burst = this.add.graphics().setDepth(75)
+      burst.fillStyle(hitColor, 0.65)
+      burst.fillCircle(bullet.x, bullet.y, 7)
+      this.tweens.add({
+        targets: burst, alpha: 0, scaleX: 3, scaleY: 3, duration: 180,
+        onComplete: () => burst.destroy(),
+      })
+      // 碎片：4 条短线向外飞散
+      for (let i = 0; i < 4; i++) {
+        const ang = (Math.PI / 2) * i + Math.random() * 0.4
+        const shard = this.add.graphics().setDepth(75)
+        shard.lineStyle(2, hitColor, 0.9)
+        shard.lineBetween(0, 0, Math.cos(ang) * 9, Math.sin(ang) * 9)
+        shard.x = bullet.x; shard.y = bullet.y
+        this.tweens.add({
+          targets: shard,
+          x: bullet.x + Math.cos(ang) * 22,
+          y: bullet.y + Math.sin(ang) * 22,
+          alpha: 0, duration: 220,
+          onComplete: () => shard.destroy(),
+        })
+      }
+
       this.damageEnemy(enemy, damage)
       bullet.destroy()
     })
@@ -1137,14 +1165,39 @@ export class DiveScene extends Phaser.Scene {
       b.setData('damage', 12)
       b.rotation = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY)
 
-      const flash = this.add.image(this.player.x, this.player.y, 'effect_muzzle_flash').setScale(1.2)
-      flash.rotation = b.rotation
-      this.tweens.add({ targets: flash, alpha: 0, duration: 120, onComplete: () => flash.destroy() })
+      // 枪口闪光：亮斑 + 十字光芒
+      const muzzleGfx = this.add.graphics().setDepth(50)
+      muzzleGfx.fillStyle(0xfff8c0, 0.9)
+      muzzleGfx.fillCircle(this.player.x, this.player.y, 6)
+      muzzleGfx.lineStyle(2, 0xfff8c0, 0.8)
+      const cos = Math.cos(b.rotation), sin = Math.sin(b.rotation)
+      muzzleGfx.lineBetween(
+        this.player.x - sin * 8, this.player.y + cos * 8,
+        this.player.x + sin * 8, this.player.y - cos * 8,
+      )
+      this.tweens.add({ targets: muzzleGfx, alpha: 0, duration: 90, onComplete: () => muzzleGfx.destroy() })
+
+      // 子弹拖尾（每 40ms 记录一次位置，画淡出线段）
+      const trail: { x: number; y: number }[] = []
+      const trailEvent = this.time.addEvent({
+        delay: 40, repeat: -1,
+        callback: () => {
+          if (!b.active) { trailEvent.remove(); return }
+          trail.push({ x: b.x, y: b.y })
+          if (trail.length > 4) trail.shift()
+          if (trail.length >= 2) {
+            const tg = this.add.graphics().setDepth(18)
+            tg.lineStyle(2, 0xfff8c0, 0.45)
+            tg.lineBetween(trail[0].x, trail[0].y, trail[trail.length - 1].x, trail[trail.length - 1].y)
+            this.tweens.add({ targets: tg, alpha: 0, duration: 100, onComplete: () => tg.destroy() })
+          }
+        },
+      })
 
       this.bullets.add(b)
-      this.physics.moveTo(b, targetX, targetY, 500)
+      this.physics.moveTo(b, targetX, targetY, 540)
       audioManager.playShoot()
-      this.time.delayedCall(1200, () => b.destroy())
+      this.time.delayedCall(1100, () => { trailEvent.remove(); b.destroy() })
 
       if (!this.offline && this.roomRealtime) {
         const rt = getRuntimeState()
@@ -1180,20 +1233,36 @@ export class DiveScene extends Phaser.Scene {
       case 'lightning_bolt': {
         const texture = isEcho ? 'bullet_echo' : 'bullet'
         const b = this.physics.add.image(this.player.x, this.player.y, texture)
-        const tints: Record<string, number> = {
+        const elementTints: Record<string, number> = {
           burn_module: 0xff6030,
           headshot: 0xf8e860,
-          lightning_bolt: 0xf0e040,
+          lightning_bolt: 0xd0e8ff,
         }
-        b.setTint(tints[skill] || 0xffffff)
+        const elemColor = elementTints[skill] || 0xffffff
+        b.setTint(elemColor)
+        b.setData('elementTint', elemColor)
         b.setScale(skill === 'headshot' ? 1.8 : skill === 'lightning_bolt' ? 1.6 : 1.5)
         b.setData('damage', (def.damage || 22) * (isEcho ? 0.85 : 1))
         if (skill === 'burn_module') b.setData('burnOnHit', true)
         if (skill === 'lightning_bolt') b.setData('chain', true)
         b.rotation = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY)
         this.bullets.add(b)
-        this.physics.moveTo(b, targetX, targetY, skill === 'headshot' ? 800 : 600)
-        this.time.delayedCall(1400, () => b.destroy())
+        const speed = skill === 'headshot' ? 800 : 600
+        this.physics.moveTo(b, targetX, targetY, speed)
+
+        // 技能弹拖尾
+        const trailColor = isEcho ? 0x7fffd1 : elemColor
+        const trailEvt = this.time.addEvent({
+          delay: 35, repeat: -1,
+          callback: () => {
+            if (!b.active) { trailEvt.remove(); return }
+            const tg = this.add.graphics().setDepth(18)
+            tg.fillStyle(trailColor, 0.5)
+            tg.fillCircle(b.x, b.y, skill === 'headshot' ? 4 : 3)
+            this.tweens.add({ targets: tg, alpha: 0, scaleX: 0.5, scaleY: 0.5, duration: 140, onComplete: () => tg.destroy() })
+          },
+        })
+        this.time.delayedCall(1400, () => { trailEvt.remove(); b.destroy() })
         break
       }
 
@@ -1203,12 +1272,24 @@ export class DiveScene extends Phaser.Scene {
       case 'gravity_well':
       case 'toxic_fog':
       case 'cryo_field': {
-        // 先发射一颗投射物到目标点，命中/到达后产生AOE
+        const projColor = Phaser.Display.Color.HexStringToColor(def.elementColor).color
         const proj = this.add.image(this.player.x, this.player.y, 'bullet')
-        proj.setTint(Phaser.Display.Color.HexStringToColor(def.elementColor).color)
-        proj.setScale(1.8)
+        proj.setTint(projColor)
+        proj.setScale(2.0)
         proj.rotation = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY)
         proj.setDepth(20)
+
+        // 飞行拖尾
+        const aoeTrail = this.time.addEvent({
+          delay: 40, repeat: -1,
+          callback: () => {
+            if (!proj.active) { aoeTrail.remove(); return }
+            const tg = this.add.graphics().setDepth(18)
+            tg.fillStyle(projColor, 0.4)
+            tg.fillCircle(proj.x, proj.y, 5)
+            this.tweens.add({ targets: tg, alpha: 0, scaleX: 2, scaleY: 2, duration: 200, onComplete: () => tg.destroy() })
+          },
+        })
 
         const travelTime = Phaser.Math.Distance.Between(this.player.x, this.player.y, targetX, targetY) / 0.55
         this.tweens.add({
@@ -1217,9 +1298,23 @@ export class DiveScene extends Phaser.Scene {
           duration: Math.min(travelTime, 600),
           ease: 'Linear',
           onComplete: () => {
+            aoeTrail.remove()
             proj.destroy()
+            // 落地冲击波
+            for (let w = 0; w < 3; w++) {
+              this.time.delayedCall(w * 70, () => {
+                const wave = this.add.graphics().setDepth(25)
+                wave.lineStyle(2 - w * 0.5, projColor, 0.7 - w * 0.2)
+                wave.strokeCircle(targetX, targetY, 8)
+                this.tweens.add({
+                  targets: wave, alpha: 0,
+                  scaleX: 5 + w * 2, scaleY: 5 + w * 2,
+                  duration: 320, ease: 'Quad.Out',
+                  onComplete: () => wave.destroy(),
+                })
+              })
+            }
             this.spawnAreaDamage(targetX, targetY, skill)
-            // cryo_field 额外冻结
             if (skill === 'cryo_field') {
               this.enemies.children.each(child => {
                 const enemy = child as EnemyBody
@@ -1281,14 +1376,38 @@ export class DiveScene extends Phaser.Scene {
         const maxRange = def.range || 260
         const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY)
         const dist = Math.min(maxRange, Phaser.Math.Distance.Between(this.player.x, this.player.y, targetX, targetY))
-        const flash = this.add.image(this.player.x, this.player.y, 'effect_teleport_flash').setScale(1.5)
-        this.tweens.add({ targets: flash, alpha: 0, duration: 260, onComplete: () => flash.destroy() })
-        // 残影
-        const shadow = this.add.image(this.player.x, this.player.y, 'player_dash')
-          .setAlpha(0.5).setScale(2).setTint(0x8060ff)
-        this.tweens.add({ targets: shadow, alpha: 0, duration: 380, onComplete: () => shadow.destroy() })
+        const fromX = this.player.x, fromY = this.player.y
+
+        // 出发点：残影
+        const shadow = this.add.image(fromX, fromY, 'player_dash')
+          .setAlpha(0.55).setScale(2).setTint(0x8060ff)
+        this.tweens.add({ targets: shadow, alpha: 0, scaleX: 1.4, scaleY: 1.4, duration: 380, onComplete: () => shadow.destroy() })
+
+        // 运动轨迹虚线
+        const trailGfx = this.add.graphics().setDepth(20)
+        trailGfx.lineStyle(1.5, 0xa080ff, 0.5)
+        trailGfx.lineBetween(fromX, fromY, fromX + Math.cos(angle) * dist, fromY + Math.sin(angle) * dist)
+        this.tweens.add({ targets: trailGfx, alpha: 0, duration: 320, onComplete: () => trailGfx.destroy() })
+
         this.player.x += Math.cos(angle) * dist
         this.player.y += Math.sin(angle) * dist
+
+        // 到达点：冲击环
+        const arrX = this.player.x, arrY = this.player.y
+        for (let r = 0; r < 2; r++) {
+          this.time.delayedCall(r * 60, () => {
+            const ring2 = this.add.graphics().setDepth(22)
+            ring2.lineStyle(2 - r, 0xc0a0ff, 0.8 - r * 0.3)
+            ring2.strokeCircle(arrX, arrY, 6)
+            this.tweens.add({
+              targets: ring2, alpha: 0, scaleX: 5 + r * 2, scaleY: 5 + r * 2,
+              duration: 280, ease: 'Quad.Out', onComplete: () => ring2.destroy(),
+            })
+          })
+        }
+
+        const flash = this.add.image(fromX, fromY, 'effect_teleport_flash').setScale(1.5)
+        this.tweens.add({ targets: flash, alpha: 0, duration: 220, onComplete: () => flash.destroy() })
         this.dashVisualUntil = Date.now() + 200
         break
       }
@@ -1309,24 +1428,39 @@ export class DiveScene extends Phaser.Scene {
       }
       case 'void_pulse': {
         // 以自身为圆心向四周推开所有敌人
+        const pulseX = this.player.x, pulseY = this.player.y
         this.enemies.children.each(child => {
           const e = child as EnemyBody
           if (!e.active) return true
-          const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, e.x, e.y)
+          const d = Phaser.Math.Distance.Between(pulseX, pulseY, e.x, e.y)
           if (d < (def.range || 300)) {
-            const angle2 = Phaser.Math.Angle.Between(this.player.x, this.player.y, e.x, e.y)
+            const angle2 = Phaser.Math.Angle.Between(pulseX, pulseY, e.x, e.y)
             e.setVelocity(Math.cos(angle2) * 500, Math.sin(angle2) * 500)
             this.damageEnemy(e, def.damage || 60)
           }
           return true
         })
         this.cameras.main.shake(200, 0.014)
-        const pulse = this.add.image(this.player.x, this.player.y, 'effect_echo_ring')
-          .setScale(0.3).setTint(0xb860ff).setDepth(60)
-        this.tweens.add({
-          targets: pulse, scaleX: 6, scaleY: 6, alpha: 0,
-          duration: 500, onComplete: () => pulse.destroy(),
-        })
+        // 多层扩散环
+        const ringColors = isEcho ? [0x7fffd1, 0x40e8b0, 0xa0f8e0] : [0xd060ff, 0xb840ff, 0x8020c0]
+        for (let r = 0; r < 3; r++) {
+          this.time.delayedCall(r * 80, () => {
+            const vring = this.add.graphics().setDepth(60)
+            vring.lineStyle(3 - r, ringColors[r], 0.85 - r * 0.2)
+            vring.strokeCircle(pulseX, pulseY, 8)
+            this.tweens.add({
+              targets: vring,
+              scaleX: 9 + r * 3, scaleY: 9 + r * 3, alpha: 0,
+              duration: 420 + r * 60, ease: 'Quad.Out',
+              onComplete: () => vring.destroy(),
+            })
+          })
+        }
+        // 中心爆光
+        const coreFlash = this.add.graphics().setDepth(61)
+        coreFlash.fillStyle(isEcho ? 0x7fffd1 : 0xe080ff, 0.7)
+        coreFlash.fillCircle(pulseX, pulseY, 18)
+        this.tweens.add({ targets: coreFlash, alpha: 0, scaleX: 0.5, scaleY: 0.5, duration: 200, onComplete: () => coreFlash.destroy() })
         break
       }
     }
