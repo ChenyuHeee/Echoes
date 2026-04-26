@@ -884,6 +884,10 @@ export class SanctuaryScene extends Phaser.Scene {
         )
       })
     }
+
+    // 启用滚动
+    const visibleH = this.scale.height - this.contentBaseY - 20
+    this.scrollMax = Math.max(0, y - visibleH + 20)
   }
 
   // ─────────────────── TAB: 角色档案 ──────────────────
@@ -991,6 +995,10 @@ export class SanctuaryScene extends Phaser.Scene {
 
         ly += CARD_H + 6
       }
+
+      // 计算滚动范围（以列表高度为准）
+      const visibleH = this.scale.height - this.contentBaseY - 20
+      this.scrollMax = Math.max(0, ly - visibleH + 20)
 
       // 分隔竖线
       makeRect(DETAIL_X - 8, 34 + (CARD_H + 6) * 5 / 2, 1, (CARD_H + 6) * 5, 0x304050, 0.5)
