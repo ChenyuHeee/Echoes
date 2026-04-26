@@ -78,6 +78,7 @@ export type EnemyType =
   | 'echo_hunter'            // 回响猎手（会预判你的回响）
   | 'time_wraith'            // 时间幽灵（半透明，难以命中）
   | 'ancient_guardian'       // 上古守护者（Boss）
+  | 'void_sniper'            // 虚空狙击手（远程高伤，静止蓄力）
 
 export interface EnemyDefinition {
   type: EnemyType

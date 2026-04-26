@@ -98,4 +98,20 @@ export const ENEMY_DEFINITIONS: Record<EnemyType, EnemyDefinition> = {
       { itemType: 'module', chance: 0.8 },
     ],
   },
+  void_sniper: {
+    type: 'void_sniper',
+    name: '虚空狙击手',
+    hp: 70,
+    speed: 65,
+    damage: 28,
+    aggroRange: 520,
+    attackRange: 480,
+    attackCooldown: 2800,
+    spriteKey: 'enemy_drone',
+    isBoss: false,
+    dropTable: [
+      { itemType: 'time_sand', amount: 20, chance: 1.0 },
+      { itemType: 'module', chance: 0.1 },
+    ],
+  },
 }

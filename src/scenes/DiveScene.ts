@@ -193,6 +193,9 @@ export class DiveScene extends Phaser.Scene {
   private comboCount = 0
   private comboResetAt = 0
 
+  // 敌人子弹
+  private enemyBullets!: Phaser.Physics.Arcade.Group
+
   // ✦ 新玩法系统
   private enemyHpGraphics!: Phaser.GameObjects.Graphics  // 敌人血条
   private hitVignette!: Phaser.GameObjects.Rectangle     // 受击红边
@@ -366,6 +369,7 @@ export class DiveScene extends Phaser.Scene {
     this.movePlayer()
     this.updateEnemies(time)
     this.updateDots()
+    this.cleanEnemyBullets()
     this.updateVisuals(time)
     this.updateMinimap()
     this.updatePickupMagnet()
@@ -523,18 +527,22 @@ export class DiveScene extends Phaser.Scene {
     this.waveNumber++
     this.waveInProgress = true
 
-    const isBossWave = this.waveNumber % 3 === 0
-    const count = isBossWave ? 4 : 6 + this.waveNumber * 2
-    const eliteChance = Math.min(0.4, 0.1 + this.waveNumber * 0.05)
+    const isBossWave = this.waveNumber % 5 === 0
+    // 难度曲线：波次越高敌人越多，波5+后大幅提速
+    const baseCount = isBossWave ? 5 : Math.min(4 + this.waveNumber * 3, 22)
+    const count = baseCount
+    const eliteChance = Math.min(0.6, 0.05 + this.waveNumber * 0.08)
 
     // 波次提示
     const { width } = this.scale
     const label = isBossWave
-      ? `⚠ 第 ${this.waveNumber} 波  —  精英遭遇`
+      ? `⚠ 第 ${this.waveNumber} 波  —  守护者现身`
+      : this.waveNumber >= 4 ? `☠ 第 ${this.waveNumber} 波  [含狙击手]`
+      : this.waveNumber >= 2 ? `⚡ 第 ${this.waveNumber} 波  [远程敌人出现]`
       : `第 ${this.waveNumber} 波`
     const waveTxt = this.add.text(width / 2, 56, label, {
       fontFamily: '"Silkscreen", monospace', fontSize: '18px',
-      color: isBossWave ? '#ff9050' : '#7ce0bc',
+      color: isBossWave ? '#ff9050' : this.waveNumber >= 4 ? '#ff6060' : this.waveNumber >= 2 ? '#ffcc40' : '#7ce0bc',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(60)
     this.tweens.add({
       targets: waveTxt, alpha: 0, y: waveTxt.y - 20,
@@ -557,9 +565,15 @@ export class DiveScene extends Phaser.Scene {
       if (isBoss) {
         enemyType = 'ancient_guardian'
       } else if (isElite) {
-        enemyType = this.seededRandom() < 0.5 ? 'time_construct_heavy' : 'echo_hunter'
+        const r = this.seededRandom()
+        enemyType = r < 0.33 ? 'time_construct_heavy' : r < 0.66 ? 'echo_hunter' : 'void_sniper'
       } else {
-        enemyType = enemyTypes[i % enemyTypes.length]
+        // 波次2+开始混入远程敌人；波次4+开始混入狙击者
+        const pool = [...enemyTypes]
+        if (this.waveNumber >= 2) pool.push('void_drone', 'void_drone')
+        if (this.waveNumber >= 4) pool.push('void_sniper')
+        if (this.waveNumber >= 6) pool.push('void_sniper', 'void_sniper')
+        enemyType = pool[i % pool.length]
       }
 
       const region = spawnRegions[i % spawnRegions.length]
@@ -581,7 +595,11 @@ export class DiveScene extends Phaser.Scene {
     const typeDef = ENEMY_DEFINITIONS[enemyType as keyof typeof ENEMY_DEFINITIONS]
     if (!typeDef) return
 
-    const hpMult = isBoss ? 3.5 : isElite ? 1.8 : 1 + this.waveNumber * 0.12
+    // HP随波次加速提升：前3波温和，之后每波+25%
+    const waveMult = this.waveNumber <= 3
+      ? 1 + this.waveNumber * 0.15
+      : 1.45 + (this.waveNumber - 3) * 0.25
+    const hpMult = isBoss ? 5 : isElite ? 2.2 : waveMult
     const e = this.physics.add.sprite(x, y, typeDef.spriteKey) as EnemyBody
     e.hp = Math.floor(typeDef.hp * hpMult)
     e.maxHp = e.hp
@@ -599,6 +617,8 @@ export class DiveScene extends Phaser.Scene {
       e.setTint(0xff6040)
       // Boss 血条
       this.spawnBossHpBar(e)
+    } else if (enemyType === 'void_sniper') {
+      e.setTint(0xff2040)  // 狙击手：鲜红色，视觉警示
     } else if (isElite) {
       e.setTint(this.currentTheme.biome === 'magic_forest' ? 0xd4ff50 : 0xffa840)
     } else if (this.currentTheme.biome === 'magic_forest') {
@@ -613,6 +633,7 @@ export class DiveScene extends Phaser.Scene {
   private pickAiMode(enemyType: string): string {
     switch (enemyType) {
       case 'void_drone':    return 'kite'     // 游击：保持距离，绕行射击
+      case 'void_sniper':   return 'sniper'   // 狙击：远距离静止蓄力射击
       case 'echo_hunter':   return 'hunter'   // 猎手：预判玩家位置
       case 'time_wraith':   return 'flank'    // 侧翼包抄
       default:              return 'chase'    // 直线追逐
@@ -1058,6 +1079,19 @@ export class DiveScene extends Phaser.Scene {
       maxSize: 80,
     })
 
+    // 敌人子弹组
+    this.enemyBullets = this.physics.add.group({ allowGravity: false, maxSize: 120 })
+    this.physics.add.overlap(this.enemyBullets, this.player, (_p, b) => {
+      const bullet = b as Phaser.Physics.Arcade.Image
+      if (!bullet.active) return
+      bullet.setActive(false).setVisible(false)
+      const dmg = Number(bullet.getData('damage') || 12)
+      this.hitVignetteUntil = Date.now() + 400
+      this.cameras.main.shake(50, 0.005)
+      this.hp -= dmg
+      this.emitHud()
+    })
+
     this.physics.add.overlap(this.bullets, this.enemies, (a, b) => {
       const bullet = a as Phaser.Physics.Arcade.Image
       const enemy = b as EnemyBody
@@ -1320,7 +1354,7 @@ export class DiveScene extends Phaser.Scene {
 
       switch (aiMode) {
         case 'kite': {
-          // 游击：距离 220+ 绕行，距离 < 120 撤退
+          // 游击：距离 220+ 接近，< 120 撤退，中间绕行射击
           if (dist > 220) {
             this.physics.moveToObject(enemy, this.player, speed)
           } else if (dist < 120) {
@@ -1331,14 +1365,32 @@ export class DiveScene extends Phaser.Scene {
             const strafe = angle + Math.PI / 2
             enemy.setVelocity(Math.cos(strafe) * speed * 0.8, Math.sin(strafe) * speed * 0.8)
           }
+          // 在有效射程内发射子弹
+          if (dist < 260) this.tryEnemyRangedAttack(enemy, 900, 10)
+          break
+        }
+        case 'sniper': {
+          // 狙击手：保持 300-500 距离，完全静止蓄力后射击重型弹
+          if (dist < 280) {
+            // 太近：快速后退
+            enemy.setVelocity(-dx / dist * speed * 0.9, -dy / dist * speed * 0.9)
+          } else if (dist > 520) {
+            // 太远：靠近
+            this.physics.moveToObject(enemy, this.player, speed * 0.6)
+          } else {
+            // 理想射程：停止移动，专心射击
+            enemy.setVelocity(0, 0)
+            this.tryEnemyRangedAttack(enemy, 2800, 28)
+          }
           break
         }
         case 'hunter': {
-          // 猎手：预判玩家运动方向
+          // 猎手：预判玩家运动方向，近战时偶尔射击
           const pVel = this.player.body?.velocity || { x: 0, y: 0 }
           const predictX = this.player.x + pVel.x * 0.4
           const predictY = this.player.y + pVel.y * 0.4
           this.physics.moveTo(enemy, predictX, predictY, speed)
+          if (dist < 180) this.tryEnemyRangedAttack(enemy, 1600, 18)
           break
         }
         case 'flank': {
@@ -1371,6 +1423,68 @@ export class DiveScene extends Phaser.Scene {
     })
   }
 
+  /** 敌人远程攻击：向玩家发射子弹，cooldownMs 控制射速 */
+  private tryEnemyRangedAttack(enemy: EnemyBody, cooldownMs: number, damage: number) {
+    const now = Date.now()
+    const lastShot = Number(enemy.getData('lastShot') || 0)
+    if (now - lastShot < cooldownMs) return
+    enemy.setData('lastShot', now)
+
+    const isSniperType = enemy.getData('aiMode') === 'sniper'
+
+    // 蓄力/发光提示
+    const chargeColor = isSniperType ? 0xff3020 : 0xe04060
+    const chargeDot = this.add.graphics().setDepth(31)
+    chargeDot.fillStyle(chargeColor, 0.85)
+    chargeDot.fillCircle(0, 0, isSniperType ? 7 : 4)
+    chargeDot.setPosition(enemy.x, enemy.y)
+    const chargeDelay = isSniperType ? 600 : 150
+    this.tweens.add({ targets: chargeDot, alpha: 0, duration: chargeDelay, onComplete: () => chargeDot.destroy() })
+
+    this.time.delayedCall(chargeDelay, () => {
+      if (!enemy.active || this.diveFinished) return
+      // 狙击手：预判位置；其他：直线射向当前位置
+      let tx = this.player.x
+      let ty = this.player.y
+      if (isSniperType) {
+        const pv = this.player.body?.velocity || { x: 0, y: 0 }
+        tx += pv.x * 0.35
+        ty += pv.y * 0.35
+      }
+      const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, tx, ty)
+      const bulletSpeed = isSniperType ? 420 : 280
+      const b = this.physics.add.image(enemy.x, enemy.y, 'bullet')
+        .setScale(isSniperType ? 1.8 : 1.1)
+        .setTint(chargeColor)
+        .setDepth(30)
+        .setData('damage', damage)
+      b.setVelocity(Math.cos(angle) * bulletSpeed, Math.sin(angle) * bulletSpeed)
+      b.rotation = angle
+      this.enemyBullets.add(b)
+
+      // 超出地图边界自动销毁
+      this.time.delayedCall(3000, () => { if (b.active) b.destroy() })
+    })
+  }
+
+  /** 清理飞出地图边界的敌人子弹 */
+  private cleanEnemyBullets() {
+    const { width, height } = this.scale
+    // 用相机滚动偏移获取世界边界
+    const cam = this.cameras.main
+    const margin = 200
+    this.enemyBullets.children.each((child) => {
+      const b = child as Phaser.Physics.Arcade.Image
+      if (!b.active) return true
+      const wx = b.x; const wy = b.y
+      if (wx < -margin || wx > 1920 + margin || wy < -margin || wy > 1280 + margin) {
+        b.setActive(false).setVisible(false)
+      }
+      return true
+    })
+    void cam  // suppress unused warning
+  }
+
   // DOT 持续伤害更新
   private updateDots() {
     const now = Date.now()
@@ -1393,6 +1507,8 @@ export class DiveScene extends Phaser.Scene {
       case 'time_construct_heavy':
         return frame === 'a' ? 'enemy_heavy_a' : 'enemy_heavy_b'
       case 'void_drone':
+        return frame === 'a' ? 'enemy_drone_a' : 'enemy_drone_b'
+      case 'void_sniper':
         return frame === 'a' ? 'enemy_drone_a' : 'enemy_drone_b'
       case 'echo_hunter':
         return frame === 'a' ? 'enemy_hunter_a' : 'enemy_hunter_b'
