@@ -3823,14 +3823,32 @@ export class DiveScene extends Phaser.Scene {
   }
 
   private tryPickupAttachment(att: AttachmentDef, x: number, y: number): boolean {
-    // 每种槽位只能装一个配件，拾取同槽位新配件时自动替换
+    // 每种槽位只能装一个配件；若拾取同 ID 配件则叠加属性，否则替换
     const existingIdx = this.weaponAttachments.findIndex(a => a.slotType === att.slotType)
     const slotNames: Record<AttachmentSlot, string> = { barrel: '枪管', scope: '瞄准镜', magazine: '弹匣', stock: '枪托', underbarrel: '下挂', enhancement: '强化核' }
 
     if (existingIdx >= 0) {
       const old = this.weaponAttachments[existingIdx]
-      this.weaponAttachments[existingIdx] = att
-      this.emitHud(`🔧 替换 [${slotNames[att.slotType]}]：${old.name} → ${att.name}  — ${att.desc}`)
+      if (old.id === att.id) {
+        // 相同配件：叠加效果（加法叠加加成，即 ×N 倍加成）
+        const prev = old as AttachmentDef & { _stackCount?: number }
+        const stackCount = (prev._stackCount ?? 1) + 1
+        const stacked: AttachmentDef & { _stackCount: number } = {
+          ...att,
+          name: `${att.name} ×${stackCount}`,
+          damageMult:   att.damageMult   !== undefined ? 1 + (att.damageMult   - 1) * stackCount : undefined,
+          fireRateMult: att.fireRateMult !== undefined ? 1 + (att.fireRateMult - 1) * stackCount : undefined,
+          critBonus:    att.critBonus    !== undefined ? att.critBonus    * stackCount : undefined,
+          sandValue:    (att.sandValue ?? 0) * stackCount,
+          _stackCount: stackCount,
+        }
+        this.weaponAttachments[existingIdx] = stacked
+        const bonusDesc = att.damageMult ? `伤害+${Math.round((att.damageMult - 1) * 100 * stackCount)}%` : att.critBonus ? `暴击+${Math.round(att.critBonus * 100 * stackCount)}%` : att.desc
+        this.emitHud(`🔧 叠加 [${slotNames[att.slotType]}] ${stacked.name}  — ${bonusDesc}`)
+      } else {
+        this.weaponAttachments[existingIdx] = att
+        this.emitHud(`🔧 替换 [${slotNames[att.slotType]}]：${old.name} → ${att.name}  — ${att.desc}`)
+      }
     } else {
       this.weaponAttachments.push(att)
       this.emitHud(`🔧 安装配件 [${slotNames[att.slotType]}]：${att.name}  — ${att.desc}`)

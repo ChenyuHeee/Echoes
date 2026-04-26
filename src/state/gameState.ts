@@ -223,12 +223,39 @@ export function saveStash(stash: Stash) {
   persistState()
 }
 
-/** 深潜撤离后：将本次带出的装备合并入仓库（不覆盖，追加） */
+/**
+ * 出发前从仓库扣除带走的装备（武器/配件）。
+ * 每个 ID 只删除一个实例（支持同 ID 多份）。
+ */
+export function deductLoadoutFromStash(weaponId: string | null, attachmentIds: string[]) {
+  const s = runtimeState.player.stash
+
+  // 从 weaponIds 中移除一个实例
+  let weaponIds = [...s.weaponIds]
+  if (weaponId) {
+    const idx = weaponIds.indexOf(weaponId)
+    if (idx >= 0) weaponIds.splice(idx, 1)
+  }
+
+  // 从 attachmentIds 中每个 ID 各移除一个实例
+  let attachmentIds2 = [...s.attachmentIds]
+  for (const id of attachmentIds) {
+    const idx = attachmentIds2.indexOf(id)
+    if (idx >= 0) attachmentIds2.splice(idx, 1)
+  }
+
+  runtimeState = {
+    ...runtimeState,
+    player: { ...runtimeState.player, stash: { ...s, weaponIds, attachmentIds: attachmentIds2 } },
+  }
+  persistState()
+}
+
+/** 深潜撤离后：将本次带出的装备合并入仓库（追加，不去重——由 deductLoadoutFromStash 保证对称） */
 export function mergeIntoStash(extracted: { weaponId: string | null; attachmentIds: string[]; itemIds: string[] }) {
   const s = runtimeState.player.stash
-  const weaponIds = extracted.weaponId && !s.weaponIds.includes(extracted.weaponId)
-    ? [...s.weaponIds, extracted.weaponId]
-    : s.weaponIds
+  // 武器直接追加（出发时已扣除，无需去重）
+  const weaponIds = extracted.weaponId ? [...s.weaponIds, extracted.weaponId] : s.weaponIds
   runtimeState = {
     ...runtimeState,
     player: {

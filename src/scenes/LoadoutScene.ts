@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { getRuntimeState } from '../state/gameState'
+import { getRuntimeState, deductLoadoutFromStash } from '../state/gameState'
 import { audioManager } from '../systems/AudioManager'
 import type { FragmentId } from '../config/fragments'
 import {
@@ -426,6 +426,8 @@ export class LoadoutScene extends Phaser.Scene {
       attachmentIds: Array.from(this.selectedAttachments),
       itemIds: [...this.selectedItems],
     }
+    // 出发前从仓库扣除据走的武器和配件（成功撤离后再加回，死亡则丢失）
+    deductLoadoutFromStash(loadout.weaponId, loadout.attachmentIds)
     this.scene.start('DiveScene', {
       ...this.diveParams,
       loadout,
