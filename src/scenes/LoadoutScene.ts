@@ -451,8 +451,8 @@ export class LoadoutScene extends Phaser.Scene {
       attachmentIds: Array.from(this.selectedAttachments),
       itemIds: [...this.selectedItems],
     }
-    // 出发前从仓库扣除据走的武器和配件（成功撤离后再加回，死亡则丢失）
-    deductLoadoutFromStash(loadout.weaponId, loadout.attachmentIds)
+    // 出发前从仓库扣除带走的武器/配件/物品（成功撤离后再加回，死亡则全部丢失）
+    deductLoadoutFromStash(loadout.weaponId, loadout.attachmentIds, loadout.itemIds)
     this.scene.start('DiveScene', {
       ...this.diveParams,
       loadout,

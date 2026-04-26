@@ -224,10 +224,10 @@ export function saveStash(stash: Stash) {
 }
 
 /**
- * 出发前从仓库扣除带走的装备（武器/配件）。
+ * 出发前从仓库扣除带走的装备（武器/配件/物品）。
  * 每个 ID 只删除一个实例（支持同 ID 多份）。
  */
-export function deductLoadoutFromStash(weaponId: string | null, attachmentIds: string[]) {
+export function deductLoadoutFromStash(weaponId: string | null, attachmentIds: string[], itemIds: string[] = []) {
   const s = runtimeState.player.stash
 
   // 从 weaponIds 中移除一个实例
@@ -244,9 +244,16 @@ export function deductLoadoutFromStash(weaponId: string | null, attachmentIds: s
     if (idx >= 0) attachmentIds2.splice(idx, 1)
   }
 
+  // 从 itemIds 中每个 ID 各移除一个实例
+  let itemIds2 = [...s.itemIds]
+  for (const id of itemIds) {
+    const idx = itemIds2.indexOf(id)
+    if (idx >= 0) itemIds2.splice(idx, 1)
+  }
+
   runtimeState = {
     ...runtimeState,
-    player: { ...runtimeState.player, stash: { ...s, weaponIds, attachmentIds: attachmentIds2 } },
+    player: { ...runtimeState.player, stash: { ...s, weaponIds, attachmentIds: attachmentIds2, itemIds: itemIds2 } },
   }
   persistState()
 }

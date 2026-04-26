@@ -72,6 +72,16 @@ export interface NetWaveStart {
   waveNumber: number
 }
 
+/** Host 广播本波所有敌人的精确生成数据（含 ID），非 Host 据此同步生成 */
+export interface NetEnemySpawn {
+  id: number
+  type: string
+  x: number
+  y: number
+  isBoss: boolean
+  isElite: boolean
+}
+
 export class RoomRealtime {
   private channel: RealtimeChannel | null = null
 
@@ -217,6 +227,28 @@ export class RoomRealtime {
     this.channel.on('broadcast', { event: 'wave_start' }, ({ payload }) => {
       handler(payload as NetWaveStart)
     })
+  }
+
+  // ── 敌人生成（Host → All）────────────────────────
+  sendEnemySpawns(spawns: NetEnemySpawn[]) {
+    this.channel?.send({ type: 'broadcast', event: 'enemy_spawns', payload: { spawns } })
+  }
+
+  onEnemySpawns(handler: (spawns: NetEnemySpawn[]) => void) {
+    if (!this.channel) return
+    this.channel.on('broadcast', { event: 'enemy_spawns' }, ({ payload }) => {
+      handler((payload as { spawns: NetEnemySpawn[] }).spawns)
+    })
+  }
+
+  // ── 波次清场（Host → All）────────────────────────
+  sendWaveClear() {
+    this.channel?.send({ type: 'broadcast', event: 'wave_clear', payload: {} })
+  }
+
+  onWaveClear(handler: () => void) {
+    if (!this.channel) return
+    this.channel.on('broadcast', { event: 'wave_clear' }, () => handler())
   }
 
   disconnect() {

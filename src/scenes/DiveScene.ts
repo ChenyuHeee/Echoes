@@ -8,7 +8,7 @@ import { closeRoomBeacon, getCurrentUser, saveDiveRecord } from '../lib/supabase
 import { audioManager } from '../systems/AudioManager'
 import { getKeybindings, keyCodeFromStr } from '../systems/SettingsManager'
 import { voiceManager, getSpeakerRole } from '../systems/VoiceManager'
-import { RoomRealtime, type NetEnemyDeath, type NetDiveResult, type NetEnemyState, type NetDropSpawn, type NetPickup } from '../net/realtime'
+import { RoomRealtime, type NetEnemyDeath, type NetDiveResult, type NetEnemyState, type NetDropSpawn, type NetPickup, type NetEnemySpawn } from '../net/realtime'
 import {
   addTimeSand,
   getRuntimeState,
@@ -471,6 +471,10 @@ export class DiveScene extends Phaser.Scene {
     if (this.waveInProgress && this.enemies.countActive() === 0 && (this.offline || this.isHost)) {
       this.waveInProgress = false
       this.bossAlive = false
+      // 广播清场信号，让非 Host 客户端同步触发升级殿/下一波
+      if (!this.offline && this.isHost && this.roomRealtime) {
+        this.roomRealtime.sendWaveClear()
+      }
       // 每完成一波，弹出升级殿（波次 >= 1 且非正在显示）
       if (this.waveNumber >= 1 && !this.shrineActive) {
         this.time.delayedCall(800, () => this.spawnUpgradeShrine())
@@ -560,6 +564,8 @@ export class DiveScene extends Phaser.Scene {
       { x: 900, y: 100 }, { x: 900, y: 1100 },
     ]
 
+    const spawnedForNet: NetEnemySpawn[] = []
+
     for (let i = 0; i < count; i++) {
       const isElite = !isBossWave && this.seededRandom() < eliteChance
       const isBoss = isBossWave && i === 0
@@ -586,18 +592,21 @@ export class DiveScene extends Phaser.Scene {
       const x = region.x + (this.seededRandom() - 0.5) * 160
       const y = region.y + (this.seededRandom() - 0.5) * 160
 
+      const nextId = this.enemyIdCounter + 1
       this.spawnEnemy(enemyType, x, y, isBoss, isElite)
+      spawnedForNet.push({ id: nextId, type: enemyType, x, y, isBoss, isElite })
     }
 
     if (isBossWave) this.bossAlive = true
 
-    // Host 广播波次开始，让非 Host 保持波次状态同步
+    // Host 广播波次开始 + 本波敌人生成数据，让非 Host 同步生成完全相同的敌人
     if (!this.offline && this.isHost && this.roomRealtime) {
       this.roomRealtime.sendWaveStart({ waveNumber: this.waveNumber })
+      this.roomRealtime.sendEnemySpawns(spawnedForNet)
     }
   }
 
-  private spawnEnemy(enemyType: string, x: number, y: number, isBoss: boolean, isElite: boolean) {
+  private spawnEnemy(enemyType: string, x: number, y: number, isBoss: boolean, isElite: boolean, overrideId?: number) {
     const typeDef = ENEMY_DEFINITIONS[enemyType as keyof typeof ENEMY_DEFINITIONS]
     if (!typeDef) return
 
@@ -617,7 +626,7 @@ export class DiveScene extends Phaser.Scene {
     e.setData('aiMode', this.pickAiMode(enemyType))
     e.setData('lastShot', 0)
     e.setData('wanderAngle', this.seededRandom() * Math.PI * 2)
-    e.setData('enemyId', ++this.enemyIdCounter)
+    e.setData('enemyId', overrideId !== undefined ? (this.enemyIdCounter = overrideId) : ++this.enemyIdCounter)
 
     if (isBoss) {
       e.setTint(0xff6040)
@@ -2826,7 +2835,7 @@ export class DiveScene extends Phaser.Scene {
         }
       })
 
-      // ── 敌人状态（非 Host 接收，直接更新敌人位置/HP）─────
+      // ── 敌人状态（非 Host 接收，直接更新敌人位置/HP，并显示他人造成的伤害数字）─────
       if (!this.isHost) {
         this.roomRealtime!.onEnemyStates((states) => {
           states.forEach(state => {
@@ -2834,6 +2843,11 @@ export class DiveScene extends Phaser.Scene {
               const e = child as EnemyBody
               if (!e.active) return true
               if ((e.getData('enemyId') as number) === state.id) {
+                // 显示他人造成的伤害数字
+                if (state.hp < e.hp) {
+                  const dmg = Math.round(e.hp - state.hp)
+                  this.spawnDamageNumber(e.x, e.y - 20, dmg, '#ffcc40')
+                }
                 // 必须通过 body.reset() 更新 ArcadePhysics body 位置，
                 // 直接设置 e.x/e.y 会在下一帧被 physics preUpdate 覆写。
                 const body = e.body as Phaser.Physics.Arcade.Body
@@ -2846,15 +2860,44 @@ export class DiveScene extends Phaser.Scene {
           })
         })
 
-        // ── 波次开始（非 Host 同步波次状态）─────────────
+        // ── 敌人生成（Host 广播精确数据 → 非 Host 据此同步生成，ID 完全一致）───────
+        this.roomRealtime!.onEnemySpawns((spawns) => {
+          spawns.forEach(s => {
+            this.spawnEnemy(s.type, s.x, s.y, s.isBoss, s.isElite, s.id)
+          })
+        })
+
+        // ── 波次开始（非 Host 同步波次标题，不自行生成敌人）─────────────
         this.roomRealtime!.onWaveStart(({ waveNumber }) => {
-          // 只有当波次序号超前时才触发（避免重复）
-          if (waveNumber > this.waveNumber) {
-            this.waveNumber = waveNumber - 1  // startNextWave 会 ++ 一次
-            this.startNextWave()
-          }
-          // 同步 waveInProgress 状态
+          this.waveNumber = waveNumber
           this.waveInProgress = true
+          const { width } = this.scale
+          const isBossWave = waveNumber % 5 === 0
+          const label = isBossWave
+            ? `⚠ 第 ${waveNumber} 波  —  守护者现身`
+            : waveNumber >= 4 ? `☠ 第 ${waveNumber} 波  [含狙击手]`
+            : waveNumber >= 2 ? `⚡ 第 ${waveNumber} 波  [远程敌人出现]`
+            : `第 ${waveNumber} 波`
+          const waveTxt = this.add.text(width / 2, 56, label, {
+            fontFamily: '"Silkscreen", monospace', fontSize: '18px',
+            color: isBossWave ? '#ff9050' : waveNumber >= 4 ? '#ff6060' : waveNumber >= 2 ? '#ffcc40' : '#7ce0bc',
+          }).setOrigin(0.5).setScrollFactor(0).setDepth(60)
+          this.tweens.add({
+            targets: waveTxt, alpha: 0, y: waveTxt.y - 20,
+            duration: 2200, delay: 1200,
+            onComplete: () => waveTxt.destroy(),
+          })
+          if (isBossWave) this.bossAlive = true
+        })
+
+        // ── 波次清场（Host 广播 → 非 Host 显示升级殿或等待下一波）───────
+        this.roomRealtime!.onWaveClear(() => {
+          this.waveInProgress = false
+          this.bossAlive = false
+          if (this.waveNumber >= 1 && !this.shrineActive) {
+            this.time.delayedCall(800, () => this.spawnUpgradeShrine())
+          }
+          // 不主动 startNextWave，等 Host 的 onWaveStart 信号
         })
       }
 
@@ -3011,12 +3054,8 @@ export class DiveScene extends Phaser.Scene {
         itemIds: this.diveInventory.map(i => i.id),
       })
     } else {
-      // 死亡：只保留背包物资，枪械/配件全部丢失
-      mergeIntoStash({
-        weaponId: null,
-        attachmentIds: [],
-        itemIds: this.diveInventory.map(i => i.id),
-      })
+      // 死亡：枪械/配件/背包物品全部丢失，不归还仓库
+      mergeIntoStash({ weaponId: null, attachmentIds: [], itemIds: [] })
     }
 
     // 保存引用以供后续广播结算使用
