@@ -305,7 +305,8 @@ export class DiveScene extends Phaser.Scene {
       time >= this.autoFireCooldownUntil
     ) {
       const p = this.input.activePointer
-      this.fireGun(p.worldX, p.worldY)
+      const wp = this.cameras.main.getWorldPoint(p.x, p.y)
+      this.fireGun(wp.x, wp.y)
       // 装载了技能时单发即释放，普通弹保持 weapon fire rate
       this.autoFireCooldownUntil = time + (this.loadedSkill ? 400 : this.getWeaponFireRateMs())
     }
