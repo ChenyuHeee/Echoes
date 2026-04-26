@@ -146,7 +146,7 @@ export class BootScene extends Phaser.Scene {
     this.load.svg('char_echo_singularity', 'assets/sprites/characters/char_echo_singularity.svg', portrait)
 
     // ─── 角色游戏内精灵（32×32，用于 DiveScene 玩家显示） ──
-    const sp = { width: 32, height: 32 }
+    const sp = { width: 16, height: 16 }
     this.load.svg('char_echo_ranger_sp',     'assets/sprites/characters/char_echo_ranger.svg',     sp)
     this.load.svg('char_void_breaker_sp',    'assets/sprites/characters/char_void_breaker.svg',    sp)
     this.load.svg('char_chrono_sentinel_sp', 'assets/sprites/characters/char_chrono_sentinel.svg', sp)
