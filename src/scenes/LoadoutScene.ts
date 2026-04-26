@@ -54,7 +54,7 @@ export class LoadoutScene extends Phaser.Scene {
       if (first) this.selectedAttachments.add(first.id)
     })
 
-    this.selectedItems = [...stash.itemIds].slice(0, BAG_CAPACITY)
+    this.selectedItems = []   // 默认不携带仓库物资，玩家手动勾选
   }
 
   create() {
