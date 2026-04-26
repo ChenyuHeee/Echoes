@@ -1,6 +1,8 @@
 import type { FragmentId } from '../config/fragments'
 import type { FactionId } from '../config/factions'
 import type { SkillType } from '../types/game.types'
+import type { CharacterId } from '../config/characters'
+import { DEFAULT_CHARACTER } from '../config/characters'
 
 export interface DailyProgress {
   date: string
@@ -39,6 +41,8 @@ export interface RuntimePlayer {
   totalKills: number
   upgrades: PlayerUpgrades
   dailyProgress: DailyProgress
+  selectedCharacter: CharacterId
+  unlockedCharacters: CharacterId[]
 }
 
 export interface RuntimeRoom {
@@ -84,6 +88,8 @@ function createDefaultState(): RuntimeState {
       totalKills: 0,
       upgrades: { maxHp: 0, stability: 0, damage: 0, speed: 0 },
       dailyProgress: { date: '', kills: 0, dives: 0, extractions: 0, killsRewarded: false, divesRewarded: false, extractionsRewarded: false },
+      selectedCharacter: DEFAULT_CHARACTER,
+      unlockedCharacters: [DEFAULT_CHARACTER],
     },
     room: null,
     diveStartAt: null,
@@ -134,6 +140,29 @@ export function patchRuntimeState(patch: Partial<RuntimeState>) {
 
 export function setRoom(room: RuntimeRoom | null) {
   runtimeState = { ...runtimeState, room }
+  persistState()
+}
+
+export function setSelectedCharacter(characterId: CharacterId) {
+  const unlocked = runtimeState.player.unlockedCharacters || [DEFAULT_CHARACTER]
+  if (!unlocked.includes(characterId)) return
+  runtimeState = {
+    ...runtimeState,
+    player: { ...runtimeState.player, selectedCharacter: characterId },
+  }
+  persistState()
+}
+
+export function unlockCharacter(characterId: CharacterId) {
+  const existing = runtimeState.player.unlockedCharacters || [DEFAULT_CHARACTER]
+  if (existing.includes(characterId)) return
+  runtimeState = {
+    ...runtimeState,
+    player: {
+      ...runtimeState.player,
+      unlockedCharacters: [...existing, characterId],
+    },
+  }
   persistState()
 }
 

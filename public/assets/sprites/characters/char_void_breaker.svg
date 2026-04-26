@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- head -->
+  <rect x="5" y="1" width="6" height="6" fill="#d0a890"/>
+  <!-- hair — dark / spiky -->
+  <rect x="5" y="1" width="6" height="2" fill="#220020"/>
+  <rect x="4" y="1" width="2" height="4" fill="#220020"/>
+  <rect x="10" y="1" width="2" height="2" fill="#220020"/>
+  <rect x="7" y="0" width="2" height="2" fill="#220020"/>
+  <!-- eyes — void purple -->
+  <rect x="6" y="4" width="1" height="1" fill="#cc44ff"/>
+  <rect x="9" y="4" width="1" height="1" fill="#cc44ff"/>
+  <!-- void cracks on face -->
+  <rect x="6" y="5" width="1" height="1" fill="#7a00a0"/>
+  <!-- body — dark void armor -->
+  <rect x="4" y="7" width="8" height="6" fill="#1a001a"/>
+  <rect x="5" y="7" width="6" height="5" fill="#440060"/>
+  <rect x="6" y="8" width="4" height="3" fill="#660088"/>
+  <!-- void glow on chest -->
+  <rect x="7" y="9" width="2" height="1" fill="#cc44ff"/>
+  <!-- legs -->
+  <rect x="4" y="13" width="3" height="3" fill="#330044"/>
+  <rect x="9" y="13" width="3" height="3" fill="#330044"/>
+</svg>

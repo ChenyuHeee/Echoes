@@ -22,6 +22,8 @@ import {
 } from '../state/gameState'
 import { LORE_ENTRIES } from '../config/lore'
 import type { SkillType } from '../types/game.types'
+import { CHARACTER_DEFINITIONS, DEFAULT_CHARACTER } from '../config/characters'
+import type { CharacterDef } from '../config/characters'
 import {
   type ItemDef,
   type ItemId,
@@ -141,6 +143,16 @@ export class DiveScene extends Phaser.Scene {
   private weaponDropGroup!: Phaser.Physics.Arcade.Group
   private attachmentDropGroup!: Phaser.Physics.Arcade.Group
 
+  // ✦ 角色系统
+  private charDef!: CharacterDef
+  private charSkillCooldownUntil = 0
+  private charSkillActive = false   // 技能激活中（部分技能有持续时间）
+  private charSkillExpire = 0       // 技能持续结束时间
+  private charSpeedBoostUntil = 0   // 幻影步速度加成结束时间
+  private charDefBoostUntil = 0     // 铁甲堡垒减伤结束时间
+  private voidStacks = 0            // 虚空破碎者 — 虚空侵蚀叠层数（最多5层）
+  private charSkillKey!: Phaser.Input.Keyboard.Key
+
   // 连击系统
   private comboCount = 0
   private comboResetAt = 0
@@ -178,8 +190,16 @@ export class DiveScene extends Phaser.Scene {
     this.shieldBlockedUntil = 0
     this.lastRegenAt = 0
     this.autoFireCooldownUntil = 0
-    this.equippedWeapon = WEAPON_DEFINITIONS.pulse_pistol  // 初始武器
+    const charId = getRuntimeState().player.selectedCharacter ?? DEFAULT_CHARACTER
+    this.charDef = CHARACTER_DEFINITIONS[charId] ?? CHARACTER_DEFINITIONS[DEFAULT_CHARACTER]
+    this.equippedWeapon = WEAPON_DEFINITIONS[this.charDef.startWeapon] ?? WEAPON_DEFINITIONS.pulse_pistol
     this.weaponAttachments = []
+    this.charSkillCooldownUntil = 0
+    this.charSkillActive = false
+    this.charSkillExpire = 0
+    this.charSpeedBoostUntil = 0
+    this.charDefBoostUntil = 0
+    this.voidStacks = 0
     const runtime = getRuntimeState()
     this.currentFragmentId = data.mapFragment || runtime.room?.mapFragment || runtime.selectedFragment
     this.currentTheme = FRAGMENT_THEMES[this.currentFragmentId]
@@ -190,8 +210,10 @@ export class DiveScene extends Phaser.Scene {
     const rt = getRuntimeState()
     resetDiveVitals()
 
-    this.hp = rt.player.maxHp
-    this.maxHp = rt.player.maxHp
+    // 角色基础 HP（charDef 在 init() 中已读取）
+    const charHpBonus = Math.round((this.charDef.baseHp - 120) * 1)
+    this.hp = rt.player.maxHp + charHpBonus
+    this.maxHp = rt.player.maxHp + charHpBonus
     this.stability = rt.player.maxStability
     this.maxStability = rt.player.maxStability
     this.timeSand = 0
@@ -294,6 +316,16 @@ export class DiveScene extends Phaser.Scene {
     // B 键开/关背包
     if (Phaser.Input.Keyboard.JustDown(this.bagKey)) {
       this.toggleBag()
+    }
+
+    // Q 键 — 角色专属技能
+    if (
+      !this.diveFinished &&
+      !this.bagOpen &&
+      Phaser.Input.Keyboard.JustDown(this.charSkillKey) &&
+      time >= this.charSkillCooldownUntil
+    ) {
+      this.activateCharSkill(time)
     }
 
     // ── 持续按住左键自动射击（普通弹 120ms/发；装载技能时单发触发） ──
@@ -847,6 +879,7 @@ export class DiveScene extends Phaser.Scene {
       digit3: this.input.keyboard!.addKey(keyCodeFromStr(getKeybindings().skill3)),
       extract: this.input.keyboard!.addKey(keyCodeFromStr(getKeybindings().extract)),
     }
+    this.charSkillKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Q)
     this.bagKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.B)
 
     // 射击统一由 update() 的 leftButtonDown 轮询处理，无需 pointerdown 事件
@@ -969,8 +1002,10 @@ export class DiveScene extends Phaser.Scene {
         }
       }
 
-      this.hp = Math.max(0, this.hp - 12)
-      this.stability = Math.max(0, this.stability - 8)
+      const rawDmg = 12
+      const wardenReduct = Date.now() < this.charDefBoostUntil ? 0.4 : 1.0
+      this.hp = Math.max(0, this.hp - Math.round(rawDmg * wardenReduct))
+      this.stability = Math.max(0, this.stability - Math.round(8 * wardenReduct))
       this.player.setData('invincible', true)
       this.player.setAlpha(0.5)
       this.time.delayedCall(450, () => {
@@ -1958,6 +1993,7 @@ export class DiveScene extends Phaser.Scene {
     enemy.destroy()
     audioManager.playEnemyDeath()
     this.diveKills += 1
+    this.addVoidStack()  // void_breaker 被动：击杀积累虚空叠层
 
     // 悖论引擎：触发免费链式闪电
     const paradoxChance = this.diveInventory.reduce((s, i) => s + (i.paradoxChainChance ?? 0), 0)
@@ -2894,7 +2930,10 @@ export class DiveScene extends Phaser.Scene {
 
   /** 计算当前背包装备的速度倍率 */
   private getDiveSpeedBonus(): number {
-    return this.diveInventory.reduce((acc, i) => acc * (i.speedMult ?? 1), 1)
+    const itemBonus = this.diveInventory.reduce((acc, i) => acc * (i.speedMult ?? 1), 1)
+    const charBonus = this.charDef?.baseSpeed ?? 1.0
+    const phantomBonus = Date.now() < this.charSpeedBoostUntil ? 1.6 : 1.0
+    return itemBonus * charBonus * phantomBonus
   }
 
   /** 计算回响技能额外倍率 */
@@ -2902,13 +2941,86 @@ export class DiveScene extends Phaser.Scene {
     return this.diveInventory.reduce((acc, i) => acc * (i.echoSkillMult ?? 1), 1)
   }
 
+  // ── 角色专属 Q 技能 ────────────────────────────────────────────
+
+  private activateCharSkill(now: number) {
+    if (!this.charDef) return
+    const cd = (this.charDef.uniqueSkill.cooldownMs ?? 10000)
+    this.charSkillCooldownUntil = now + cd
+
+    const id = this.charDef.id
+    const showMsg = (msg: string, color = '#80e0ff') => {
+      const { width, height } = this.scale
+      const txt = this.add.text(width / 2, height * 0.28, msg, {
+        fontFamily: '"Silkscreen", monospace', fontSize: '16px', color,
+        stroke: '#000', strokeThickness: 3,
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(300)
+      this.tweens.add({ targets: txt, alpha: 0, y: txt.y - 30, delay: 1200, duration: 600, onComplete: () => txt.destroy() })
+    }
+
+    if (id === 'echo_ranger') {
+      // 时间回溯：回复 35% 最大 HP
+      const heal = Math.round(this.maxHp * 0.35)
+      this.hp = Math.min(this.maxHp, this.hp + heal)
+      showMsg(`⟳ 时间回溯！恢复 ${heal} HP`, '#7ce0bc')
+
+    } else if (id === 'void_breaker') {
+      // 虚空爆裂：在玩家位置制造 AOE 伤害，清除叠层→全释放
+      const baseDmg = 30 + this.voidStacks * 20
+      this.enemies.getChildren().forEach(go => {
+        const enemy = go as EnemyBody
+        if (!enemy.active) return
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y)
+        if (dist < 180) {
+          const dealt = Math.round(baseDmg * (1 - dist / 360))
+          this.damageEnemy(enemy, dealt)
+        }
+      })
+      this.voidStacks = 0
+      showMsg(`💥 虚空爆裂！${baseDmg} AOE 伤害`, '#cc44ff')
+
+    } else if (id === 'chrono_sentinel') {
+      // 时序冻结：冻结全部敌人 2.5s
+      const freezeUntil = now + 2500
+      this.enemies.getChildren().forEach(go => {
+        const enemy = go as EnemyBody
+        if (!enemy.active) return
+        this.slowUntil.set(enemy, Math.max(this.slowUntil.get(enemy) ?? 0, freezeUntil))
+      })
+      showMsg(`❄ 时序冻结！敌人停止 2.5s`, '#44ccff')
+
+    } else if (id === 'echo_phantom') {
+      // 幻影步：急速冲刺 + 留下残影
+      const ghostX = this.player.x
+      const ghostY = this.player.y
+      const ghost = this.add.image(ghostX, ghostY, 'player_idle')
+        .setAlpha(0.5).setTint(0xf0e040).setDepth(2)
+      this.tweens.add({ targets: ghost, alpha: 0, duration: 700, onComplete: () => ghost.destroy() })
+      this.charSpeedBoostUntil = now + 2200
+      showMsg(`⚡ 幻影步！速度+60% 2.2s`, '#f0e040')
+
+    } else if (id === 'iron_warden') {
+      // 铁甲堡垒：3s 内受到伤害-60%（charDefBoostUntil 在 takeDamage 读取）
+      this.charDefBoostUntil = now + 3000
+      showMsg(`🛡 铁甲堡垒！3s 减伤 60%`, '#ddaa44')
+    }
+  }
+
+  /** void_breaker 被动：击杀敌人积攒虚空叠层 */
+  private addVoidStack() {
+    if (this.charDef?.id !== 'void_breaker') return
+    this.voidStacks = Math.min(5, this.voidStacks + 1)
+  }
+
   // ── 武器属性计算 ────────────────────────────────────────────────
 
-  /** 当前武器单发基础伤害（含配件加成） */
+  /** 当前武器单发基础伤害（含配件加成 + 角色伤害加成） */
   private getWeaponBaseDamage(): number {
     const base = this.equippedWeapon?.baseDamage ?? 12
     const attMult = this.weaponAttachments.reduce((acc, a) => acc * (a.damageMult ?? 1), 1)
-    return Math.max(1, Math.round(base * attMult))
+    const charMult = this.charDef?.baseDamage ?? 1.0
+    const voidMult = 1 + this.voidStacks * 0.08  // void_breaker 被动：每叠层 +8% 伤害
+    return Math.max(1, Math.round(base * attMult * charMult * voidMult))
   }
 
   /** 当前武器射击间隔 ms（含配件加成） */

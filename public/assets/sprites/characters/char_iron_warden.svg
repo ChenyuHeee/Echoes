@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- head -->
+  <rect x="5" y="1" width="6" height="6" fill="#d4a870"/>
+  <!-- stubble -->
+  <rect x="5" y="5" width="6" height="2" fill="#b08050"/>
+  <rect x="6" y="6" width="4" height="1" fill="#806040"/>
+  <!-- hair / shaved -->
+  <rect x="5" y="1" width="6" height="1" fill="#4a3020"/>
+  <!-- eyes — amber -->
+  <rect x="6" y="3" width="1" height="1" fill="#c08020"/>
+  <rect x="9" y="3" width="1" height="1" fill="#c08020"/>
+  <!-- scar -->
+  <rect x="9" y="4" width="1" height="2" fill="#904020"/>
+  <!-- heavy iron armor body -->
+  <rect x="3" y="7" width="10" height="7" fill="#404040"/>
+  <rect x="4" y="7" width="8" height="6" fill="#555555"/>
+  <!-- chest plate -->
+  <rect x="5" y="8" width="6" height="4" fill="#666666"/>
+  <rect x="6" y="9" width="4" height="2" fill="#888888"/>
+  <!-- rivets -->
+  <rect x="5" y="8" width="1" height="1" fill="#cccc88"/>
+  <rect x="10" y="8" width="1" height="1" fill="#cccc88"/>
+  <rect x="5" y="11" width="1" height="1" fill="#cccc88"/>
+  <rect x="10" y="11" width="1" height="1" fill="#cccc88"/>
+  <!-- amber glow on chest -->
+  <rect x="7" y="10" width="2" height="1" fill="#ddaa44"/>
+  <!-- massive shoulder plates -->
+  <rect x="2" y="7" width="2" height="4" fill="#4a4a4a"/>
+  <rect x="12" y="7" width="2" height="4" fill="#4a4a4a"/>
+  <!-- legs -->
+  <rect x="4" y="14" width="3" height="2" fill="#333333"/>
+  <rect x="9" y="14" width="3" height="2" fill="#333333"/>
+</svg>

@@ -8,11 +8,14 @@ import {
   setEquippedSkills,
   upgradeAttribute,
   claimDailyQuest,
+  setSelectedCharacter,
   UPGRADE_MAX_LEVEL,
   UPGRADE_COST_PER_LEVEL,
 } from '../state/gameState'
 import { audioManager } from '../systems/AudioManager'
 import { SKILL_DEFINITIONS } from '../config/skills'
+import { CHARACTER_DEFINITIONS, CHARACTER_LIST } from '../config/characters'
+import type { CharacterId } from '../config/characters'
 import { FACTION_DEFINITIONS } from '../config/factions'
 import type { SkillType } from '../types/game.types'
 import type { PlayerUpgrades } from '../state/gameState'
@@ -606,82 +609,208 @@ export class SanctuaryScene extends Phaser.Scene {
     const { width } = this.scale
     const rt = getRuntimeState()
     const cx = width / 2
-    let y = 30
+    const unlocked: CharacterId[] = rt.player.unlockedCharacters ?? ['echo_ranger']
+    let selected: CharacterId = rt.player.selectedCharacter ?? 'echo_ranger'
 
-    const faction = rt.player.faction ? FACTION_DEFINITIONS[rt.player.faction] : null
-    const fColor = faction?.color || '#7090b0'
+    // 整体分为：左侧角色列表 + 右侧详情面板
+    const LIST_X = cx - 220
+    const DETAIL_X = cx + 100
 
-    // 阵营卡
-    this.contentLayer.add(this.add.rectangle(cx, y + 60, 500, 120, 0x0c1020))
-
-    const fBorder = this.add.rectangle(cx, y + 60, 500, 120)
-    fBorder.setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(fColor).color, 0.5)
-    this.contentLayer.add(fBorder)
-
+    // ── 标题 ────────────────────────────────────────────
     this.contentLayer.add(this.make.text({
-      x: cx, y: y + 10,
-      text: faction ? `${faction.name}  ${faction.nameEn}` : '未选择阵营',
-      style: { fontFamily: '"Silkscreen", monospace', fontSize: '18px', color: fColor },
+      x: cx, y: 10,
+      text: '— 选择角色 —',
+      style: { fontFamily: '"Silkscreen", monospace', fontSize: '14px', color: '#5090b0' },
       add: false,
     }).setOrigin(0.5))
 
-    if (faction) {
-      this.contentLayer.add(this.make.text({
-        x: cx, y: y + 34,
-        text: `${faction.passiveName}：${faction.passiveDescription}`,
-        style: {
-          fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#8090a8',
-          wordWrap: { width: 460 }, align: 'center',
-        },
-        add: false,
-      }).setOrigin(0.5))
+    // ── 右侧详情面板容器（会在 refreshDetail 中重建） ────
+    const detailContainer = this.add.container(0, 0)
+    this.contentLayer.add(detailContainer)
 
-      this.contentLayer.add(this.make.text({
-        x: cx, y: y + 56,
-        text: `「${faction.philosophy}」`,
-        style: {
-          fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: fColor, fontStyle: 'italic',
-          wordWrap: { width: 460 }, align: 'center',
-        },
-        add: false,
-      }).setOrigin(0.5))
-    }
+    const refreshDetail = (id: CharacterId) => {
+      detailContainer.removeAll(true)
+      const def = CHARACTER_DEFINITIONS[id]
+      if (!def) return
+      const isUnlocked = unlocked.includes(id)
 
-    y += 150
-    // 角色统计
-    const stats = [
-      [`等级`, `${rt.player.level}`],
-      [`总深潜次数`, `${rt.player.totalDives}`],
-      [`总击杀`, `${rt.player.totalKills}`],
-      [`时砂`, `${rt.player.timeSand}`],
-      [`HP`, `${rt.player.hp} / ${rt.player.maxHp}`],
-      [`稳定度`, `${rt.player.stability} / ${rt.player.maxStability}`],
-      [`回响水晶`, `${rt.player.crystalsFound?.length || 0} 枚`],
-      [`收集残响`, `${rt.player.loreCollected?.length || 0} 条`],
-    ]
+      const dx = DETAIL_X
+      let dy = 30
 
-    const COL = 2
-    const ROW_H = 34
-    const colW = 240
-    stats.forEach(([k, v], idx) => {
-      const col = idx % COL
-      const row = Math.floor(idx / COL)
-      const sx = cx + (col === 0 ? -colW / 2 - 8 : colW / 2 + 8)
-      const sy = y + row * ROW_H
+      // 角色头像
+      const portrait = this.add.image(dx, dy + 32, `char_${id}`)
+        .setDisplaySize(64, 64)
+        .setAlpha(isUnlocked ? 1 : 0.3)
+      detailContainer.add(portrait)
 
-      this.contentLayer.add(this.make.text({
-        x: sx - colW / 2 + 12, y: sy,
-        text: k, style: { fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#506070' }, add: false,
+      // 名字 + 定位
+      detailContainer.add(this.make.text({
+        x: dx + 48, y: dy + 4,
+        text: def.name, style: { fontFamily: '"Silkscreen", monospace', fontSize: '15px', color: isUnlocked ? '#e8d8a0' : '#405060' }, add: false,
       }).setOrigin(0))
 
-      this.contentLayer.add(this.make.text({
-        x: sx + colW / 2 - 12, y: sy,
-        text: v, style: { fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#c8d8f0' }, add: false,
-      }).setOrigin(1, 0))
+      detailContainer.add(this.make.text({
+        x: dx + 48, y: dy + 24,
+        text: `[${def.role}]`, style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#6090b0' }, add: false,
+      }).setOrigin(0))
 
-      this.contentLayer.add(this.add.rectangle(
-        sx, sy + 18, colW, 1, 0x304050, 0.4))
-    })
+      if (!isUnlocked) {
+        detailContainer.add(this.make.text({
+          x: dx + 48, y: dy + 42,
+          text: `🔒 ${def.unlockRequirement ?? ''}`,
+          style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#806050', wordWrap: { width: 220 } }, add: false,
+        }).setOrigin(0))
+      }
+
+      dy += 80
+
+      // 基础属性条
+      const attrs: Array<[string, number, string]> = [
+        ['HP',   def.baseHp / 2,    `${def.baseHp}`],
+        ['速度', (def.baseSpeed - 0.75) / 0.7 * 100, `×${def.baseSpeed.toFixed(2)}`],
+        ['伤害', (def.baseDamage - 0.75) / 0.7 * 100, `×${def.baseDamage.toFixed(2)}`],
+      ]
+      for (const [label, pct, val] of attrs) {
+        detailContainer.add(this.make.text({
+          x: dx, y: dy, text: label,
+          style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#607080' }, add: false,
+        }).setOrigin(0))
+        const barW = 180
+        const fillW = Math.max(4, Math.min(barW, Math.round(pct / 100 * barW)))
+        detailContainer.add(this.add.rectangle(dx + 50 + barW / 2, dy + 5, barW, 8, 0x1a2a30))
+        detailContainer.add(this.add.rectangle(dx + 50 + fillW / 2, dy + 5, fillW, 8, isUnlocked ? 0x3a8aaa : 0x3a4a50))
+        detailContainer.add(this.make.text({
+          x: dx + 50 + barW + 6, y: dy, text: val,
+          style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#a0c0d0' }, add: false,
+        }).setOrigin(0))
+        dy += 18
+      }
+      dy += 6
+
+      // 初始武器
+      detailContainer.add(this.make.text({
+        x: dx, y: dy,
+        text: `初始武器：${def.startWeapon.replace(/_/g, ' ')}`,
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#90a868' }, add: false,
+      }).setOrigin(0))
+      dy += 22
+
+      // 分隔
+      detailContainer.add(this.add.rectangle(dx + 130, dy, 260, 1, 0x304050, 0.5))
+      dy += 8
+
+      // 被动技能
+      detailContainer.add(this.make.text({
+        x: dx, y: dy,
+        text: `被动：${def.passiveName}`,
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#c8a060' }, add: false,
+      }).setOrigin(0))
+      dy += 16
+      detailContainer.add(this.make.text({
+        x: dx, y: dy,
+        text: def.passiveDesc,
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#708090', wordWrap: { width: 250 } }, add: false,
+      }).setOrigin(0))
+      dy += 30
+
+      // Q 专属技能
+      const sk = def.uniqueSkill
+      detailContainer.add(this.make.text({
+        x: dx, y: dy,
+        text: `Q 技能：${sk.name}  (CD ${sk.cooldownMs / 1000}s)`,
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#80c0e0' }, add: false,
+      }).setOrigin(0))
+      dy += 16
+      detailContainer.add(this.make.text({
+        x: dx, y: dy,
+        text: sk.desc,
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#708090', wordWrap: { width: 250 } }, add: false,
+      }).setOrigin(0))
+      dy += 36
+
+      // 选择按钮
+      if (isUnlocked) {
+        const isCurrent = selected === id
+        const btnBg = this.add.rectangle(dx + 110, dy, 220, 34, isCurrent ? 0x1a4060 : 0x0c1a2a)
+        btnBg.setStrokeStyle(1, isCurrent ? 0x60c0ff : 0x305070, 1)
+        const btnTxt = this.make.text({
+          x: dx + 110, y: dy,
+          text: isCurrent ? '✓ 已选择' : '选择此角色',
+          style: { fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: isCurrent ? '#80e0ff' : '#7090b0' }, add: false,
+        }).setOrigin(0.5)
+        if (!isCurrent) {
+          btnBg.setInteractive({ useHandCursor: true })
+          btnBg.on('pointerover', () => { btnBg.setFillStyle(0x1a2a40, 1); btnTxt.setColor('#b0d8f0') })
+          btnBg.on('pointerout', () => { btnBg.setFillStyle(0x0c1a2a, 1); btnTxt.setColor('#7090b0') })
+          btnBg.on('pointerdown', () => {
+            audioManager.playClick()
+            setSelectedCharacter(id)
+            selected = id
+            refreshDetail(id)
+            // 刷新列表高亮
+            refreshList()
+          })
+        }
+        detailContainer.add(btnBg)
+        detailContainer.add(btnTxt)
+      }
+    }
+
+    // ── 左侧角色列表 ─────────────────────────────────────
+    const listObjects: Phaser.GameObjects.GameObject[] = []
+
+    const refreshList = () => {
+      listObjects.forEach(o => o.destroy())
+      listObjects.length = 0
+
+      let ly = 30
+      for (const def of CHARACTER_LIST) {
+        const id = def.id
+        const isUnlocked = unlocked.includes(id)
+        const isSel = selected === id
+
+        const cardBg = this.add.rectangle(LIST_X, ly + 28, 200, 54, isSel ? 0x143050 : 0x0c1820)
+        cardBg.setStrokeStyle(1, isSel ? 0x5090d0 : 0x203040, 0.8)
+        this.contentLayer.add(cardBg)
+        listObjects.push(cardBg)
+
+        const portrait = this.add.image(LIST_X - 76, ly + 28, `char_${id}`)
+          .setDisplaySize(40, 40)
+          .setAlpha(isUnlocked ? 1 : 0.25)
+        this.contentLayer.add(portrait)
+        listObjects.push(portrait)
+
+        const nameTxt = this.make.text({
+          x: LIST_X - 50, y: ly + 12,
+          text: def.name,
+          style: { fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: isUnlocked ? (isSel ? '#c8e8ff' : '#a0b8c8') : '#384858' }, add: false,
+        }).setOrigin(0)
+        this.contentLayer.add(nameTxt)
+        listObjects.push(nameTxt)
+
+        const roleTxt = this.make.text({
+          x: LIST_X - 50, y: ly + 30,
+          text: isUnlocked ? `[${def.role}]` : `🔒 ${def.role}`,
+          style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#4a6070' }, add: false,
+        }).setOrigin(0)
+        this.contentLayer.add(roleTxt)
+        listObjects.push(roleTxt)
+
+        // 点击切换
+        cardBg.setInteractive({ useHandCursor: true })
+        const capturedId = id as CharacterId
+        cardBg.on('pointerdown', () => {
+          audioManager.playClick()
+          refreshDetail(capturedId)
+          refreshList()
+        })
+
+        ly += 64
+      }
+    }
+
+    refreshList()
+    refreshDetail(selected)
   }
 
   // ─────────────────── TAB: 残响档案 ──────────────────

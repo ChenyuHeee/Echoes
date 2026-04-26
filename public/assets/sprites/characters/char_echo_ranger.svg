@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- head -->
+  <rect x="5" y="1" width="6" height="6" fill="#e8c8a0"/>
+  <!-- hair -->
+  <rect x="5" y="1" width="6" height="2" fill="#3a2a18"/>
+  <rect x="4" y="2" width="1" height="3" fill="#3a2a18"/>
+  <rect x="11" y="2" width="1" height="3" fill="#3a2a18"/>
+  <!-- eyes -->
+  <rect x="6" y="4" width="1" height="1" fill="#2244aa"/>
+  <rect x="9" y="4" width="1" height="1" fill="#2244aa"/>
+  <!-- echo teal hood stripe -->
+  <rect x="5" y="1" width="6" height="1" fill="#7ce0bc"/>
+  <!-- body armor teal -->
+  <rect x="4" y="7" width="8" height="6" fill="#1a4040"/>
+  <rect x="5" y="7" width="6" height="5" fill="#226060"/>
+  <!-- echo glow on chest -->
+  <rect x="7" y="9" width="2" height="2" fill="#7ce0bc"/>
+  <!-- legs -->
+  <rect x="4" y="13" width="3" height="3" fill="#142830"/>
+  <rect x="9" y="13" width="3" height="3" fill="#142830"/>
+</svg>

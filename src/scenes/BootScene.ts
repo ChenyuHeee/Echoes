@@ -114,6 +114,13 @@ export class BootScene extends Phaser.Scene {
     this.load.svg('att_scope',    'assets/sprites/items/att_scope.svg')
     this.load.svg('att_magazine', 'assets/sprites/items/att_magazine.svg')
     this.load.svg('att_stock',    'assets/sprites/items/att_stock.svg')
+
+    // ─── 角色立绘 ────────────────────────────────────────
+    this.load.svg('char_echo_ranger',     'assets/sprites/characters/char_echo_ranger.svg')
+    this.load.svg('char_void_breaker',    'assets/sprites/characters/char_void_breaker.svg')
+    this.load.svg('char_chrono_sentinel', 'assets/sprites/characters/char_chrono_sentinel.svg')
+    this.load.svg('char_echo_phantom',    'assets/sprites/characters/char_echo_phantom.svg')
+    this.load.svg('char_iron_warden',     'assets/sprites/characters/char_iron_warden.svg')
   }
 
   create() {

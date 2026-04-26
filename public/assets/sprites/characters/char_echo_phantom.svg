@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- head -->
+  <rect x="5" y="1" width="6" height="6" fill="#f0d8a0"/>
+  <!-- hair — golden -->
+  <rect x="5" y="1" width="6" height="2" fill="#c09020"/>
+  <rect x="4" y="2" width="1" height="2" fill="#c09020"/>
+  <!-- eyes — gold -->
+  <rect x="6" y="4" width="1" height="1" fill="#e0c060"/>
+  <rect x="9" y="4" width="1" height="1" fill="#e0c060"/>
+  <!-- smirk -->
+  <rect x="7" y="6" width="2" height="1" fill="#c09070"/>
+  <!-- phantom scarf -->
+  <rect x="5" y="6" width="6" height="1" fill="#f0e040"/>
+  <rect x="4" y="7" width="8" height="1" fill="#d0c030"/>
+  <!-- body — light fast suit -->
+  <rect x="5" y="8" width="6" height="5" fill="#2a2010"/>
+  <rect x="6" y="8" width="4" height="4" fill="#3a3018"/>
+  <!-- motion stripes -->
+  <rect x="5" y="9" width="1" height="3" fill="#e0c060"/>
+  <rect x="10" y="9" width="1" height="3" fill="#e0c060"/>
+  <rect x="7" y="10" width="2" height="1" fill="#f0e040"/>
+  <!-- legs -->
+  <rect x="5" y="13" width="2" height="3" fill="#1a1808"/>
+  <rect x="9" y="13" width="2" height="3" fill="#1a1808"/>
+</svg>
