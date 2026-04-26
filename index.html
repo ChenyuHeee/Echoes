@@ -32,8 +32,9 @@
       }
       canvas {
         display: block;
-        image-rendering: pixelated;
-        image-rendering: crisp-edges;
+        /* auto = 双线性过滤，消除非整数倍 CSS 缩放导致的像素不均匀模糊；
+           DPR>1 时 add.text() 已注入高分辨率贴图，不再需要 pixelated */
+        image-rendering: auto;
       }
       #loading-screen {
         position: absolute;
