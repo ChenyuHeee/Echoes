@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- 虚空透镜 -->
+  <!-- 外环 -->
+  <rect x="4" y="3" width="8" height="1" fill="#3a1860"/>
+  <rect x="3" y="4" width="1" height="8" fill="#3a1860"/>
+  <rect x="12" y="4" width="1" height="8" fill="#3a1860"/>
+  <rect x="4" y="12" width="8" height="1" fill="#3a1860"/>
+  <rect x="2" y="5" width="1" height="6" fill="#2a1048"/>
+  <rect x="13" y="5" width="1" height="6" fill="#2a1048"/>
+  <!-- 镜片 -->
+  <rect x="4" y="4" width="8" height="8" fill="#5020a0"/>
+  <rect x="4" y="4" width="8" height="1" fill="#7040c0"/>
+  <rect x="4" y="11" width="8" height="1" fill="#3a1880"/>
+  <!-- 反光内圈 -->
+  <rect x="6" y="6" width="4" height="4" fill="#8050d0"/>
+  <rect x="6" y="6" width="2" height="1" fill="#c080ff"/>
+  <rect x="6" y="6" width="1" height="2" fill="#c080ff"/>
+  <!-- 中心瞳 -->
+  <rect x="7" y="7" width="2" height="2" fill="#1a0030"/>
+</svg>

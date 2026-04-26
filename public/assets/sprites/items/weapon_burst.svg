@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- 时序爆裂枪 — 三连发橙金 -->
+  <!-- 三根短管 -->
+  <rect x="9" y="4" width="6" height="2" fill="#a05818"/>
+  <rect x="9" y="7" width="6" height="2" fill="#a05818"/>
+  <rect x="9" y="10" width="6" height="2" fill="#a05818"/>
+  <rect x="14" y="4" width="2" height="2" fill="#ffaa40"/>
+  <rect x="14" y="7" width="2" height="2" fill="#ffaa40"/>
+  <rect x="14" y="10" width="2" height="2" fill="#ffaa40"/>
+  <!-- 主体 -->
+  <rect x="3" y="4" width="6" height="8" fill="#603810"/>
+  <rect x="3" y="4" width="6" height="1" fill="#a06028"/>
+  <!-- 能量芯 -->
+  <rect x="5" y="7" width="2" height="2" fill="#ffd060"/>
+  <rect x="5" y="7" width="1" height="1" fill="#ffffff"/>
+  <!-- 握把 -->
+  <rect x="3" y="12" width="3" height="3" fill="#1a0e04"/>
+</svg>

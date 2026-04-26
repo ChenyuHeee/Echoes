@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- 时序锚点 — 金色锚 + 砂粒 -->
+  <!-- 锚环 -->
+  <rect x="7" y="2" width="2" height="2" fill="#e0a830"/>
+  <rect x="6" y="3" width="1" height="1" fill="#c08820"/>
+  <rect x="9" y="3" width="1" height="1" fill="#c08820"/>
+  <!-- 锚柱 -->
+  <rect x="7" y="4" width="2" height="6" fill="#d0a040"/>
+  <rect x="7" y="4" width="1" height="6" fill="#f0c060"/>
+  <!-- 横臂 -->
+  <rect x="4" y="7" width="8" height="1" fill="#d0a040"/>
+  <rect x="4" y="7" width="8" height="1" fill="#e0b850"/>
+  <!-- 锚钩 -->
+  <rect x="3" y="10" width="1" height="3" fill="#c08828"/>
+  <rect x="12" y="10" width="1" height="3" fill="#c08828"/>
+  <rect x="4" y="13" width="2" height="1" fill="#a87820"/>
+  <rect x="10" y="13" width="2" height="1" fill="#a87820"/>
+  <!-- 砂粒飘散 -->
+  <rect x="2" y="5" width="1" height="1" fill="#f0d870"/>
+  <rect x="13" y="6" width="1" height="1" fill="#f0d870"/>
+  <rect x="14" y="11" width="1" height="1" fill="#e0c860"/>
+  <rect x="1" y="11" width="1" height="1" fill="#e0c860"/>
+</svg>

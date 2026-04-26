@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- 虚空发射器 — 深紫黑洞 -->
+  <!-- 大口径炮口 -->
+  <rect x="10" y="3" width="6" height="10" fill="#1a0828"/>
+  <rect x="11" y="4" width="4" height="8" fill="#2a1040"/>
+  <rect x="12" y="5" width="2" height="6" fill="#08000f"/>
+  <rect x="12" y="7" width="2" height="2" fill="#000000"/>
+  <!-- 紫色边缘光 -->
+  <rect x="10" y="3" width="1" height="10" fill="#6020a0"/>
+  <rect x="15" y="3" width="1" height="10" fill="#5018a0"/>
+  <!-- 主体 -->
+  <rect x="3" y="5" width="7" height="6" fill="#2a1450"/>
+  <rect x="3" y="5" width="7" height="1" fill="#5028a0"/>
+  <rect x="3" y="10" width="7" height="1" fill="#1a0830"/>
+  <!-- 能量条 -->
+  <rect x="5" y="7" width="3" height="2" fill="#a050ff"/>
+  <rect x="5" y="7" width="3" height="1" fill="#d090ff"/>
+  <!-- 握把 -->
+  <rect x="3" y="11" width="3" height="3" fill="#0a0418"/>
+</svg>

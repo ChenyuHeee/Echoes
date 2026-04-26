@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- 弧光步枪 — 蓝紫电火花 -->
+  <!-- 长枪管 -->
+  <rect x="6" y="6" width="9" height="2" fill="#3a4880"/>
+  <rect x="14" y="6" width="2" height="2" fill="#80a0ff"/>
+  <!-- 上瞄准镜 -->
+  <rect x="7" y="4" width="3" height="2" fill="#202840"/>
+  <rect x="8" y="5" width="1" height="1" fill="#a0c0ff"/>
+  <!-- 主体 -->
+  <rect x="2" y="6" width="4" height="4" fill="#2a3460"/>
+  <rect x="2" y="6" width="4" height="1" fill="#5060a0"/>
+  <!-- 弹匣 -->
+  <rect x="5" y="9" width="3" height="4" fill="#1a2040"/>
+  <!-- 握把 -->
+  <rect x="2" y="9" width="3" height="4" fill="#10162a"/>
+  <!-- 电弧火花 -->
+  <rect x="10" y="3" width="1" height="1" fill="#a0d0ff"/>
+  <rect x="13" y="4" width="1" height="1" fill="#c0e0ff"/>
+  <rect x="11" y="9" width="1" height="1" fill="#a0c0ff"/>
+  <rect x="3" y="7" width="1" height="1" fill="#80a0ff"/>
+</svg>

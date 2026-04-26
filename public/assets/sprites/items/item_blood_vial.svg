@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- 血瓶 -->
+  <!-- 瓶口 -->
+  <rect x="6" y="2" width="4" height="2" fill="#404048"/>
+  <rect x="6" y="2" width="4" height="1" fill="#606068"/>
+  <!-- 瓶身 -->
+  <rect x="5" y="4" width="6" height="9" fill="#1a0808"/>
+  <rect x="5" y="4" width="1" height="9" fill="#3a2020"/>
+  <rect x="10" y="4" width="1" height="9" fill="#0a0404"/>
+  <!-- 红色液体 -->
+  <rect x="6" y="6" width="4" height="6" fill="#c01828"/>
+  <rect x="6" y="6" width="4" height="1" fill="#e04050"/>
+  <rect x="6" y="11" width="4" height="1" fill="#800810"/>
+  <!-- 高光 -->
+  <rect x="6" y="7" width="1" height="3" fill="#ff5060"/>
+  <!-- 瓶底 -->
+  <rect x="5" y="13" width="6" height="1" fill="#202028"/>
+</svg>

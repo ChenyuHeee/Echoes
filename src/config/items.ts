@@ -17,6 +17,12 @@ export type ItemId =
   | 'sand_magnet'
   | 'echo_crystal_core'
   | 'paradox_engine'
+  | 'blood_vial'
+  | 'chrono_anchor'
+  | 'void_lens'
+  | 'phase_cloak'
+  | 'resonator'
+  | 'temporal_battery'
 
 export interface ItemDef {
   id: ItemId
@@ -118,7 +124,37 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDef> = {
     desc: '击杀时 30% 触发免费链式闪电',
     spriteKey: 'item_paradox_engine', paradoxChainChance: 0.30, sandValue: 120, weight: 2,
   },
-}
+  // ─── 新增物品 ────────────────────────
+  blood_vial: {
+    id: 'blood_vial', name: '血瓶', rarity: 'common',
+    desc: '造成伤害回血 4%',
+    spriteKey: 'item_blood_vial', lifesteal: 0.04, sandValue: 18, weight: 25,
+  },
+  chrono_anchor: {
+    id: 'chrono_anchor', name: '时序锚点', rarity: 'uncommon',
+    desc: '最大 HP +25，每秒回血 1',
+    spriteKey: 'item_chrono_anchor', maxHpBonus: 25, regenPerSec: 1, sandValue: 32, weight: 14,
+  },
+  void_lens: {
+    id: 'void_lens', name: '虚空透镜', rarity: 'rare',
+    desc: '暴击率 +18%，伤害 +10%',
+    spriteKey: 'item_void_lens', critChance: 0.18, damageMult: 1.10, sandValue: 70, weight: 7,
+  },
+  phase_cloak: {
+    id: 'phase_cloak', name: '相位斗篷', rarity: 'rare',
+    desc: '移动速度 +15%，最大 HP +30',
+    spriteKey: 'item_phase_cloak', speedMult: 1.15, maxHpBonus: 30, sandValue: 60, weight: 8,
+  },
+  resonator: {
+    id: 'resonator', name: '共鸣器', rarity: 'uncommon',
+    desc: '回响技能伤害 +50%',
+    spriteKey: 'item_resonator', echoSkillMult: 1.50, sandValue: 38, weight: 12,
+  },
+  temporal_battery: {
+    id: 'temporal_battery', name: '时序电池', rarity: 'legendary',
+    desc: '伤害 +20%，速度 +15%，回响技能 +60%',
+    spriteKey: 'item_temporal_battery', damageMult: 1.20, speedMult: 1.15, echoSkillMult: 1.60, sandValue: 145, weight: 2,
+  },}
 
 export const RARITY_COLORS: Record<ItemRarity, number> = {
   common:    0x607080,
@@ -259,32 +295,32 @@ export const WEAPON_DEFINITIONS: Record<WeaponId, WeaponDef> = {
   },
   arc_rifle: {
     id: 'arc_rifle', name: '弧光步枪', rarity: 'uncommon',
-    desc: '全自动步枪，射速稳定，综合能力强', spriteKey: 'weapon_smg',
+    desc: '全自动步枪，射速稳定，综合能力强', spriteKey: 'weapon_arc',
     baseDamage: 16, fireRateMs: 110, baseCritChance: 0.10,
     sandValue: 55, weight: 12,
   },
   plasma_cutter: {
     id: 'plasma_cutter', name: '等离子切割器', rarity: 'common',
-    desc: '超高射速，靠连射积累伤害', spriteKey: 'weapon_pistol',
+    desc: '超高射速，靠连射积累伤害', spriteKey: 'weapon_plasma',
     baseDamage: 6, fireRateMs: 45, baseCritChance: 0.05,
     sandValue: 22, weight: 20,
   },
   gravity_cannon: {
     id: 'gravity_cannon', name: '重力炮', rarity: 'rare',
-    desc: '超慢射速，每发引爆重力波，4弹片扇形覆盖', spriteKey: 'weapon_shotgun',
+    desc: '超慢射速，每发引爆重力波，4弹片扇形覆盖', spriteKey: 'weapon_gravity',
     baseDamage: 60, fireRateMs: 800, baseCritChance: 0.18,
     pellets: 4, spreadAngle: 0.30,
     sandValue: 100, weight: 5,
   },
   void_launcher: {
     id: 'void_launcher', name: '虚空发射器', rarity: 'legendary',
-    desc: '终极武器，单发虚空能量球，伤害极高', spriteKey: 'weapon_sniper',
+    desc: '终极武器，单发虚空能量球，伤害极高', spriteKey: 'weapon_void',
     baseDamage: 140, fireRateMs: 1500, baseCritChance: 0.35,
     sandValue: 190, weight: 2,
   },
   temporal_burst: {
     id: 'temporal_burst', name: '时阵连发枪', rarity: 'uncommon',
-    desc: '每次射击释放3枚时空弹片，近距离爆发强', spriteKey: 'weapon_pistol',
+    desc: '每次射击释放3枚时空弹片，近距离爆发强', spriteKey: 'weapon_burst',
     baseDamage: 14, fireRateMs: 290, baseCritChance: 0.12,
     pellets: 3, spreadAngle: 0.18,
     sandValue: 58, weight: 10,

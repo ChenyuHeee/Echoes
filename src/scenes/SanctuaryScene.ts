@@ -37,6 +37,9 @@ export class SanctuaryScene extends Phaser.Scene {
   private contentLayer!: Phaser.GameObjects.Container
   private activeTab: TabId = 'overview'
   private tabBtns: Map<TabId, { bg: Phaser.GameObjects.Rectangle; txt: Phaser.GameObjects.Text }> = new Map()
+  private contentBaseY = 108
+  private scrollOffset = 0
+  private scrollMax = 0
 
   constructor() {
     super('SanctuaryScene')
@@ -110,6 +113,13 @@ export class SanctuaryScene extends Phaser.Scene {
     }).setOrigin(0.5, 1).setDepth(8)
 
     this.switchTab('overview')
+
+    // 鼠标滚轮：仅在内容超出可见区时（如仓库/成就页）允许上下滚动
+    this.input.on('wheel', (_p: unknown, _go: unknown, _dx: number, dy: number) => {
+      if (this.scrollMax <= 0) return
+      this.scrollOffset = Phaser.Math.Clamp(this.scrollOffset + dy * 0.5, 0, this.scrollMax)
+      if (this.contentLayer) this.contentLayer.y = this.contentBaseY - this.scrollOffset
+    })
   }
 
   // ─────────────────────────────────────────────────────
@@ -117,6 +127,10 @@ export class SanctuaryScene extends Phaser.Scene {
     this.activeTab = tab
     this.contentLayer.removeAll(true)
     this.tipText.setText('')
+    // 重置滚动状态
+    this.scrollOffset = 0
+    this.scrollMax = 0
+    this.contentLayer.y = this.contentBaseY
 
     // 更新标签样式
     this.tabBtns.forEach((btn, id) => {
@@ -1129,6 +1143,10 @@ export class SanctuaryScene extends Phaser.Scene {
       }).setOrigin(1, 0.5))
       y += cardH + 6
     })
+
+    // 设置滚动范围
+    const visibleH = this.scale.height - this.contentBaseY - 30
+    this.scrollMax = Math.max(0, y - visibleH + 20)
   }
 
   // ─────────────────── TAB: 残响档案 ──────────────────

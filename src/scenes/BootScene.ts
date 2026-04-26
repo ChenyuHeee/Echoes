@@ -107,12 +107,25 @@ export class BootScene extends Phaser.Scene {
     this.load.svg('item_sand_magnet',       'assets/sprites/items/sand_magnet.svg',       icon16)
     this.load.svg('item_echo_crystal_core', 'assets/sprites/items/echo_crystal_core.svg', icon16)
     this.load.svg('item_paradox_engine',    'assets/sprites/items/paradox_engine.svg',    icon16)
+    // 新增物品
+    this.load.svg('item_blood_vial',        'assets/sprites/items/item_blood_vial.svg',        icon16)
+    this.load.svg('item_chrono_anchor',     'assets/sprites/items/item_chrono_anchor.svg',     icon16)
+    this.load.svg('item_void_lens',         'assets/sprites/items/item_void_lens.svg',         icon16)
+    this.load.svg('item_phase_cloak',       'assets/sprites/items/item_phase_cloak.svg',       icon16)
+    this.load.svg('item_resonator',         'assets/sprites/items/item_resonator.svg',         icon16)
+    this.load.svg('item_temporal_battery',  'assets/sprites/items/item_temporal_battery.svg',  icon16)
 
     // ─── 武器图标 ───────────────────────────────────────
     this.load.svg('weapon_pistol',   'assets/sprites/items/weapon_pistol.svg',   icon16)
     this.load.svg('weapon_smg',      'assets/sprites/items/weapon_smg.svg',      icon16)
     this.load.svg('weapon_shotgun',  'assets/sprites/items/weapon_shotgun.svg',  icon16)
     this.load.svg('weapon_sniper',   'assets/sprites/items/weapon_sniper.svg',   icon16)
+    // 新增武器（专属图标，让玩家一眼区分武器类型）
+    this.load.svg('weapon_plasma',   'assets/sprites/items/weapon_plasma.svg',   icon16)
+    this.load.svg('weapon_arc',      'assets/sprites/items/weapon_arc.svg',      icon16)
+    this.load.svg('weapon_void',     'assets/sprites/items/weapon_void.svg',     icon16)
+    this.load.svg('weapon_burst',    'assets/sprites/items/weapon_burst.svg',    icon16)
+    this.load.svg('weapon_gravity',  'assets/sprites/items/weapon_gravity.svg',  icon16)
 
     // ─── 配件图标（按槽型共用贴图） ────────────────────
     this.load.svg('att_barrel',   'assets/sprites/items/att_barrel.svg',   icon16)

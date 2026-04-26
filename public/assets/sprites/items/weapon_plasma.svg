@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- 等离子切割枪 — 绿色光刃 -->
+  <!-- 后端枪身 -->
+  <rect x="2" y="6" width="4" height="4" fill="#1a3826"/>
+  <rect x="2" y="9" width="2" height="3" fill="#0f1f16"/>
+  <!-- 中段切割槽 -->
+  <rect x="6" y="6" width="3" height="4" fill="#244830"/>
+  <rect x="6" y="7" width="3" height="2" fill="#3a6048"/>
+  <!-- 等离子刃 -->
+  <rect x="9" y="7" width="6" height="2" fill="#40ff80"/>
+  <rect x="9" y="8" width="6" height="1" fill="#a0ffc0"/>
+  <rect x="14" y="6" width="2" height="4" fill="#80ffa0"/>
+  <!-- 能量芯 -->
+  <rect x="3" y="7" width="2" height="2" fill="#80ffb0"/>
+  <rect x="3" y="7" width="1" height="1" fill="#ffffff"/>
+  <!-- 握把 -->
+  <rect x="2" y="10" width="3" height="3" fill="#0a160e"/>
+</svg>

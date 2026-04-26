@@ -113,6 +113,7 @@ export class LoadoutScene extends Phaser.Scene {
     this.leftMask = this.add.graphics()
     this.leftMask.fillStyle(0xffffff)
     this.leftMask.fillRect(lx - 4, 62, LEFT_W + 8, height - 62 - 55)
+    this.leftMask.setVisible(false)  // 仅用于 geometry mask，不应作为可见质量呈现
     this.leftCol.setMask(this.leftMask.createGeometryMask())
 
     // ════ 左栏：仓库物品（可选择） ═══════════════════════

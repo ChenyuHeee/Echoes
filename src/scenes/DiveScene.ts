@@ -475,6 +475,17 @@ export class DiveScene extends Phaser.Scene {
     }
 
     // 波次清空检测（只有 Host 或离线模式才自行调度下一波）
+    // 容错：清理 hp<=0 但未销毁的幽灵敌人、以及超出世界边界的绿口鱼
+    if ((this.offline || this.isHost) && this.waveInProgress) {
+      this.enemies.children.each((child) => {
+        const e = child as EnemyBody
+        if (!e.active) return true
+        if (e.hp <= 0 || e.x < -200 || e.x > 2200 || e.y < -200 || e.y > 1500) {
+          e.destroy()
+        }
+        return true
+      })
+    }
     if (this.waveInProgress && this.enemies.countActive() === 0 && (this.offline || this.isHost)) {
       this.waveInProgress = false
       this.bossAlive = false
@@ -1097,8 +1108,11 @@ export class DiveScene extends Phaser.Scene {
       fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#304050',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(151)
 
-    this.input.keyboard!.once('keydown', () => {
-      bg.destroy(); titleTxt.destroy(); srcTxt.destroy(); bodyTxt.destroy(); closeTxt.destroy()
+    // 延迟一帧再绑定键盘关闭事件，避免被拾取时的同一个 F 键事件立刻触发关闭
+    this.time.delayedCall(120, () => {
+      this.input.keyboard!.once('keydown', () => {
+        bg.destroy(); titleTxt.destroy(); srcTxt.destroy(); bodyTxt.destroy(); closeTxt.destroy()
+      })
     })
   }
 
@@ -3490,12 +3504,11 @@ export class DiveScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(16)
     this.tweens.add({ targets: label, y: y - 30, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
 
-    // 当 drop 被拾取/销毁时同步清除装饰
-    this.time.addEvent({
-      delay: 100, repeat: -1,
-      callback: () => {
-        if (!drop.active) { glowGfx.destroy(); label.destroy() }
-      },
+    // 当 drop 被拾取/销毁时同步清除装饰（事件驱动，避免轮询泄漏）
+    drop.once('destroy', () => {
+      glowGfx.destroy()
+      glowTween.remove()
+      label.destroy()
     })
   }
 
@@ -3542,12 +3555,16 @@ export class DiveScene extends Phaser.Scene {
 
   /** B 键 — 切换背包界面 */
   private toggleBag() {
+    if (this.diveFinished) return
     if (this.bagOpen) {
       this.destroyBagUI()
+      this.bagOpen = false
+      this.physics.world.resume()
     } else {
       this.buildBagUI()
+      this.bagOpen = true
+      this.physics.world.pause()  // 背包打开时暂停游戏，避免被偼袭
     }
-    this.bagOpen = !this.bagOpen
     audioManager.playClick()
   }
 
@@ -3886,7 +3903,7 @@ export class DiveScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(16)
     this.tweens.add({ targets: label, y: y - 30, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
 
-    this.time.addEvent({ delay: 100, repeat: -1, callback: () => { if (!drop.active) { glow.destroy(); label.destroy() } } })
+    drop.once('destroy', () => { glow.destroy(); label.destroy() })
   }
 
   private tryEquipWeapon(weapon: WeaponDef, x: number, y: number) {
@@ -3934,7 +3951,7 @@ export class DiveScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(16)
     this.tweens.add({ targets: label, y: y - 28, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
 
-    this.time.addEvent({ delay: 100, repeat: -1, callback: () => { if (!drop.active) { glow.destroy(); label.destroy() } } })
+    drop.once('destroy', () => { glow.destroy(); label.destroy() })
   }
 
   private tryPickupAttachment(att: AttachmentDef, x: number, y: number): boolean {
