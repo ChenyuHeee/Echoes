@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- 悖论引擎 — 金色齿轮 -->
+  <!-- 齿 (8个) -->
+  <rect x="6"  y="0"  width="4" height="2" fill="#c08020"/>
+  <rect x="6"  y="14" width="4" height="2" fill="#c08020"/>
+  <rect x="0"  y="6"  width="2" height="4" fill="#c08020"/>
+  <rect x="14" y="6"  width="2" height="4" fill="#c08020"/>
+  <rect x="2"  y="2"  width="2" height="2" fill="#c08020"/>
+  <rect x="12" y="2"  width="2" height="2" fill="#c08020"/>
+  <rect x="2"  y="12" width="2" height="2" fill="#c08020"/>
+  <rect x="12" y="12" width="2" height="2" fill="#c08020"/>
+  <!-- 齿轮外圆 -->
+  <rect x="4"  y="1"  width="8" height="1" fill="#d09030"/>
+  <rect x="2"  y="2"  width="2" height="1" fill="#d09030"/>
+  <rect x="12" y="2"  width="2" height="1" fill="#d09030"/>
+  <rect x="1"  y="4"  width="1" height="8" fill="#d09030"/>
+  <rect x="14" y="4"  width="1" height="8" fill="#b07018"/>
+  <rect x="2"  y="13" width="2" height="1" fill="#d09030"/>
+  <rect x="12" y="13" width="2" height="1" fill="#b07018"/>
+  <rect x="4"  y="14" width="8" height="1" fill="#b07018"/>
+  <!-- 齿轮主体 -->
+  <rect x="2"  y="3"  width="12" height="10" fill="#c08020"/>
+  <rect x="3"  y="2"  width="10" height="12" fill="#c08020"/>
+  <!-- 高光面 -->
+  <rect x="2"  y="3"  width="6"  height="5"  fill="#d8a030"/>
+  <rect x="3"  y="2"  width="5"  height="4"  fill="#e0b040"/>
+  <!-- 中心孔 -->
+  <rect x="5"  y="5"  width="6" height="6" fill="#1a1000"/>
+  <rect x="6"  y="4"  width="4" height="8" fill="#1a1000"/>
+  <!-- 中心环 -->
+  <rect x="5"  y="5"  width="6" height="1" fill="#f0c050"/>
+  <rect x="5"  y="10" width="6" height="1" fill="#906010"/>
+  <rect x="5"  y="5"  width="1" height="6" fill="#f0c050"/>
+  <rect x="10" y="5"  width="1" height="6" fill="#906010"/>
+  <!-- 十字齿轮纹 -->
+  <rect x="7"  y="6"  width="2" height="4" fill="#604008"/>
+  <rect x="6"  y="7"  width="4" height="2" fill="#604008"/>
+</svg>

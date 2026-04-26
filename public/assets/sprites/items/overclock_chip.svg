@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- 超频芯片 — 电路微芯片 -->
+  <!-- 引脚 (顶部) -->
+  <rect x="3"  y="0"  width="1" height="2" fill="#808080"/>
+  <rect x="6"  y="0"  width="1" height="2" fill="#808080"/>
+  <rect x="9"  y="0"  width="1" height="2" fill="#808080"/>
+  <rect x="12" y="0"  width="1" height="2" fill="#808080"/>
+  <!-- 引脚 (底部) -->
+  <rect x="3"  y="14" width="1" height="2" fill="#808080"/>
+  <rect x="6"  y="14" width="1" height="2" fill="#808080"/>
+  <rect x="9"  y="14" width="1" height="2" fill="#808080"/>
+  <rect x="12" y="14" width="1" height="2" fill="#808080"/>
+  <!-- 引脚 (左侧) -->
+  <rect x="0"  y="4"  width="2" height="1" fill="#808080"/>
+  <rect x="0"  y="7"  width="2" height="1" fill="#808080"/>
+  <rect x="0"  y="10" width="2" height="1" fill="#808080"/>
+  <!-- 引脚 (右侧) -->
+  <rect x="14" y="4"  width="2" height="1" fill="#808080"/>
+  <rect x="14" y="7"  width="2" height="1" fill="#808080"/>
+  <rect x="14" y="10" width="2" height="1" fill="#808080"/>
+  <!-- 芯片主体 -->
+  <rect x="2"  y="2"  width="12" height="12" fill="#142814"/>
+  <!-- 芯片边框 -->
+  <rect x="2"  y="2"  width="12" height="1"  fill="#204820"/>
+  <rect x="2"  y="13" width="12" height="1"  fill="#204820"/>
+  <rect x="2"  y="2"  width="1"  height="12" fill="#204820"/>
+  <rect x="13" y="2"  width="1"  height="12" fill="#204820"/>
+  <!-- 电路图案 -->
+  <rect x="4"  y="4"  width="3" height="1" fill="#00c840"/>
+  <rect x="6"  y="4"  width="1" height="3" fill="#00c840"/>
+  <rect x="4"  y="6"  width="3" height="1" fill="#00c840"/>
+  <rect x="9"  y="4"  width="3" height="1" fill="#00a830"/>
+  <rect x="9"  y="4"  width="1" height="4" fill="#00a830"/>
+  <rect x="9"  y="7"  width="3" height="1" fill="#00a830"/>
+  <rect x="4"  y="9"  width="8" height="1" fill="#00c840"/>
+  <rect x="4"  y="9"  width="1" height="3" fill="#00c840"/>
+  <rect x="11" y="9"  width="1" height="3" fill="#00c840"/>
+  <rect x="4"  y="11" width="8" height="1" fill="#00c840"/>
+  <!-- 核心亮点 -->
+  <rect x="7"  y="5"  width="2" height="2" fill="#80ff80"/>
+</svg>

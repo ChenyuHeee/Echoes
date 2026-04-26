@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- 漂移靴 — 向右的靴子 -->
+  <!-- 靴筒 -->
+  <rect x="3"  y="1"  width="6" height="7" fill="#20a0a0"/>
+  <rect x="3"  y="1"  width="6" height="1" fill="#30c0c0"/>
+  <rect x="3"  y="1"  width="1" height="7" fill="#30c0c0"/>
+  <rect x="8"  y="1"  width="1" height="7" fill="#108080"/>
+  <!-- 靴帮 -->
+  <rect x="2"  y="8"  width="10" height="4" fill="#20a0a0"/>
+  <rect x="2"  y="8"  width="10" height="1" fill="#108080"/>
+  <rect x="2"  y="8"  width="1"  height="4" fill="#30c0c0"/>
+  <rect x="11" y="8"  width="1"  height="4" fill="#108080"/>
+  <!-- 靴头 -->
+  <rect x="9"  y="9"  width="4" height="3" fill="#30b8b8"/>
+  <rect x="12" y="10" width="2" height="2" fill="#20a0a0"/>
+  <rect x="13" y="11" width="1" height="1" fill="#109898"/>
+  <!-- 鞋底 -->
+  <rect x="2"  y="12" width="12" height="2" fill="#e8e8e8"/>
+  <rect x="2"  y="12" width="12" height="1" fill="#ffffff"/>
+  <rect x="2"  y="13" width="12" height="1" fill="#c8c8c8"/>
+  <!-- 细节: 鞋带 -->
+  <rect x="4"  y="3"  width="4" height="1" fill="#60e0e0"/>
+  <rect x="4"  y="5"  width="4" height="1" fill="#40c0c0"/>
+  <!-- 速度线效果 -->
+  <rect x="0"  y="5"  width="2" height="1" fill="#60e0e0"/>
+  <rect x="0"  y="7"  width="3" height="1" fill="#40c0c0"/>
+  <rect x="1"  y="9"  width="1" height="1" fill="#30b0b0"/>
+</svg>

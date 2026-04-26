@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- 时相镜 — 圆形镜头 -->
+  <!-- 镜框外环 -->
+  <rect x="4"  y="1"  width="8" height="1" fill="#b07818"/>
+  <rect x="2"  y="2"  width="2" height="1" fill="#b07818"/>
+  <rect x="12" y="2"  width="2" height="1" fill="#b07818"/>
+  <rect x="1"  y="3"  width="1" height="8" fill="#b07818"/>
+  <rect x="14" y="3"  width="1" height="8" fill="#906010"/>
+  <rect x="2"  y="11" width="2" height="1" fill="#b07818"/>
+  <rect x="12" y="11" width="2" height="1" fill="#906010"/>
+  <rect x="4"  y="12" width="8" height="1" fill="#906010"/>
+  <!-- 镜框厚度 -->
+  <rect x="2"  y="2"  width="12" height="10" fill="#c08820"/>
+  <rect x="3"  y="3"  width="10" height="8"  fill="#d09828"/>
+  <rect x="2"  y="2"  width="3"  height="3"  fill="#e0a830"/> <!-- 高光角 -->
+  <!-- 镜片 -->
+  <rect x="4"  y="4"  width="8" height="6" fill="#f0e060"/>
+  <rect x="5"  y="3"  width="6" height="8" fill="#f0e060"/>
+  <rect x="4"  y="4"  width="5" height="3" fill="#f8f090"/> <!-- 镜片高光 -->
+  <!-- 时相折射 -->
+  <rect x="6"  y="6"  width="1" height="1" fill="#ffffff"/>
+  <rect x="9"  y="5"  width="1" height="1" fill="#ffffff"/>
+  <rect x="7"  y="8"  width="2" height="1" fill="#e8d040"/>
+  <!-- 刻度 -->
+  <rect x="8"  y="2"  width="1" height="1" fill="#906010"/>
+  <rect x="8"  y="12" width="1" height="1" fill="#906010"/>
+  <rect x="1"  y="7"  width="1" height="1" fill="#906010"/>
+  <rect x="14" y="7"  width="1" height="1" fill="#906010"/>
+</svg>

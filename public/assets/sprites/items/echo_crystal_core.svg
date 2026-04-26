@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- 回响晶核 — 多面宝石 -->
+  <!-- 顶部尖 -->
+  <rect x="7"  y="0"  width="2" height="1" fill="#e0a0ff"/>
+  <rect x="6"  y="1"  width="4" height="1" fill="#d080ff"/>
+  <!-- 上半六面体 -->
+  <rect x="4"  y="2"  width="8" height="1" fill="#c060f0"/>
+  <!-- 左上面 (暗紫) -->
+  <rect x="2"  y="3"  width="5" height="4" fill="#500090"/>
+  <rect x="3"  y="3"  width="4" height="4" fill="#6000b0"/>
+  <rect x="2"  y="3"  width="1" height="4" fill="#400080"/>
+  <!-- 右上面 (亮紫) -->
+  <rect x="9"  y="3"  width="5" height="4" fill="#a040e0"/>
+  <rect x="9"  y="3"  width="4" height="4" fill="#b050f0"/>
+  <rect x="13" y="3"  width="1" height="4" fill="#8030c0"/>
+  <!-- 中间横线 -->
+  <rect x="2"  y="7"  width="12" height="1" fill="#d070ff"/>
+  <!-- 左下面 (中暗) -->
+  <rect x="2"  y="8"  width="5" height="4" fill="#700090"/>
+  <rect x="2"  y="8"  width="1" height="4" fill="#500060"/>
+  <!-- 右下面 (最亮) -->
+  <rect x="9"  y="8"  width="5" height="4" fill="#c060e0"/>
+  <rect x="13" y="8"  width="1" height="4" fill="#903080"/>
+  <!-- 下半底部 -->
+  <rect x="4"  y="12" width="8" height="1" fill="#8030b0"/>
+  <rect x="6"  y="13" width="4" height="1" fill="#600090"/>
+  <rect x="7"  y="14" width="2" height="1" fill="#500070"/>
+  <rect x="8"  y="15" width="1" height="1" fill="#400050"/>
+  <!-- 内部高光 -->
+  <rect x="5"  y="4"  width="2" height="2" fill="#e0b0ff"/>
+  <rect x="10" y="9"  width="2" height="2" fill="#c070e8"/>
+</svg>

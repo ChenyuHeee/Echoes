@@ -22,6 +22,15 @@ import {
 } from '../state/gameState'
 import { LORE_ENTRIES } from '../config/lore'
 import type { SkillType } from '../types/game.types'
+import {
+  type ItemDef,
+  type ItemId,
+  ITEM_DEFINITIONS,
+  RARITY_COLORS,
+  RARITY_NAMES,
+  BAG_CAPACITY,
+  rollItemDrop,
+} from '../config/items'
 
 type DiveInit = {
   offline?: boolean
@@ -111,6 +120,15 @@ export class DiveScene extends Phaser.Scene {
   // 时序谜题状态
   private echoPuzzleSolved = false
 
+  // ✦ 装备背包系统
+  private itemDropGroup!: Phaser.Physics.Arcade.Group
+  private diveInventory: ItemDef[] = []
+  private bagOpen = false
+  private bagObjects: Array<Phaser.GameObjects.GameObject | Phaser.Input.Keyboard.Key> = []
+  private bagKey!: Phaser.Input.Keyboard.Key
+  private shieldBlockedUntil = 0   // 回响盾：下次可格挡时间
+  private lastRegenAt = 0           // 纳米胶布：上次回血时间
+
   // 连击系统
   private comboCount = 0
   private comboResetAt = 0
@@ -142,6 +160,11 @@ export class DiveScene extends Phaser.Scene {
     this.activeEffectZones = []
     this.burnDots.clear()
     this.slowUntil.clear()
+    this.diveInventory = []
+    this.bagOpen = false
+    this.bagObjects = []
+    this.shieldBlockedUntil = 0
+    this.lastRegenAt = 0
     const runtime = getRuntimeState()
     this.currentFragmentId = data.mapFragment || runtime.room?.mapFragment || runtime.selectedFragment
     this.currentTheme = FRAGMENT_THEMES[this.currentFragmentId]
@@ -251,6 +274,18 @@ export class DiveScene extends Phaser.Scene {
       if (inZone) {
         void this.finishDive('success')
       }
+    }
+
+    // B 键开/关背包
+    if (Phaser.Input.Keyboard.JustDown(this.bagKey)) {
+      this.toggleBag()
+    }
+
+    // 被动回血（纳米胶布）
+    const regenRate = this.diveInventory.reduce((s, i) => s + (i.regenPerSec ?? 0), 0)
+    if (regenRate > 0 && time - this.lastRegenAt >= 1000) {
+      this.lastRegenAt = time
+      this.hp = Math.min(this.maxHp, this.hp + regenRate)
     }
 
     if (this.hp <= 0 && !this.diveFinished) {
@@ -429,6 +464,7 @@ export class DiveScene extends Phaser.Scene {
 
   private spawnPickupsAndExtraction() {
     this.pickups = this.physics.add.group()
+    this.itemDropGroup = this.physics.add.group()
 
     this.extractionZone = this.add.zone(1650, 1040, 120, 120)
     this.physics.add.existing(this.extractionZone, true)
@@ -680,7 +716,8 @@ export class DiveScene extends Phaser.Scene {
 
   /** 磁吸拾取：120px 内时砂自动向玩家飞 */
   private updatePickupMagnet() {
-    const MAGNET_RADIUS = 120
+    const magnetMult = this.diveInventory.reduce((s, i) => s * (i.magnetRadiusMult ?? 1), 1)
+    const MAGNET_RADIUS = 120 * magnetMult
     const MAGNET_SPEED = 280
     this.pickups.children.each(child => {
       const p = child as Phaser.Physics.Arcade.Image
@@ -778,10 +815,12 @@ export class DiveScene extends Phaser.Scene {
       digit3: this.input.keyboard!.addKey(keyCodeFromStr(getKeybindings().skill3)),
       extract: this.input.keyboard!.addKey(keyCodeFromStr(getKeybindings().extract)),
     }
+    this.bagKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.B)
 
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       if (this.tutorialActive) return
-      if (p.rightButtonDown()) return   // 右键不射击
+      if (this.bagOpen) return       // 背包打开时不射击
+      if (p.rightButtonDown()) return
       this.fireGun(p.worldX, p.worldY)
     })
   }
@@ -887,6 +926,22 @@ export class DiveScene extends Phaser.Scene {
       const enemy = enemyObj as EnemyBody
       if (this.player.getData('invincible')) return
 
+      // 回响盾格挡
+      const shieldCd = this.diveInventory.reduce((s, i) => s + (i.shieldCooldownMs ? 1 : 0), 0)
+      if (shieldCd > 0) {
+        const shieldItem = this.diveInventory.find(i => i.shieldCooldownMs)
+        if (shieldItem && Date.now() > this.shieldBlockedUntil) {
+          this.shieldBlockedUntil = Date.now() + shieldItem.shieldCooldownMs!
+          // 格挡特效
+          const shieldFx = this.add.graphics().setDepth(80)
+          shieldFx.lineStyle(3, 0x4090e0, 0.9)
+          shieldFx.strokeCircle(this.player.x, this.player.y, 24)
+          this.tweens.add({ targets: shieldFx, alpha: 0, scaleX: 2, scaleY: 2, duration: 350, onComplete: () => shieldFx.destroy() })
+          this.emitHud('✦ 回响盾 — 格挡')
+          return
+        }
+      }
+
       this.hp = Math.max(0, this.hp - 12)
       this.stability = Math.max(0, this.stability - 8)
       this.player.setData('invincible', true)
@@ -912,6 +967,16 @@ export class DiveScene extends Phaser.Scene {
       const label = comboMult > 1 ? `时砂 +${gain}  ×${comboMult.toFixed(2)}` : `时砂 +${gain}`
       this.emitHud(label)
     })
+
+    // ─── 装备拾取 ───────────────────────────────────
+    this.physics.add.overlap(this.player, this.itemDropGroup, (_, drop) => {
+      const dropImg = drop as Phaser.Physics.Arcade.Image
+      if (!dropImg.active) return
+      const itemId = dropImg.getData('itemId') as ItemId
+      if (!itemId) return
+      this.tryPickupItem(ITEM_DEFINITIONS[itemId], dropImg.x, dropImg.y)
+      dropImg.destroy()
+    })
   }
 
   private movePlayer() {
@@ -922,7 +987,7 @@ export class DiveScene extends Phaser.Scene {
     if (this.keys.a.isDown || this.cursors.left.isDown) move.x -= 1
     if (this.keys.d.isDown || this.cursors.right.isDown) move.x += 1
 
-    move.normalize().scale(210 * getSpeedMultiplier())
+    move.normalize().scale(210 * getSpeedMultiplier() * this.getDiveSpeedBonus())
     this.player.setVelocity(move.x, move.y)
 
     this.player.setRotation(0)
@@ -1246,7 +1311,7 @@ export class DiveScene extends Phaser.Scene {
         b.setTint(elemColor)
         b.setData('elementTint', elemColor)
         b.setScale(skill === 'headshot' ? 1.8 : skill === 'lightning_bolt' ? 1.6 : 1.5)
-        b.setData('damage', (def.damage || 22) * (isEcho ? 0.85 : 1))
+        b.setData('damage', (def.damage || 22) * (isEcho ? 0.85 : 1) * (isEcho ? this.getDiveEchoBonus() : 1))
         if (skill === 'burn_module') b.setData('burnOnHit', true)
         if (skill === 'lightning_bolt') b.setData('chain', true)
         b.rotation = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY)
@@ -1750,10 +1815,28 @@ export class DiveScene extends Phaser.Scene {
   }
 
   private damageEnemy(enemy: EnemyBody, amount: number, showNumber = true) {
-    const finalAmount = Math.round(amount * getDamageMultiplier())
+    // 暴击检测（时相镜）
+    const critChance = this.diveInventory.reduce((s, i) => s + (i.critChance ?? 0), 0)
+    const isCrit = Math.random() < critChance
+    const critMult = isCrit ? 2.0 : 1.0
+    const finalAmount = Math.round(amount * getDamageMultiplier() * this.getDiveDamageBonus() * critMult)
     enemy.hp -= finalAmount
     if (showNumber) {
-      this.spawnDamageNumber(enemy.x, enemy.y - 20, finalAmount, '#f0e050')
+      const color = isCrit ? '#ffee22' : '#f0e050'
+      this.spawnDamageNumber(enemy.x, enemy.y - 20, finalAmount, color)
+      if (isCrit) {
+        const critTxt = this.add.text(enemy.x, enemy.y - 36, 'CRIT!', {
+          fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#ffee22',
+          stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(91)
+        this.tweens.add({ targets: critTxt, y: critTxt.y - 14, alpha: 0, duration: 600, onComplete: () => critTxt.destroy() })
+      }
+    }
+
+    // 吸血（虚空碎片）
+    const lifesteal = this.diveInventory.reduce((s, i) => s + (i.lifesteal ?? 0), 0)
+    if (lifesteal > 0 && finalAmount > 0) {
+      this.hp = Math.min(this.maxHp, this.hp + Math.ceil(finalAmount * lifesteal))
     }
 
     if (enemy.hp > 0) {
@@ -1810,6 +1893,22 @@ export class DiveScene extends Phaser.Scene {
     enemy.destroy()
     audioManager.playEnemyDeath()
     this.diveKills += 1
+
+    // 悖论引擎：触发免费链式闪电
+    const paradoxChance = this.diveInventory.reduce((s, i) => s + (i.paradoxChainChance ?? 0), 0)
+    if (paradoxChance > 0 && Math.random() < paradoxChance) {
+      const chains = this.getNearestEnemies(dropX, dropY, 3, 280)
+      chains.forEach((target, idx) => {
+        this.time.delayedCall(idx * 80, () => {
+          if (target.active) {
+            const arc = this.add.line(0, 0, dropX, dropY, target.x, target.y, 0xf0e040, 0.85).setDepth(80)
+            this.tweens.add({ targets: arc, alpha: 0, duration: 280, onComplete: () => arc.destroy() })
+            this.damageEnemy(target, 40, true)
+          }
+        })
+      })
+      if (chains.length > 0) this.emitHud('✦ 悖论引擎 — 链式闪电！')
+    }
 
     // 连击系统：3 秒内连杀叠加倍率
     const now = Date.now()
@@ -1870,6 +1969,12 @@ export class DiveScene extends Phaser.Scene {
         this.tweens.add({ targets: shine, alpha: 0, duration: 550, onComplete: () => shine.destroy() })
         this.tweens.add({ targets: p, y: p.y - 6, duration: 700, yoyo: true, repeat: -1 })
       }
+    }
+
+    // ─── 装备掉落 ─────────────────────────────────────
+    const itemDef = rollItemDrop(isBoss, isElite)
+    if (itemDef) {
+      this.spawnItemDrop(itemDef, dropX + (Math.random() - 0.5) * 40, dropY + (Math.random() - 0.5) * 40)
     }
   }
 
@@ -2093,6 +2198,12 @@ export class DiveScene extends Phaser.Scene {
     if (this.diveFinished) return
     this.diveFinished = true
 
+    // 关闭背包 UI（如果打开）
+    if (this.bagOpen) {
+      this.destroyBagUI()
+      this.bagOpen = false
+    }
+
     // 立即冻结玩家和敌人
     this.player.setVelocity(0, 0)
     this.player.setActive(false)
@@ -2290,6 +2401,21 @@ export class DiveScene extends Phaser.Scene {
       color: '#a0c4e8',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
+    // 本次找到的装备
+    if (this.diveInventory.length > 0) {
+      this.add.text(width / 2, height * 0.56,
+        isSuccess ? '本次带回装备加成：' : '背包已损失：', {
+        fontFamily: '"Silkscreen", monospace', fontSize: '11px',
+        color: isSuccess ? '#7ce0bc' : '#e07c7c',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
+
+      const itemNames = this.diveInventory.map(i => i.name).join('  ·  ')
+      this.add.text(width / 2, height * 0.62, itemNames, {
+        fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#9090c0',
+        wordWrap: { width: 480 }, align: 'center',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
+    }
+
     let sec = 4
     const cntText = this.add.text(width / 2, height * 0.62, `${sec} 秒后返回庇护所…`, {
       fontFamily: '"Silkscreen", monospace',
@@ -2405,4 +2531,251 @@ export class DiveScene extends Phaser.Scene {
     dim.on('pointerdown', () => { step++; showStep(step) })
     skipTxt.on('pointerdown', closeTutorial)
   }
+
+  // ─────────────────── 装备系统 ────────────────────────────────────
+
+  /** 在指定位置生成装备掉落物 */
+  private spawnItemDrop(item: ItemDef, x: number, y: number) {
+    const drop = this.physics.add.image(x, y, item.spriteKey)
+    drop.setScale(2)
+    drop.setData('itemId', item.id)
+    drop.setDepth(15)
+    this.itemDropGroup.add(drop)
+
+    // 稀有度光晕边框色
+    const rarityColor = RARITY_COLORS[item.rarity]
+
+    // 浮动动画
+    this.tweens.add({
+      targets: drop, y: y - 8,
+      duration: 900 + Math.random() * 200,
+      yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    })
+
+    // 光晕
+    const glowGfx = this.add.graphics().setDepth(14)
+    const glowTween = this.tweens.add({
+      targets: { v: 0 }, v: 1,
+      duration: 800, yoyo: true, repeat: -1,
+      onUpdate: (_, target) => {
+        if (!drop.active) { glowGfx.destroy(); glowTween.destroy(); return }
+        glowGfx.clear()
+        glowGfx.lineStyle(2, rarityColor, 0.4 + (target.v as number) * 0.4)
+        glowGfx.strokeCircle(drop.x, drop.y, 14)
+      },
+    })
+
+    // 名称悬浮文字
+    const label = this.add.text(x, y - 22, item.name, {
+      fontFamily: '"Silkscreen", monospace', fontSize: '10px',
+      color: `#${rarityColor.toString(16).padStart(6, '0')}`,
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(16)
+    this.tweens.add({ targets: label, y: y - 30, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+
+    // 当 drop 被拾取/销毁时同步清除装饰
+    this.time.addEvent({
+      delay: 100, repeat: -1,
+      callback: () => {
+        if (!drop.active) { glowGfx.destroy(); label.destroy() }
+      },
+    })
+  }
+
+  /** 尝试拾取装备到背包 */
+  private tryPickupItem(item: ItemDef, x: number, y: number) {
+    if (this.diveInventory.length >= BAG_CAPACITY) {
+      // 背包满，弹出提示然后丢弃
+      this.emitHud('背包已满！')
+      const fullTxt = this.add.text(x, y - 30, '背包已满', {
+        fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#ff8060',
+        stroke: '#000', strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(92)
+      this.tweens.add({ targets: fullTxt, y: fullTxt.y - 20, alpha: 0, duration: 800, onComplete: () => fullTxt.destroy() })
+      return
+    }
+
+    this.diveInventory.push(item)
+
+    // 应用最大 HP 加成（立即生效）
+    if (item.maxHpBonus) {
+      this.maxHp += item.maxHpBonus
+      this.hp = Math.min(this.maxHp, this.hp + item.maxHpBonus)
+    }
+
+    audioManager.playPickup()
+
+    const rarityColor = RARITY_COLORS[item.rarity]
+    const rarityColorHex = `#${rarityColor.toString(16).padStart(6, '0')}`
+    this.emitHud(`✦ 拾取：${item.name}  [${RARITY_NAMES[item.rarity]}]  — ${item.desc}`)
+
+    // 拾取特效
+    const pickupFx = this.add.text(x, y - 18, `+${item.name}`, {
+      fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: rarityColorHex,
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(92)
+    this.tweens.add({ targets: pickupFx, y: pickupFx.y - 28, alpha: 0, duration: 900, onComplete: () => pickupFx.destroy() })
+
+    // 背包已满提示
+    if (this.diveInventory.length >= BAG_CAPACITY) {
+      this.emitHud('背包已满 (B 键查看)')
+    }
+  }
+
+  /** B 键 — 切换背包界面 */
+  private toggleBag() {
+    if (this.bagOpen) {
+      this.destroyBagUI()
+    } else {
+      this.buildBagUI()
+    }
+    this.bagOpen = !this.bagOpen
+    audioManager.playClick()
+  }
+
+  /** 构建背包 UI（Phaser 原生对象） */
+  private buildBagUI() {
+    const { width, height } = this.scale
+    const objs: Array<Phaser.GameObjects.GameObject | Phaser.Input.Keyboard.Key> = []
+
+    // 半透明背景
+    const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.72)
+      .setScrollFactor(0).setDepth(300).setInteractive()
+    objs.push(dim)
+
+    // 面板背景
+    const panelW = 500, panelH = 340
+    const panelX = width / 2, panelY = height / 2
+
+    const panel = this.add.rectangle(panelX, panelY, panelW, panelH, 0x060c18, 1)
+      .setScrollFactor(0).setDepth(301)
+    panel.setStrokeStyle(1, 0x3a6090, 0.8)
+    objs.push(panel)
+
+    // 标题
+    const title = this.add.text(panelX, panelY - panelH / 2 + 18, '✦  背包  (B 关闭)', {
+      fontFamily: '"Silkscreen", monospace', fontSize: '16px', color: '#c8a96e',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(302)
+    objs.push(title)
+
+    // 槽位布局：3列×2行
+    const SLOT_SIZE = 72
+    const SLOT_GAP = 12
+    const COLS = 3, ROWS = 2
+    const gridW = COLS * SLOT_SIZE + (COLS - 1) * SLOT_GAP
+    const gridX = panelX - gridW / 2
+    const gridY = panelY - 60
+
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        const idx = row * COLS + col
+        const sx = gridX + col * (SLOT_SIZE + SLOT_GAP) + SLOT_SIZE / 2
+        const sy = gridY + row * (SLOT_SIZE + SLOT_GAP) + SLOT_SIZE / 2
+
+        // 槽位背景
+        const slotBg = this.add.rectangle(sx, sy, SLOT_SIZE, SLOT_SIZE, 0x0a1020, 1)
+          .setScrollFactor(0).setDepth(302)
+        objs.push(slotBg)
+
+        if (idx < this.diveInventory.length) {
+          const item = this.diveInventory[idx]
+          const rarityColor = RARITY_COLORS[item.rarity]
+          slotBg.setStrokeStyle(2, rarityColor, 0.9)
+
+          // 装备图标
+          const icon = this.add.image(sx, sy - 8, item.spriteKey)
+            .setScale(3).setScrollFactor(0).setDepth(303)
+          objs.push(icon)
+
+          // 装备名
+          const nameColor = `#${rarityColor.toString(16).padStart(6, '0')}`
+          const nameTxt = this.add.text(sx, sy + 26, item.name, {
+            fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: nameColor,
+          }).setOrigin(0.5).setScrollFactor(0).setDepth(303)
+          objs.push(nameTxt)
+
+          // 稀有度标签
+          const rarityTxt = this.add.text(sx, sy + 36, RARITY_NAMES[item.rarity], {
+            fontFamily: '"Silkscreen", monospace', fontSize: '8px', color: '#405060',
+          }).setOrigin(0.5).setScrollFactor(0).setDepth(303)
+          objs.push(rarityTxt)
+        } else {
+          slotBg.setStrokeStyle(1, 0x1e3050, 0.5)
+          // 空槽提示
+          const emptyTxt = this.add.text(sx, sy, '空', {
+            fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#1e3050',
+          }).setOrigin(0.5).setScrollFactor(0).setDepth(303)
+          objs.push(emptyTxt)
+        }
+      }
+    }
+
+    // 效果汇总
+    const effectLines: string[] = []
+    const dmgBonus = this.getDiveDamageBonus()
+    const spdBonus = this.getDiveSpeedBonus()
+    const echoBonus = this.getDiveEchoBonus()
+    const totalRegen = this.diveInventory.reduce((s, i) => s + (i.regenPerSec ?? 0), 0)
+    const totalCrit = this.diveInventory.reduce((s, i) => s + (i.critChance ?? 0), 0)
+    const magnetMult = this.diveInventory.reduce((s, i) => s * (i.magnetRadiusMult ?? 1), 1)
+    if (dmgBonus > 1) effectLines.push(`伤害 ×${dmgBonus.toFixed(2)}`)
+    if (spdBonus > 1) effectLines.push(`速度 ×${spdBonus.toFixed(2)}`)
+    if (echoBonus > 1) effectLines.push(`回响 ×${echoBonus.toFixed(2)}`)
+    if (totalRegen > 0) effectLines.push(`回血 +${totalRegen}/s`)
+    if (totalCrit > 0) effectLines.push(`暴击 +${Math.round(totalCrit * 100)}%`)
+    if (magnetMult > 1) effectLines.push(`磁吸 ×${magnetMult.toFixed(1)}`)
+    const hasShield = this.diveInventory.some(i => i.shieldCooldownMs)
+    if (hasShield) effectLines.push('回响盾：已激活')
+    const hasParadox = this.diveInventory.some(i => i.paradoxChainChance)
+    if (hasParadox) effectLines.push('悖论引擎：已激活')
+
+    const effectStr = effectLines.length > 0 ? effectLines.join('   ') : '暂无加成'
+    const effectTxt = this.add.text(panelX, panelY + panelH / 2 - 38, `效果：${effectStr}`, {
+      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#7090b0',
+      wordWrap: { width: panelW - 30 }, align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(302)
+    objs.push(effectTxt)
+
+    // 数量提示
+    const countTxt = this.add.text(panelX, panelY + panelH / 2 - 18, `${this.diveInventory.length}/${BAG_CAPACITY} 格  —  撤离成功才能保留本次加成记录`, {
+      fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#304050',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(302)
+    objs.push(countTxt)
+
+    // ESC 关闭
+    const escKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
+    const escHandler = () => { if (this.bagOpen) this.toggleBag() }
+    escKey.once('down', escHandler)
+    objs.push(escKey)
+
+    this.bagObjects = objs
+  }
+
+  private destroyBagUI() {
+    for (const o of this.bagObjects) {
+      if (o instanceof Phaser.Input.Keyboard.Key) {
+        this.input.keyboard!.removeKey(o as Phaser.Input.Keyboard.Key)
+      } else {
+        const go = o as Phaser.GameObjects.GameObject
+        if (go && go.active !== undefined) go.destroy()
+      }
+    }
+    this.bagObjects = []
+  }
+
+  /** 计算当前背包装备的伤害倍率 */
+  private getDiveDamageBonus(): number {
+    return this.diveInventory.reduce((acc, i) => acc * (i.damageMult ?? 1), 1)
+  }
+
+  /** 计算当前背包装备的速度倍率 */
+  private getDiveSpeedBonus(): number {
+    return this.diveInventory.reduce((acc, i) => acc * (i.speedMult ?? 1), 1)
+  }
+
+  /** 计算回响技能额外倍率 */
+  private getDiveEchoBonus(): number {
+    return this.diveInventory.reduce((acc, i) => acc * (i.echoSkillMult ?? 1), 1)
+  }
 }
+

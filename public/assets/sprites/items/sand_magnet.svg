@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- 时砂磁铁 — U形磁铁 -->
+  <!-- 左臂 -->
+  <rect x="2"  y="1"  width="4" height="9" fill="#c02020"/>
+  <rect x="2"  y="1"  width="4" height="1" fill="#e03030"/>  <!-- 高光 -->
+  <rect x="2"  y="1"  width="1" height="9" fill="#e03030"/>  <!-- 高光侧面 -->
+  <rect x="5"  y="1"  width="1" height="9" fill="#901818"/>  <!-- 阴影侧面 -->
+  <!-- 右臂 -->
+  <rect x="10" y="1"  width="4" height="9" fill="#c02020"/>
+  <rect x="10" y="1"  width="4" height="1" fill="#e03030"/>
+  <rect x="10" y="1"  width="1" height="9" fill="#e03030"/>
+  <rect x="13" y="1"  width="1" height="9" fill="#901818"/>
+  <!-- U形底部弧 -->
+  <rect x="2"  y="10" width="12" height="2" fill="#c02020"/>
+  <rect x="2"  y="10" width="12" height="1" fill="#901818"/>
+  <!-- 磁极黄色提示 (左) -->
+  <rect x="2"  y="9"  width="4" height="2" fill="#d0c020"/>
+  <rect x="2"  y="9"  width="4" height="1" fill="#f0e030"/>
+  <!-- 磁极黄色提示 (右) -->
+  <rect x="10" y="9"  width="4" height="2" fill="#d0c020"/>
+  <rect x="10" y="9"  width="4" height="1" fill="#f0e030"/>
+  <!-- 磁场弧线 -->
+  <rect x="4"  y="12" width="8" height="1" fill="#ff4040"/>
+  <rect x="5"  y="13" width="6" height="1" fill="#ff6060"/>
+  <rect x="6"  y="14" width="4" height="1" fill="#ff8080"/>
+  <rect x="7"  y="15" width="2" height="1" fill="#ffa0a0"/>
+  <!-- 中间空隙 (留白) -->
+  <rect x="6"  y="1"  width="4" height="9" fill="none"/>
+</svg>

@@ -88,6 +88,20 @@ export class BootScene extends Phaser.Scene {
     this.load.svg('ui_button_medium', 'assets/ui/button-medium.svg')
     this.load.svg('ui_panel_wide', 'assets/ui/panel-wide.svg')
     this.load.svg('ui_hud_box', 'assets/ui/hud-box.svg')
+
+    // ─── 深潜装备图标 ───────────────────────────────────
+    this.load.svg('item_rusty_blade',       'assets/sprites/items/rusty_blade.svg')
+    this.load.svg('item_resonance_coil',    'assets/sprites/items/resonance_coil.svg')
+    this.load.svg('item_void_shard',        'assets/sprites/items/void_shard.svg')
+    this.load.svg('item_overclock_chip',    'assets/sprites/items/overclock_chip.svg')
+    this.load.svg('item_time_weave_vest',   'assets/sprites/items/time_weave_vest.svg')
+    this.load.svg('item_echo_shield',       'assets/sprites/items/echo_shield.svg')
+    this.load.svg('item_nanite_patch',      'assets/sprites/items/nanite_patch.svg')
+    this.load.svg('item_drift_boots',       'assets/sprites/items/drift_boots.svg')
+    this.load.svg('item_chrono_lens',       'assets/sprites/items/chrono_lens.svg')
+    this.load.svg('item_sand_magnet',       'assets/sprites/items/sand_magnet.svg')
+    this.load.svg('item_echo_crystal_core', 'assets/sprites/items/echo_crystal_core.svg')
+    this.load.svg('item_paradox_engine',    'assets/sprites/items/paradox_engine.svg')
   }
 
   create() {

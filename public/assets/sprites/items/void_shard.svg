@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- 虚空碎片 — 角形水晶 -->
+  <!-- 左侧暗面 -->
+  <rect x="6"  y="1"  width="1" height="1" fill="#400060"/>
+  <rect x="5"  y="2"  width="2" height="1" fill="#500080"/>
+  <rect x="4"  y="3"  width="3" height="1" fill="#5a00a0"/>
+  <rect x="3"  y="4"  width="4" height="1" fill="#5a00a0"/>
+  <rect x="2"  y="5"  width="5" height="1" fill="#6010a0"/>
+  <rect x="2"  y="6"  width="5" height="1" fill="#6010a0"/>
+  <rect x="2"  y="7"  width="5" height="1" fill="#5800a0"/>
+  <rect x="3"  y="8"  width="4" height="1" fill="#500090"/>
+  <rect x="4"  y="9"  width="3" height="1" fill="#480080"/>
+  <rect x="5"  y="10" width="2" height="1" fill="#400070"/>
+  <rect x="6"  y="11" width="1" height="1" fill="#380060"/>
+  <!-- 右侧亮面 -->
+  <rect x="7"  y="1"  width="3" height="1" fill="#c060ff"/>
+  <rect x="7"  y="2"  width="4" height="1" fill="#b050f0"/>
+  <rect x="7"  y="3"  width="5" height="1" fill="#a040e0"/>
+  <rect x="7"  y="4"  width="6" height="1" fill="#9030d0"/>
+  <rect x="7"  y="5"  width="7" height="1" fill="#8830c0"/>
+  <rect x="7"  y="6"  width="7" height="1" fill="#8030b8"/>
+  <rect x="7"  y="7"  width="7" height="1" fill="#7828b0"/>
+  <rect x="7"  y="8"  width="6" height="1" fill="#7020a8"/>
+  <rect x="7"  y="9"  width="5" height="1" fill="#6820a0"/>
+  <rect x="7"  y="10" width="4" height="1" fill="#601898"/>
+  <rect x="7"  y="11" width="3" height="1" fill="#581090"/>
+  <rect x="8"  y="12" width="2" height="1" fill="#500888"/>
+  <rect x="9"  y="13" width="1" height="1" fill="#480080"/>
+  <!-- 高光边缘 -->
+  <rect x="7"  y="2"  width="1" height="9" fill="#d880ff"/>
+  <rect x="9"  y="1"  width="1" height="1" fill="#e090ff"/>
+</svg>
