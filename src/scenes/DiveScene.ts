@@ -339,13 +339,20 @@ export class DiveScene extends Phaser.Scene {
       this.showPrologue()
     }
 
-    // 启动第一波
-    this.time.delayedCall(3000, () => this.startNextWave())
+    // 启动第一波（在线模式只有 Host 触发，且需等待 realtime 订阅完毕；非 Host 等待广播）
+    if (this.offline || !this.roomCode) {
+      this.time.delayedCall(3000, () => this.startNextWave())
+    }
 
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08)
 
     if (!this.offline && this.roomCode) {
-      void this.setupRealtime()
+      void this.setupRealtime().then(() => {
+        // realtime 订阅成功后，仅 Host 触发首波（非 Host 通过 onEnemySpawns 接收）
+        if (this.isHost && !this.diveFinished) {
+          this.time.delayedCall(2000, () => this.startNextWave())
+        }
+      })
       // 关闭浏览器时自动关闭房间
       const rt2 = getRuntimeState()
       if (rt2.room?.id) {
@@ -531,6 +538,8 @@ export class DiveScene extends Phaser.Scene {
   // ─────────────────── 波次系统 ───────────────────────
   private startNextWave() {
     if (this.diveFinished) return
+    // 在线模式下，非 Host 不本地生成怪物（等待 Host 的 enemy_spawns 广播）
+    if (!this.offline && !this.isHost) return
     this.waveNumber++
     this.waveInProgress = true
 
@@ -2748,6 +2757,9 @@ export class DiveScene extends Phaser.Scene {
         const tx2 = evt.tx ?? sx, ty2 = evt.ty ?? sy
         const isInstant = evt.skillId === 'dash' || evt.skillId === 'teleport'
           || evt.skillId === 'shadow_clone' || evt.skillId === 'void_pulse'
+        // 落地型 AOE 技能：飞到目标后产生冲击效果
+        const isAoeProjectile = evt.skillId === 'plague_module' || evt.skillId === 'magnet_module'
+          || evt.skillId === 'gravity_well' || evt.skillId === 'toxic_fog' || evt.skillId === 'cryo_field'
 
         // ── 枪口闪光（所有技能都有）
         const mfGfx = this.add.graphics().setDepth(50)
@@ -2756,9 +2768,47 @@ export class DiveScene extends Phaser.Scene {
         this.tweens.add({ targets: mfGfx, alpha: 0, duration: 100, onComplete: () => mfGfx.destroy() })
 
         if (isInstant) {
-          // 即时技能：保留原来的脉冲圆
-          const pulse = this.add.circle(sx, sy, evt.isEcho ? 24 : 16, evt.isEcho ? 0x7fffd1 : 0xffcd8a, 0.35)
-          this.tweens.add({ targets: pulse, alpha: 0, scaleX: 2.5, scaleY: 2.5, duration: 500, onComplete: () => pulse.destroy() })
+          if (evt.skillId === 'void_pulse') {
+            // 虚空脉冲：3 层扩散环 + 中心爆光
+            const ringColors = evt.isEcho ? [0x7fffd1, 0x40e8b0, 0xa0f8e0] : [0xd060ff, 0xb840ff, 0x8020c0]
+            for (let r = 0; r < 3; r++) {
+              this.time.delayedCall(r * 80, () => {
+                const vring = this.add.graphics().setDepth(60)
+                vring.lineStyle(3 - r, ringColors[r], 0.85 - r * 0.2)
+                vring.strokeCircle(sx, sy, 8)
+                this.tweens.add({
+                  targets: vring, scaleX: 9 + r * 3, scaleY: 9 + r * 3, alpha: 0,
+                  duration: 420 + r * 60, ease: 'Quad.Out',
+                  onComplete: () => vring.destroy(),
+                })
+              })
+            }
+            const coreFlash = this.add.graphics().setDepth(61)
+            coreFlash.fillStyle(evt.isEcho ? 0x7fffd1 : 0xe080ff, 0.7)
+            coreFlash.fillCircle(sx, sy, 18)
+            this.tweens.add({ targets: coreFlash, alpha: 0, scaleX: 0.5, scaleY: 0.5, duration: 200, onComplete: () => coreFlash.destroy() })
+          } else if (evt.skillId === 'dash' || evt.skillId === 'teleport') {
+            // 冲刺/瞬移：从 (sx,sy) 到 (tx2,ty2) 的虚线轨迹 + 残影 + 冲击环
+            const trailGfx = this.add.graphics().setDepth(20)
+            trailGfx.lineStyle(1.5, 0xa080ff, 0.5)
+            trailGfx.lineBetween(sx, sy, tx2, ty2)
+            this.tweens.add({ targets: trailGfx, alpha: 0, duration: 320, onComplete: () => trailGfx.destroy() })
+            for (let r = 0; r < 2; r++) {
+              this.time.delayedCall(r * 60, () => {
+                const ring2 = this.add.graphics().setDepth(22)
+                ring2.lineStyle(2 - r, 0xc0a0ff, 0.8 - r * 0.3)
+                ring2.strokeCircle(tx2, ty2, 6)
+                this.tweens.add({
+                  targets: ring2, alpha: 0, scaleX: 5 + r * 2, scaleY: 5 + r * 2,
+                  duration: 280, ease: 'Quad.Out', onComplete: () => ring2.destroy(),
+                })
+              })
+            }
+          } else {
+            // shadow_clone：脉冲圆
+            const pulse = this.add.circle(sx, sy, evt.isEcho ? 24 : 16, evt.isEcho ? 0x7fffd1 : 0xffcd8a, 0.35)
+            this.tweens.add({ targets: pulse, alpha: 0, scaleX: 2.5, scaleY: 2.5, duration: 500, onComplete: () => pulse.destroy() })
+          }
           return
         }
 
@@ -2768,6 +2818,11 @@ export class DiveScene extends Phaser.Scene {
           burn_module:   { color: 0xff6030, size: 6,  speed: 600 },
           headshot:      { color: 0xf8e860, size: 7,  speed: 800 },
           lightning_bolt:{ color: 0xd0e8ff, size: 6,  speed: 600 },
+          plague_module: { color: 0x80ff60, size: 7,  speed: 550 },
+          magnet_module: { color: 0xff80ff, size: 7,  speed: 550 },
+          gravity_well:  { color: 0xa080ff, size: 8,  speed: 500 },
+          toxic_fog:     { color: 0x60d040, size: 7,  speed: 500 },
+          cryo_field:    { color: 0x80d8ff, size: 7,  speed: 500 },
         }
         const sd = skillDefs[evt.skillId] ?? { color: evt.isEcho ? 0x7fffd1 : 0xffcd8a, size: 7, speed: 500 }
         const bulletColor = sd.color
@@ -2799,11 +2854,28 @@ export class DiveScene extends Phaser.Scene {
           onComplete: () => {
             trailEvt.remove()
             bGfx.destroy()
-            // 命中特效
-            const hitGfx = this.add.graphics().setDepth(75)
-            hitGfx.fillStyle(bulletColor, 0.6)
-            hitGfx.fillCircle(tx2, ty2, 7)
-            this.tweens.add({ targets: hitGfx, alpha: 0, scaleX: 3, scaleY: 3, duration: 180, onComplete: () => hitGfx.destroy() })
+            if (isAoeProjectile) {
+              // 落地冲击波（3 层）
+              for (let w = 0; w < 3; w++) {
+                this.time.delayedCall(w * 70, () => {
+                  const wave = this.add.graphics().setDepth(25)
+                  wave.lineStyle(2 - w * 0.5, bulletColor, 0.7 - w * 0.2)
+                  wave.strokeCircle(tx2, ty2, 8)
+                  this.tweens.add({
+                    targets: wave, alpha: 0,
+                    scaleX: 5 + w * 2, scaleY: 5 + w * 2,
+                    duration: 320, ease: 'Quad.Out',
+                    onComplete: () => wave.destroy(),
+                  })
+                })
+              }
+            } else {
+              // 普通命中特效
+              const hitGfx = this.add.graphics().setDepth(75)
+              hitGfx.fillStyle(bulletColor, 0.6)
+              hitGfx.fillCircle(tx2, ty2, 7)
+              this.tweens.add({ targets: hitGfx, alpha: 0, scaleX: 3, scaleY: 3, duration: 180, onComplete: () => hitGfx.destroy() })
+            }
           },
         })
       })
