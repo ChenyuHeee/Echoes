@@ -188,6 +188,7 @@ export class DiveScene extends Phaser.Scene {
   private charDefBoostUntil = 0     // 铁甲堡垒减伤结束时间
   private voidStacks = 0            // 虚空破碎者 — 虚空侵蚀叠层数（最多5层）
   private charSkillKey!: Phaser.Input.Keyboard.Key
+  private pickupKey!: Phaser.Input.Keyboard.Key  // F键拾取武器/配件
 
   // 连击系统
   private comboCount = 0
@@ -370,6 +371,7 @@ export class DiveScene extends Phaser.Scene {
     this.updateEnemies(time)
     this.updateDots()
     this.cleanEnemyBullets()
+    this.checkNearbyPickups()
     this.updateVisuals(time)
     this.updateMinimap()
     this.updatePickupMagnet()
@@ -915,6 +917,80 @@ export class DiveScene extends Phaser.Scene {
     }).setScrollFactor(0).setDepth(62)
   }
 
+
+  /** 检测附近武器/配件掉落物，提示 [F] 拾取，按 F 时执行拾取 */
+  private checkNearbyPickups() {
+    const PICKUP_RADIUS = 60
+    const px = this.player.x; const py = this.player.y
+    const justPressedF = Phaser.Input.Keyboard.JustDown(this.pickupKey)
+
+    let nearestWeapon: Phaser.Physics.Arcade.Image | null = null
+    let nearestWeaponDist = PICKUP_RADIUS + 1
+
+    this.weaponDropGroup.children.each((child: Phaser.GameObjects.GameObject) => {
+      const drop = child as Phaser.Physics.Arcade.Image
+      if (!drop.active) return true
+      const d = Phaser.Math.Distance.Between(px, py, drop.x, drop.y)
+      if (d < nearestWeaponDist) { nearestWeaponDist = d; nearestWeapon = drop }
+      return true
+    })
+
+    let nearestAtt: Phaser.Physics.Arcade.Image | null = null
+    let nearestAttDist = PICKUP_RADIUS + 1
+
+    this.attachmentDropGroup.children.each((child: Phaser.GameObjects.GameObject) => {
+      const drop = child as Phaser.Physics.Arcade.Image
+      if (!drop.active) return true
+      const d = Phaser.Math.Distance.Between(px, py, drop.x, drop.y)
+      if (d < nearestAttDist) { nearestAttDist = d; nearestAtt = drop }
+      return true
+    })
+
+    // 优先拾取武器（距离相近时），F键触发
+    const nw = nearestWeapon as Phaser.Physics.Arcade.Image | null
+    if (nw && nearestWeaponDist <= PICKUP_RADIUS) {
+      const w = nw.getData('weaponDef') as WeaponDef
+      if (w && !this._pickupHintShown) {
+        this.emitHud(`[F] 拾取武器：${w.name}  [${RARITY_NAMES[w.rarity]}]`)
+        this._pickupHintShown = true
+      }
+      if (justPressedF) {
+        this.tryEquipWeapon(w, nw.x, nw.y)
+        const dropId = nw.getData('dropId') as string | undefined
+        nw.destroy()
+        if (dropId) {
+          this.dropRegistry.delete(dropId)
+          if (!this.offline) this.roomRealtime?.sendPickup({ dropId, playerId: getRuntimeState().player.id })
+        }
+        if (!this.offline) this.roomRealtime?.sendSound({ type: 'pickup', x: px, y: py })
+        this._pickupHintShown = false
+      }
+    } else {
+      const na = nearestAtt as Phaser.Physics.Arcade.Image | null
+      if (na && nearestAttDist <= PICKUP_RADIUS) {
+        const att = na.getData('attDef') as AttachmentDef
+        if (att && !this._pickupHintShown) {
+          this.emitHud(`[F] 拾取配件：${att.name}  [${RARITY_NAMES[att.rarity]}]`)
+          this._pickupHintShown = true
+        }
+        if (justPressedF) {
+          if (this.tryPickupAttachment(att, na.x, na.y)) {
+            const dropId = na.getData('dropId') as string | undefined
+            na.destroy()
+            if (dropId) {
+              this.dropRegistry.delete(dropId)
+              if (!this.offline) this.roomRealtime?.sendPickup({ dropId, playerId: getRuntimeState().player.id })
+            }
+          }
+          this._pickupHintShown = false
+        }
+      } else {
+        this._pickupHintShown = false
+      }
+    }
+  }
+  private _pickupHintShown = false
+
   /** 磁吸拾取：120px 内时砂自动向玩家飞 */
   private updatePickupMagnet() {
     const magnetMult = this.diveInventory.reduce((s, i) => s * (i.magnetRadiusMult ?? 1), 1) * this._shrineBuffs.magnetMult
@@ -1018,6 +1094,7 @@ export class DiveScene extends Phaser.Scene {
     }
     this.charSkillKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Q)
     this.bagKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.B)
+    this.pickupKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F)
 
     // 射击统一由 update() 的 leftButtonDown 轮询处理，无需 pointerdown 事件
   }
@@ -1210,37 +1287,8 @@ export class DiveScene extends Phaser.Scene {
       }
     })
 
-    // ─── 武器拾取 ───────────────────────────────────
-    this.physics.add.overlap(this.player, this.weaponDropGroup, (_, drop) => {
-      const dropImg = drop as Phaser.Physics.Arcade.Image
-      if (!dropImg.active) return
-      const weapon = dropImg.getData('weaponDef') as WeaponDef
-      if (!weapon) return
-      const dropId = dropImg.getData('dropId') as string | undefined
-      this.tryEquipWeapon(weapon, dropImg.x, dropImg.y)
-      dropImg.destroy()
-      if (dropId) {
-        this.dropRegistry.delete(dropId)
-        if (!this.offline) this.roomRealtime?.sendPickup({ dropId, playerId: getRuntimeState().player.id })
-      }
-      if (!this.offline) this.roomRealtime?.sendSound({ type: 'pickup', x: this.player.x, y: this.player.y })
-    })
-
-    // ─── 配件拾取 ───────────────────────────────────
-    this.physics.add.overlap(this.player, this.attachmentDropGroup, (_, drop) => {
-      const dropImg = drop as Phaser.Physics.Arcade.Image
-      if (!dropImg.active) return
-      const att = dropImg.getData('attDef') as AttachmentDef
-      if (!att) return
-      if (this.tryPickupAttachment(att, dropImg.x, dropImg.y)) {
-        const dropId = dropImg.getData('dropId') as string | undefined
-        dropImg.destroy()
-        if (dropId) {
-          this.dropRegistry.delete(dropId)
-          if (!this.offline) this.roomRealtime?.sendPickup({ dropId, playerId: getRuntimeState().player.id })
-        }
-      }
-    })
+    // ─── 武器/配件拾取：靠近时显示提示，按F拾取 ───────────────────
+    // （不再自动 overlap，改为 update() 中 checkNearbyPickups 轮询处理）
   }
 
   private movePlayer() {
@@ -2946,11 +2994,18 @@ export class DiveScene extends Phaser.Scene {
     })
     recordDiveComplete(this.diveKills, result === 'success')
 
-    // 成功撤离时持久化背包物品到仓库
+    // 成功撤离时持久化背包物品到仓库；死亡时枪械和配件全部丢失
     if (result === 'success') {
       mergeIntoStash({
         weaponId: this.equippedWeapon.id,
         attachmentIds: this.weaponAttachments.map(a => a.id),
+        itemIds: this.diveInventory.map(i => i.id),
+      })
+    } else {
+      // 死亡：只保留背包物资，枪械/配件全部丢失
+      mergeIntoStash({
+        weaponId: null,
+        attachmentIds: [],
         itemIds: this.diveInventory.map(i => i.id),
       })
     }
