@@ -67,6 +67,11 @@ export interface NetSoundEvent {
   y: number
 }
 
+/** Host 广播波次开始（非 Host 以此同步波次，避免独立触发） */
+export interface NetWaveStart {
+  waveNumber: number
+}
+
 export class RoomRealtime {
   private channel: RealtimeChannel | null = null
 
@@ -199,6 +204,18 @@ export class RoomRealtime {
     if (!this.channel) return
     this.channel.on('broadcast', { event: 'sound_event' }, ({ payload }) => {
       handler(payload as NetSoundEvent)
+    })
+  }
+
+  // ── 波次开始 (Host → All) ─────────────────────────
+  sendWaveStart(payload: NetWaveStart) {
+    this.channel?.send({ type: 'broadcast', event: 'wave_start', payload })
+  }
+
+  onWaveStart(handler: (p: NetWaveStart) => void) {
+    if (!this.channel) return
+    this.channel.on('broadcast', { event: 'wave_start' }, ({ payload }) => {
+      handler(payload as NetWaveStart)
     })
   }
 

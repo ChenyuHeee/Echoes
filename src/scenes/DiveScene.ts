@@ -410,8 +410,8 @@ export class DiveScene extends Phaser.Scene {
       void this.finishDive('death')
     }
 
-    // 波次清空检测
-    if (this.waveInProgress && this.enemies.countActive() === 0) {
+    // 波次清空检测（只有 Host 或离线模式才自行调度下一波）
+    if (this.waveInProgress && this.enemies.countActive() === 0 && (this.offline || this.isHost)) {
       this.waveInProgress = false
       this.bossAlive = false
       this.time.delayedCall(2500, () => this.startNextWave())
@@ -515,6 +515,11 @@ export class DiveScene extends Phaser.Scene {
     }
 
     if (isBossWave) this.bossAlive = true
+
+    // Host 广播波次开始，让非 Host 保持波次状态同步
+    if (!this.offline && this.isHost && this.roomRealtime) {
+      this.roomRealtime.sendWaveStart({ waveNumber: this.waveNumber })
+    }
   }
 
   private spawnEnemy(enemyType: string, x: number, y: number, isBoss: boolean, isElite: boolean) {
@@ -1200,6 +1205,16 @@ export class DiveScene extends Phaser.Scene {
   }
 
   private updateEnemies(time: number) {
+    // 非 Host 客户端：不运行本地 AI，位置完全由 Host 广播驱动
+    if (!this.offline && !this.isHost) {
+      this.enemies.children.each((child) => {
+        const enemy = child as EnemyBody
+        if (enemy.active) (enemy.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0)
+        return true
+      })
+      return
+    }
+
     this.enemies.children.each((child) => {
       const enemy = child as EnemyBody
       if (!enemy.active) return true
@@ -2342,7 +2357,7 @@ export class DiveScene extends Phaser.Scene {
         }
       })
 
-      // ── 敌人状态（非 Host 接收，更新敌人位置/HP）─────
+      // ── 敌人状态（非 Host 接收，直接更新敌人位置/HP）─────
       if (!this.isHost) {
         this.roomRealtime!.onEnemyStates((states) => {
           states.forEach(state => {
@@ -2350,15 +2365,26 @@ export class DiveScene extends Phaser.Scene {
               const e = child as EnemyBody
               if (!e.active) return true
               if ((e.getData('enemyId') as number) === state.id) {
-                // 平滑插值到 Host 权威位置
-                e.x = Phaser.Math.Linear(e.x, state.x, 0.4)
-                e.y = Phaser.Math.Linear(e.y, state.y, 0.4)
+                // 直接设置位置，不插值（AI 已禁用，不会有抖动）
+                e.x = state.x
+                e.y = state.y
                 e.hp = state.hp
                 e.maxHp = state.maxHp
               }
               return true
             })
           })
+        })
+
+        // ── 波次开始（非 Host 同步波次状态）─────────────
+        this.roomRealtime!.onWaveStart(({ waveNumber }) => {
+          // 只有当波次序号超前时才触发（避免重复）
+          if (waveNumber > this.waveNumber) {
+            this.waveNumber = waveNumber - 1  // startNextWave 会 ++ 一次
+            this.startNextWave()
+          }
+          // 同步 waveInProgress 状态
+          this.waveInProgress = true
         })
       }
 
