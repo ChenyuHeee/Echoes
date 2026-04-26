@@ -1458,9 +1458,11 @@ export class DiveScene extends Phaser.Scene {
         .setTint(chargeColor)
         .setDepth(30)
         .setData('damage', damage)
+      // 先加入组，再设置速度（加入组会重置物理体，必须之后再赋速度）
+      this.enemyBullets.add(b)
+      ;(b.body as Phaser.Physics.Arcade.Body).allowGravity = false
       b.setVelocity(Math.cos(angle) * bulletSpeed, Math.sin(angle) * bulletSpeed)
       b.rotation = angle
-      this.enemyBullets.add(b)
 
       // 超出地图边界自动销毁
       this.time.delayedCall(3000, () => { if (b.active) b.destroy() })
