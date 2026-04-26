@@ -540,6 +540,11 @@ export class DiveScene extends Phaser.Scene {
     this.player.setCollideWorldBounds(true)
     this.player.setDrag(1000, 1000)
     this.player.setMaxVelocity(220, 220)
+    // 按角色主题色着色，让玩家能直观感知当前角色
+    if (this.charDef?.accentColor) {
+      const tint = Phaser.Display.Color.HexStringToColor(this.charDef.accentColor).color
+      this.player.setTint(tint)
+    }
   }
 
   private spawnEnemies() {

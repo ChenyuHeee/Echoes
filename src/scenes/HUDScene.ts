@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { getRuntimeState } from '../state/gameState'
 import { SKILL_DEFINITIONS } from '../config/skills'
+import { CHARACTER_DEFINITIONS } from '../config/characters'
 import type { SkillType } from '../types/game.types'
 import { showSettingsPanel } from '../systems/SettingsManager'
 
@@ -83,6 +84,21 @@ export class HUDScene extends Phaser.Scene {
       color: '#c8d8f0',
       lineSpacing: 2,
     }).setScrollFactor(0).setDepth(10)
+
+    // ─── 左下：角色信息条 ────────────────────────────────────
+    const charId = rt.player.selectedCharacter ?? 'echo_ranger'
+    const charDef = CHARACTER_DEFINITIONS[charId as keyof typeof CHARACTER_DEFINITIONS]
+    if (charDef) {
+      const charColorVal = Phaser.Display.Color.HexStringToColor(charDef.accentColor).color
+      // 角色主题色细条
+      this.add.rectangle(0, panelH, panelW, 14, charColorVal, 0.18)
+        .setOrigin(0, 0).setScrollFactor(0).setDepth(9)
+      this.add.rectangle(0, panelH, panelW, 1, charColorVal, 0.6)
+        .setOrigin(0, 0).setScrollFactor(0).setDepth(9)
+      this.add.text(8, panelH + 2, `▸ ${charDef.name}  [Q: ${charDef.uniqueSkill.name}]`, {
+        fontFamily: '"Noto Sans SC", monospace', fontSize: '9px', color: charDef.accentColor,
+      }).setScrollFactor(0).setDepth(10)
+    }
 
     // ─── 右上：提示区 ─────────────────────────────────────────
     this.add.rectangle(width - 200, 14, 392, 28, 0x060810, 0.78)
