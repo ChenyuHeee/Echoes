@@ -510,7 +510,7 @@ export class DiveScene extends Phaser.Scene {
     this.spawnEnvironmentProps()
 
     this.add.text(120, 90, this.currentTheme.name, {
-      fontFamily: '"Silkscreen", monospace',
+      fontFamily: '"DotGothic16", monospace',
       fontSize: '22px',
       color: this.currentTheme.ambientColor,
     }).setDepth(3)
@@ -548,7 +548,7 @@ export class DiveScene extends Phaser.Scene {
       : this.waveNumber >= 2 ? `⚡ 第 ${this.waveNumber} 波  [远程敌人出现]`
       : `第 ${this.waveNumber} 波`
     const waveTxt = this.add.text(width / 2, 56, label, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '18px',
+      fontFamily: '"DotGothic16", monospace', fontSize: '18px',
       color: isBossWave ? '#ff9050' : this.waveNumber >= 4 ? '#ff6060' : this.waveNumber >= 2 ? '#ffcc40' : '#7ce0bc',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(60)
     this.tweens.add({
@@ -662,7 +662,7 @@ export class DiveScene extends Phaser.Scene {
     const barFill = this.add.rectangle(width / 2 - 200, 30, 400, 10, 0xe05030, 1)
       .setOrigin(0, 0.5).setScrollFactor(0).setDepth(56)
     this.add.text(width / 2, 14, '时砂守护者', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#ff8060',
+      fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#ff8060',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(56)
 
     // 每帧更新 Boss 血条
@@ -694,7 +694,7 @@ export class DiveScene extends Phaser.Scene {
       repeat: -1,
     })
     this.extractionHint = this.add.text(1650, 1115, this.currentTheme.extractionLabel, {
-      fontFamily: '"Silkscreen", monospace',
+      fontFamily: '"DotGothic16", monospace',
       fontSize: '14px',
       color: this.currentTheme.ambientColor,
     }).setOrigin(0.5)
@@ -734,7 +734,7 @@ export class DiveScene extends Phaser.Scene {
 
       // F 键拾取提示（靠近时显示）
       const hint = this.add.text(pos.x, pos.y - 28, `[F] ${entry.title}`, {
-        fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#80c8ff',
+        fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#80c8ff',
       }).setOrigin(0.5).setAlpha(0)
 
       // 注册为可交互拾取物（通过定时检测距离 + F 键）
@@ -778,11 +778,11 @@ export class DiveScene extends Phaser.Scene {
 
     // 说明文字
     const label = this.add.text(doorX, doorY - 70, '时序共鸣之门', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#a060ff',
+      fontFamily: '"DotGothic16", monospace', fontSize: '13px', color: '#a060ff',
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5)
     const subLabel = this.add.text(doorX, doorY - 52, '装填模块后开枪 — 回响将同时触发感应器', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#604880',
+      fontFamily: '"DotGothic16", monospace', fontSize: '9px', color: '#604880',
     }).setOrigin(0.5)
 
     // 两个感应器（左右各一）
@@ -795,10 +795,10 @@ export class DiveScene extends Phaser.Scene {
     s2.setStrokeStyle(1.5, 0xb080ff, 0.9)
 
     const s1Hint = this.add.text(s1Pos.x, s1Pos.y - 18, 'α', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#8050d0',
+      fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#8050d0',
     }).setOrigin(0.5)
     const s2Hint = this.add.text(s2Pos.x, s2Pos.y - 18, 'β', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#8050d0',
+      fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#8050d0',
     }).setOrigin(0.5)
 
     // 物理感应区
@@ -859,11 +859,11 @@ export class DiveScene extends Phaser.Scene {
 
     const { width, height } = this.scale
     const txt = this.add.text(width / 2, height / 2 - 55, '✦ 时序共鸣 ✦', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '28px', color: '#b080ff',
+      fontFamily: '"DotGothic16", monospace', fontSize: '28px', color: '#b080ff',
       stroke: '#000000', strokeThickness: 5,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(200)
     const sub = this.add.text(width / 2, height / 2 - 20, '回响的因果在此刻交汇，门锁应声而开', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#9060cc',
+      fontFamily: '"DotGothic16", monospace', fontSize: '13px', color: '#9060cc',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(200)
     this.tweens.add({
       targets: [txt, sub], y: '-=40', alpha: 0,
@@ -882,7 +882,7 @@ export class DiveScene extends Phaser.Scene {
         const reward = this.add.image(doorX, doorY, 'prop_time_crystal').setScale(2).setTint(0xb080ff)
         this.tweens.add({ targets: reward, y: doorY - 12, alpha: 0.7, duration: 900, yoyo: true, repeat: -1 })
         const rewardHint = this.add.text(doorX, doorY - 48, '[F] 汲取完美回响', {
-          fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#b080ff',
+          fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#b080ff',
         }).setOrigin(0.5).setAlpha(0)
 
         const KEY_F2 = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F)
@@ -926,7 +926,7 @@ export class DiveScene extends Phaser.Scene {
 
     this.minimap = this.add.graphics().setScrollFactor(0).setDepth(61)
     this.add.text(mmX + 2, mmY + 2, '地图', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '8px', color: '#304050',
+      fontFamily: '"DotGothic16", monospace', fontSize: '8px', color: '#304050',
     }).setScrollFactor(0).setDepth(62)
   }
 
@@ -1072,20 +1072,20 @@ export class DiveScene extends Phaser.Scene {
     bg.setStrokeStyle(1, 0x4080c0, 0.6)
 
     const titleTxt = this.add.text(width / 2, height / 2 - 60, title, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '16px', color: '#c8a96e',
+      fontFamily: '"DotGothic16", monospace', fontSize: '16px', color: '#c8a96e',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(151)
 
     const srcTxt = this.add.text(width / 2, height / 2 - 38, `— ${source}`, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#405060',
+      fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#405060',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(151)
 
     const bodyTxt = this.add.text(width / 2, height / 2 - 18, content, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#9090b0',
+      fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: '#9090b0',
       wordWrap: { width: 520 }, align: 'center',
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(151)
 
     const closeTxt = this.add.text(width / 2, height / 2 + 66, '[ 任意键关闭 ]', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#304050',
+      fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#304050',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(151)
 
     this.input.keyboard!.once('keydown', () => {
@@ -2208,7 +2208,7 @@ export class DiveScene extends Phaser.Scene {
 
     // 大型组合名称文字
     const txt = this.add.text(width / 2, height / 2 - 55, cfg.name, {
-      fontFamily: '"Silkscreen", monospace',
+      fontFamily: '"DotGothic16", monospace',
       fontSize: '28px',
       color: cfg.color,
       stroke: '#000000',
@@ -2296,7 +2296,7 @@ export class DiveScene extends Phaser.Scene {
       this.spawnDamageNumber(enemy.x, enemy.y - 20, finalAmount, color)
       if (isCrit) {
         const critTxt = this.add.text(enemy.x, enemy.y - 36, 'CRIT!', {
-          fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#ffee22',
+          fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#ffee22',
           stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(91)
         this.tweens.add({ targets: critTxt, y: critTxt.y - 14, alpha: 0, duration: 600, onComplete: () => critTxt.destroy() })
@@ -2445,11 +2445,11 @@ export class DiveScene extends Phaser.Scene {
 
     // 标题
     const title = this.add.text(width / 2, height / 2 - 115, '✦ 时间方尖碑 — 选择强化', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '18px', color: '#7ce0bc',
+      fontFamily: '"DotGothic16", monospace', fontSize: '18px', color: '#7ce0bc',
       stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(151)
     const subtitle = this.add.text(width / 2, height / 2 - 92, `第 ${this.waveNumber} 波完成  ·  本波击杀 ${this.diveKills}  ·  选择一项强化`, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#406060',
+      fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#406060',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(151)
 
     this.shrineObjects.push(overlay, title, subtitle)
@@ -2479,18 +2479,18 @@ export class DiveScene extends Phaser.Scene {
 
       // 图标
       const iconTxt = this.add.text(cx, cy - 24, opt.icon, {
-        fontFamily: '"Silkscreen", monospace', fontSize: '22px', color: `#${rarityColor.toString(16).padStart(6, '0')}`,
+        fontFamily: '"DotGothic16", monospace', fontSize: '22px', color: `#${rarityColor.toString(16).padStart(6, '0')}`,
       }).setOrigin(0.5).setScrollFactor(0).setDepth(152)
 
       // 名称
       const nameTxt = this.add.text(cx, cy + 8, opt.name, {
-        fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#dce9ff',
+        fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: '#dce9ff',
         wordWrap: { width: cardW - 12 }, align: 'center',
       }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(152)
 
       // 描述
       const descTxt = this.add.text(cx, cy + 30, opt.desc, {
-        fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#6080a0',
+        fontFamily: '"DotGothic16", monospace', fontSize: '9px', color: '#6080a0',
         wordWrap: { width: cardW - 12 }, align: 'center',
       }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(152)
 
@@ -2499,7 +2499,7 @@ export class DiveScene extends Phaser.Scene {
         .setScrollFactor(0).setDepth(152).setInteractive({ useHandCursor: true })
       btn.setStrokeStyle(1, rarityColor, 0.6)
       const btnTxt = this.add.text(cx, cy + cardH / 2 - 14, '选择', {
-        fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#c0d8f0',
+        fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#c0d8f0',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(153)
 
       btn.on('pointerover', () => {
@@ -2525,7 +2525,7 @@ export class DiveScene extends Phaser.Scene {
 
     // 跳过按钮
     const skipBtn = this.add.text(width / 2, height / 2 + cardH / 2 + 22, '[ 跳过 — 直接进入下一波 ]', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#2a3a4a',
+      fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#2a3a4a',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(151).setInteractive({ useHandCursor: true })
     skipBtn.on('pointerover', () => skipBtn.setColor('#5a7a9a'))
     skipBtn.on('pointerout', () => skipBtn.setColor('#2a3a4a'))
@@ -2683,7 +2683,7 @@ export class DiveScene extends Phaser.Scene {
   // 飘字伤害数字
   private spawnDamageNumber(x: number, y: number, amount: number, color: string) {
     const txt = this.add.text(x, y, `-${amount}`, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '13px', color,
+      fontFamily: '"DotGothic16", monospace', fontSize: '13px', color,
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5).setDepth(90)
     this.tweens.add({
@@ -2723,7 +2723,7 @@ export class DiveScene extends Phaser.Scene {
           this.remotePlayers.set(p.id, sprite)
           // 创建名字+血量标签
           const label = this.add.text(p.x, p.y - 28, '', {
-            fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#7ce0bc',
+            fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#7ce0bc',
             stroke: '#000000', strokeThickness: 2,
           }).setOrigin(0.5).setDepth(26)
           this.remotePlayerLabels.set(p.id, label)
@@ -2879,7 +2879,7 @@ export class DiveScene extends Phaser.Scene {
             : waveNumber >= 2 ? `⚡ 第 ${waveNumber} 波  [远程敌人出现]`
             : `第 ${waveNumber} 波`
           const waveTxt = this.add.text(width / 2, 56, label, {
-            fontFamily: '"Silkscreen", monospace', fontSize: '18px',
+            fontFamily: '"DotGothic16", monospace', fontSize: '18px',
             color: isBossWave ? '#ff9050' : waveNumber >= 4 ? '#ff6060' : waveNumber >= 2 ? '#ffcc40' : '#7ce0bc',
           }).setOrigin(0.5).setScrollFactor(0).setDepth(60)
           this.tweens.add({
@@ -2976,7 +2976,7 @@ export class DiveScene extends Phaser.Scene {
     const box = this.add.rectangle(width / 2, 76, width - 80, 92, 0x000000, 0.52)
       .setScrollFactor(0).setDepth(50)
     const text = this.add.text(40, 32, lines, {
-      fontFamily: '"Silkscreen", monospace',
+      fontFamily: '"DotGothic16", monospace',
       fontSize: '13px',
       color: '#dce9ff',
       wordWrap: { width: width - 120 },
@@ -3127,7 +3127,7 @@ export class DiveScene extends Phaser.Scene {
       .setOrigin(0).setScrollFactor(0).setDepth(200)
 
     this.add.text(width / 2, 50, '✦  小队结算  ✦', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '28px', color: '#c8a96e',
+      fontFamily: '"DotGothic16", monospace', fontSize: '28px', color: '#c8a96e',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
     // 标题行
@@ -3136,7 +3136,7 @@ export class DiveScene extends Phaser.Scene {
     const HEADERS = ['玩家', '结果', '击杀', '时砂', '耗时']
     HEADERS.forEach((h, i) => {
       this.add.text(COL[i], HEADER_Y, h, {
-        fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#4a6a8a',
+        fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#4a6a8a',
       }).setOrigin(i === 0 ? 0 : 0.5).setScrollFactor(0).setDepth(201)
     })
     this.add.rectangle(width / 2, HEADER_Y + 16, 420, 1, 0x2a4060, 0.6)
@@ -3158,39 +3158,39 @@ export class DiveScene extends Phaser.Scene {
       const rankColors = ['#f0c040', '#c0c8d8', '#c08050']
       this.add.text(width / 2 - 215, rowY + 10,
         i < 3 ? ['①', '②', '③'][i] : `${i + 1}`, {
-        fontFamily: '"Silkscreen", monospace', fontSize: '14px', color: rankColors[i] || '#506070',
+        fontFamily: '"DotGothic16", monospace', fontSize: '14px', color: rankColors[i] || '#506070',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
       // 玩家名
       this.add.text(COL[0], rowY + 10, `${r.username}${isMe ? ' ★' : ''}`, {
-        fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: isMe ? '#e8f0ff' : '#8090a8',
+        fontFamily: '"DotGothic16", monospace', fontSize: '13px', color: isMe ? '#e8f0ff' : '#8090a8',
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(201)
 
       // 结果
       this.add.text(COL[1], rowY + 10, isSuccess ? '撤离' : '阵亡', {
-        fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: isSuccess ? '#7ce0bc' : '#e07c7c',
+        fontFamily: '"DotGothic16", monospace', fontSize: '13px', color: isSuccess ? '#7ce0bc' : '#e07c7c',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
       // 击杀
       this.add.text(COL[2], rowY + 10, String(r.kills), {
-        fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#d8c880',
+        fontFamily: '"DotGothic16", monospace', fontSize: '13px', color: '#d8c880',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
       // 时砂
       this.add.text(COL[3], rowY + 10, String(r.sand), {
-        fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#80c8f0',
+        fontFamily: '"DotGothic16", monospace', fontSize: '13px', color: '#80c8f0',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
       // 耗时
       this.add.text(COL[4], rowY + 10, `${r.duration}s`, {
-        fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#506070',
+        fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: '#506070',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
     })
 
     const returnY = 135 + Math.max(sorted.length, 1) * 52 + 40
     let sec = 8
     const cntText = this.add.text(width / 2, returnY, `${sec} 秒后返回庇护所…`, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#405060',
+      fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: '#405060',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
     this.time.addEvent({
@@ -3203,7 +3203,7 @@ export class DiveScene extends Phaser.Scene {
     backBtn.setInteractive({ useHandCursor: true })
     backBtn.on('pointerdown', () => { this.scene.stop('HUDScene'); this.scene.start('SanctuaryScene') })
     this.add.text(width / 2, returnY + 36, '返回庇护所', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#7090b8',
+      fontFamily: '"DotGothic16", monospace', fontSize: '13px', color: '#7090b8',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(202)
 
     this.time.delayedCall(8200, () => {
@@ -3224,14 +3224,14 @@ export class DiveScene extends Phaser.Scene {
       .setOrigin(0).setScrollFactor(0).setDepth(200)
 
     this.add.text(width / 2, height * 0.28, isSuccess ? '✦  深潜成功  ✦' : '✦  深潜失败  ✦', {
-      fontFamily: '"Silkscreen", monospace',
+      fontFamily: '"DotGothic16", monospace',
       fontSize: '34px',
       color: isSuccess ? '#7ce0bc' : '#e07c7c',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
     this.add.text(width / 2, height * 0.46,
       `耗时 ${duration}s    ·    击杀 ${kills}    ·    带回时砂 ${sand}`, {
-      fontFamily: '"Silkscreen", monospace',
+      fontFamily: '"DotGothic16", monospace',
       fontSize: '15px',
       color: '#a0c4e8',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
@@ -3244,7 +3244,7 @@ export class DiveScene extends Phaser.Scene {
 
       this.add.text(width / 2, height * 0.56,
         isSuccess ? `✦ 带回物资总估值：${totalValue} 时砂` : '✦ 背包已损失：', {
-        fontFamily: '"Silkscreen", monospace', fontSize: '12px',
+        fontFamily: '"DotGothic16", monospace', fontSize: '12px',
         color: isSuccess ? '#f0d060' : '#e07c7c',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
@@ -3253,14 +3253,14 @@ export class DiveScene extends Phaser.Scene {
       if (this.weaponAttachments.length) parts.push(this.weaponAttachments.map(a => a.name).join(' · '))
       if (this.diveInventory.length) parts.push(this.diveInventory.map(i => i.name).join(' · '))
       this.add.text(width / 2, height * 0.63, parts.join('  |  '), {
-        fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#9090c0',
+        fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#9090c0',
         wordWrap: { width: 520 }, align: 'center',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
     }
 
     let sec = 4
     const cntText = this.add.text(width / 2, height * 0.76, `${sec} 秒后返回庇护所…`, {
-      fontFamily: '"Silkscreen", monospace',
+      fontFamily: '"DotGothic16", monospace',
       fontSize: '12px',
       color: '#506080',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
@@ -3317,13 +3317,13 @@ export class DiveScene extends Phaser.Scene {
       .setOrigin(0).setScrollFactor(0).setDepth(100).setInteractive()
 
     const iconTxt = this.add.text(width / 2, height * 0.27, '', {
-      fontFamily: '"Silkscreen", monospace',
+      fontFamily: '"DotGothic16", monospace',
       fontSize: '22px',
       color: '#c8a96e',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(101)
 
     const bodyTxt = this.add.text(width / 2, height * 0.48, '', {
-      fontFamily: '"Silkscreen", monospace',
+      fontFamily: '"DotGothic16", monospace',
       fontSize: '14px',
       color: '#dce9ff',
       align: 'center',
@@ -3331,19 +3331,19 @@ export class DiveScene extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(101)
 
     const promptTxt = this.add.text(width / 2, height * 0.74, '[ 点击继续 ]', {
-      fontFamily: '"Silkscreen", monospace',
+      fontFamily: '"DotGothic16", monospace',
       fontSize: '12px',
       color: '#7090b0',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(101)
 
     const counterTxt = this.add.text(width / 2, height * 0.82, '', {
-      fontFamily: '"Silkscreen", monospace',
+      fontFamily: '"DotGothic16", monospace',
       fontSize: '11px',
       color: '#40506a',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(101)
 
     const skipTxt = this.add.text(width - 14, height - 14, '跳过教程', {
-      fontFamily: '"Silkscreen", monospace',
+      fontFamily: '"DotGothic16", monospace',
       fontSize: '11px',
       color: '#405060',
     }).setOrigin(1, 1).setScrollFactor(0).setDepth(102).setInteractive()
@@ -3412,7 +3412,7 @@ export class DiveScene extends Phaser.Scene {
 
     // 名称悬浮文字
     const label = this.add.text(x, y - 22, item.name, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '10px',
+      fontFamily: '"DotGothic16", monospace', fontSize: '10px',
       color: `#${rarityColor.toString(16).padStart(6, '0')}`,
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(16)
@@ -3433,7 +3433,7 @@ export class DiveScene extends Phaser.Scene {
       // 背包满：物品留在地上，仅提示
       this.emitHud('背包已满！(B 键查看)')
       const fullTxt = this.add.text(x, y - 30, '背包已满', {
-        fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#ff8060',
+        fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#ff8060',
         stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5).setDepth(92)
       this.tweens.add({ targets: fullTxt, y: fullTxt.y - 20, alpha: 0, duration: 800, onComplete: () => fullTxt.destroy() })
@@ -3456,7 +3456,7 @@ export class DiveScene extends Phaser.Scene {
 
     // 拾取特效
     const pickupFx = this.add.text(x, y - 18, `+${item.name}`, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: rarityColorHex,
+      fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: rarityColorHex,
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(92)
     this.tweens.add({ targets: pickupFx, y: pickupFx.y - 28, alpha: 0, duration: 900, onComplete: () => pickupFx.destroy() })
@@ -3500,13 +3500,13 @@ export class DiveScene extends Phaser.Scene {
 
     // 标题
     objs.push(this.add.text(panelX, panelY - panelH / 2 + 16, '✦  背包  (B 关闭)', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '15px', color: '#c8a96e',
+      fontFamily: '"DotGothic16", monospace', fontSize: '15px', color: '#c8a96e',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(302))
 
     // ── 武器区域 ─────────────────────────────────────────
     const weapSectionY = panelY - 148
     objs.push(this.add.text(panelX - panelW / 2 + 10, panelY - panelH / 2 + 40, '── 武器 ──', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#446688',
+      fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#446688',
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(302))
 
     const weapBg = this.add.rectangle(panelX, weapSectionY, panelW - 20, 72, 0x0a1828, 1)
@@ -3521,12 +3521,12 @@ export class DiveScene extends Phaser.Scene {
 
     const weapColorHex = `#${weapRarityColor.toString(16).padStart(6, '0')}`
     objs.push(this.add.text(weapIconX + 26, weapSectionY - 18, this.equippedWeapon.name, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: weapColorHex,
+      fontFamily: '"DotGothic16", monospace', fontSize: '13px', color: weapColorHex,
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(303))
 
     objs.push(this.add.text(weapIconX + 26, weapSectionY - 4,
       `[${RARITY_NAMES[this.equippedWeapon.rarity]}]  ${this.equippedWeapon.desc}`, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#607080',
+      fontFamily: '"DotGothic16", monospace', fontSize: '9px', color: '#607080',
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(303))
 
     const finalDmg = this.getWeaponBaseDamage()
@@ -3535,13 +3535,13 @@ export class DiveScene extends Phaser.Scene {
     const pelletStr = this.equippedWeapon.pellets ? ` ×${this.equippedWeapon.pellets}弹` : ''
     objs.push(this.add.text(weapIconX + 26, weapSectionY + 12,
       `伤害 ${finalDmg}${pelletStr}   射速 ${finalRate}ms   暴击 ${finalCrit}%`, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#88aacc',
+      fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#88aacc',
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(303))
 
     // 武器估值
     objs.push(this.add.text(weapIconX + 26, weapSectionY + 26,
       `估值 ${this.equippedWeapon.sandValue} ⌛`, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#906030',
+      fontFamily: '"DotGothic16", monospace', fontSize: '9px', color: '#906030',
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(303))
 
     // ── 4 槽位配件（每槽一格：枪管/瞄准镜/弹匣/枪托）────────────
@@ -3559,26 +3559,26 @@ export class DiveScene extends Phaser.Scene {
         slotBg.setStrokeStyle(2, RARITY_COLORS[att.rarity], 0.8)
         objs.push(this.add.image(ax, ay - 14, att.spriteKey).setScale(2.4).setScrollFactor(0).setDepth(303))
         objs.push(this.add.text(ax, ay + 4, att.name, {
-          fontFamily: '"Silkscreen", monospace', fontSize: '7px',
+          fontFamily: '"DotGothic16", monospace', fontSize: '7px',
           color: `#${RARITY_COLORS[att.rarity].toString(16).padStart(6, '0')}`,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
         objs.push(this.add.text(ax, ay + 16, `${att.sandValue}⌛`, {
-          fontFamily: '"Silkscreen", monospace', fontSize: '7px', color: '#806030',
+          fontFamily: '"DotGothic16", monospace', fontSize: '7px', color: '#806030',
         }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
       } else {
         slotBg.setStrokeStyle(1, 0x1e3050, 0.5)
         objs.push(this.add.text(ax, ay - 6, slotNames[slotType], {
-          fontFamily: '"Silkscreen", monospace', fontSize: '8px', color: '#2a4060',
+          fontFamily: '"DotGothic16", monospace', fontSize: '8px', color: '#2a4060',
         }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
         objs.push(this.add.text(ax, ay + 8, '空', {
-          fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#1e3050',
+          fontFamily: '"DotGothic16", monospace', fontSize: '9px', color: '#1e3050',
         }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
       }
     })
 
     // ── 物品区域 ─────────────────────────────────────────
     objs.push(this.add.text(panelX - panelW / 2 + 10, panelY - 67, '── 物品 ──', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#446688',
+      fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#446688',
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(302))
 
     const SLOT_SIZE = 56, SLOT_GAP = 8, COLS = 5
@@ -3603,15 +3603,15 @@ export class DiveScene extends Phaser.Scene {
         slotBg.setStrokeStyle(2, rarityColor, 0.9)
         objs.push(this.add.image(sx, sy - 8, item.spriteKey).setScale(2.6).setScrollFactor(0).setDepth(303))
         objs.push(this.add.text(sx, sy + 14, item.name, {
-          fontFamily: '"Silkscreen", monospace', fontSize: '7px', color: rcHex,
+          fontFamily: '"DotGothic16", monospace', fontSize: '7px', color: rcHex,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
         objs.push(this.add.text(sx, sy + 23, `${item.sandValue}⌛`, {
-          fontFamily: '"Silkscreen", monospace', fontSize: '7px', color: '#906030',
+          fontFamily: '"DotGothic16", monospace', fontSize: '7px', color: '#906030',
         }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
       } else {
         slotBg.setStrokeStyle(1, 0x1e3050, 0.5)
         objs.push(this.add.text(sx, sy, '空', {
-          fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#1e3050',
+          fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#1e3050',
         }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
       }
     }
@@ -3639,7 +3639,7 @@ export class DiveScene extends Phaser.Scene {
 
     const effectStr = effectLines.length > 0 ? effectLines.join('  ') : '暂无加成'
     objs.push(this.add.text(panelX, panelY + 140, `加成：${effectStr}`, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#6090b0',
+      fontFamily: '"DotGothic16", monospace', fontSize: '9px', color: '#6090b0',
       wordWrap: { width: panelW - 30 }, align: 'center',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(302))
 
@@ -3648,7 +3648,7 @@ export class DiveScene extends Phaser.Scene {
       + this.weaponAttachments.reduce((s, a) => s + (a.sandValue ?? 0), 0)
     objs.push(this.add.text(panelX, panelY + 158,
       `${this.diveInventory.length}/${BAG_CAPACITY} 格物品  ·  配件 ${this.weaponAttachments.length}/${ATTACHMENT_SLOTS.length}  ·  总估值 ${totalValue} ⌛  —  撤离后存入仓库`, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#304050',
+      fontFamily: '"DotGothic16", monospace', fontSize: '9px', color: '#304050',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(302))
 
     // ESC 关闭
@@ -3705,7 +3705,7 @@ export class DiveScene extends Phaser.Scene {
     const showMsg = (msg: string, color = '#80e0ff') => {
       const { width, height } = this.scale
       const txt = this.add.text(width / 2, height * 0.28, msg, {
-        fontFamily: '"Silkscreen", monospace', fontSize: '16px', color,
+        fontFamily: '"DotGothic16", monospace', fontSize: '16px', color,
         stroke: '#000', strokeThickness: 3,
       }).setOrigin(0.5).setScrollFactor(0).setDepth(300)
       this.tweens.add({ targets: txt, alpha: 0, y: txt.y - 30, delay: 1200, duration: 600, onComplete: () => txt.destroy() })
@@ -3808,7 +3808,7 @@ export class DiveScene extends Phaser.Scene {
     glow.fillCircle(x, y, 18)
 
     const label = this.add.text(x, y - 22, `🔫 ${weapon.name}`, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '10px',
+      fontFamily: '"DotGothic16", monospace', fontSize: '10px',
       color: `#${color.toString(16).padStart(6, '0')}`,
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(16)
@@ -3835,7 +3835,7 @@ export class DiveScene extends Phaser.Scene {
 
     const color = `#${RARITY_COLORS[weapon.rarity].toString(16).padStart(6, '0')}`
     const fx = this.add.text(x, y - 20, `+ ${weapon.name}`, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '12px', color,
+      fontFamily: '"DotGothic16", monospace', fontSize: '12px', color,
       stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(92)
     this.tweens.add({ targets: fx, y: fx.y - 32, alpha: 0, duration: 1000, onComplete: () => fx.destroy() })
@@ -3856,7 +3856,7 @@ export class DiveScene extends Phaser.Scene {
     glow.fillCircle(x, y, 14)
 
     const label = this.add.text(x, y - 20, att.name, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '9px',
+      fontFamily: '"DotGothic16", monospace', fontSize: '9px',
       color: `#${color.toString(16).padStart(6, '0')}`,
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(16)
@@ -3901,7 +3901,7 @@ export class DiveScene extends Phaser.Scene {
 
     const color = `#${RARITY_COLORS[att.rarity].toString(16).padStart(6, '0')}`
     const fx = this.add.text(x, y - 18, `+${att.name}`, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '11px', color,
+      fontFamily: '"DotGothic16", monospace', fontSize: '11px', color,
       stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(92)
     this.tweens.add({ targets: fx, y: fx.y - 28, alpha: 0, duration: 900, onComplete: () => fx.destroy() })

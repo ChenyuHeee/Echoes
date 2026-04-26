@@ -26,14 +26,14 @@ export class ModeSelectScene extends Phaser.Scene {
     // 顶栏
     this.add.rectangle(width / 2, 26, width, 52, 0x040810, 0.96)
     this.add.text(width / 2, 10, '选择游戏模式', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '24px', color: '#c8a96e',
+      fontFamily: '"DotGothic16", monospace', fontSize: '24px', color: '#c8a96e',
     }).setOrigin(0.5, 0)
     this.add.text(width / 2, 36, 'ECHOES: FRACTURED TIME  ·  六种回响，六种宿命', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#506878',
+      fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#506878',
     }).setOrigin(0.5, 0)
 
     const back = this.add.text(16, height - 12, '← 返回主菜单', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#405060',
+      fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: '#405060',
     }).setOrigin(0, 1)
     back.setInteractive({ useHandCursor: true })
     back.on('pointerover', () => back.setColor('#7090b0'))
@@ -144,23 +144,23 @@ export class ModeSelectScene extends Phaser.Scene {
     // 标签
     const tagColor = m.locked ? '#303840' : m.color
     this.add.text(x + w / 2 - 8, y - h / 2 + 8, m.tag, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: tagColor,
+      fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: tagColor,
     }).setOrigin(1, 0).setDepth(3)
 
     // 标题
     this.add.text(lx, y - h / 2 + 8, m.title, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '16px',
+      fontFamily: '"DotGothic16", monospace', fontSize: '16px',
       color: m.locked ? '#3a4a58' : m.color,
     }).setOrigin(0, 0).setDepth(3)
 
     // 副标题
     this.add.text(lx, y - h / 2 + 28, m.sub, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#5a7088',
+      fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#5a7088',
     }).setOrigin(0, 0).setDepth(3)
 
     // 描述
     this.add.text(lx, y - h / 2 + 46, m.desc, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '11px',
+      fontFamily: '"DotGothic16", monospace', fontSize: '11px',
       color: m.locked ? '#28353f' : '#8aA0b8',
       lineSpacing: 4,
     }).setOrigin(0, 0).setDepth(3)
@@ -171,7 +171,7 @@ export class ModeSelectScene extends Phaser.Scene {
       const btn = this.add.rectangle(btnX, btnY, 82, 24, 0x101e2c).setDepth(3)
       btn.setStrokeStyle(1, col, 0.8)
       this.add.text(btnX, btnY, '进入模式', {
-        fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: m.color,
+        fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: m.color,
       }).setOrigin(0.5).setDepth(4)
 
       btn.setInteractive({ useHandCursor: true })
@@ -180,7 +180,7 @@ export class ModeSelectScene extends Phaser.Scene {
       btn.on('pointerdown', () => { audioManager.playClick(); m.action() })
     } else {
       this.add.text(x + w / 2 - 50, y + h / 2 - 16, '联机功能开发中', {
-        fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#2a3840',
+        fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#2a3840',
       }).setOrigin(0.5).setDepth(3)
     }
   }
