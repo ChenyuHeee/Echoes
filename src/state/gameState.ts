@@ -46,6 +46,7 @@ export interface RuntimePlayer {
   exp: number
   totalDives: number
   totalKills: number
+  totalExtractions: number
   upgrades: PlayerUpgrades
   dailyProgress: DailyProgress
   selectedCharacter: CharacterId
@@ -94,6 +95,7 @@ function createDefaultState(): RuntimeState {
       exp: 0,
       totalDives: 0,
       totalKills: 0,
+      totalExtractions: 0,
       upgrades: { maxHp: 0, stability: 0, damage: 0, speed: 0 },
       dailyProgress: { date: '', kills: 0, dives: 0, extractions: 0, killsRewarded: false, divesRewarded: false, extractionsRewarded: false },
       selectedCharacter: DEFAULT_CHARACTER,
@@ -128,6 +130,33 @@ function loadState(): RuntimeState {
 }
 
 let runtimeState: RuntimeState = loadState()
+
+// 根据当前统计自动解锁满足条件的角色
+function checkCharacterUnlocks() {
+  const p = runtimeState.player
+  const unlock = (id: CharacterId) => {
+    if (!p.unlockedCharacters.includes(id)) {
+      runtimeState = {
+        ...runtimeState,
+        player: {
+          ...runtimeState.player,
+          unlockedCharacters: [...runtimeState.player.unlockedCharacters, id],
+        },
+      }
+    }
+  }
+  // void_breaker: 完成 5 次深潜撤离
+  if ((runtimeState.player.totalExtractions) >= 5) unlock('void_breaker')
+  // chrono_sentinel: 收集 3 枚回响水晶
+  if (runtimeState.player.crystalsFound.length >= 3) unlock('chrono_sentinel')
+  // echo_phantom: 总击杀数达到 100
+  if (runtimeState.player.totalKills >= 100) unlock('echo_phantom')
+  // iron_warden: 总深潜次数达到 10
+  if (runtimeState.player.totalDives >= 10) unlock('iron_warden')
+}
+
+// 初始加载时检查一次（兼容旧存档已满足条件但未解锁的情况）
+checkCharacterUnlocks()
 
 function persistState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(runtimeState))
@@ -295,6 +324,7 @@ export function addCrystal(crystalId: string) {
       crystalsFound: [...runtimeState.player.crystalsFound, crystalId],
     },
   }
+  checkCharacterUnlocks()
   persistState()
 }
 
@@ -347,6 +377,7 @@ export function recordDiveComplete(kills: number, extracted: boolean) {
       ...runtimeState.player,
       totalDives: runtimeState.player.totalDives + 1,
       totalKills: runtimeState.player.totalKills + kills,
+      totalExtractions: runtimeState.player.totalExtractions + (extracted ? 1 : 0),
       level,
       exp,
       maxHp: computeMaxHp(level, upgrades.maxHp),
@@ -354,6 +385,7 @@ export function recordDiveComplete(kills: number, extracted: boolean) {
       dailyProgress: newDp,
     },
   }
+  checkCharacterUnlocks()
   persistState()
 }
 

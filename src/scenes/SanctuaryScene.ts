@@ -945,11 +945,30 @@ export class SanctuaryScene extends Phaser.Scene {
         { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#506070',
           wordWrap: { width: DETAIL_W - 90 } })
 
-      // 未解锁提示
+      // 未解锁提示 + 实时进度
       if (!isUnlocked && def.unlockRequirement) {
+        // 计算实时进度文字
+        let progressText = ''
+        if (selected === 'void_breaker') {
+          const cur = rt.player.totalExtractions ?? 0
+          progressText = cur >= 5 ? '条件已达成（重新打开页面生效）' : `撤离 ${cur}/5 次`
+        } else if (selected === 'chrono_sentinel') {
+          const cur = rt.player.crystalsFound.length
+          progressText = cur >= 3 ? '条件已达成' : `回响水晶 ${cur}/3 枚`
+        } else if (selected === 'echo_phantom') {
+          const cur = rt.player.totalKills
+          progressText = cur >= 100 ? '条件已达成' : `击杀 ${cur}/100`
+        } else if (selected === 'iron_warden') {
+          const cur = rt.player.totalDives
+          progressText = cur >= 10 ? '条件已达成' : `深潜 ${cur}/10 次`
+        }
         makeText(DETAIL_X + 82, dy + 60, `🔒 ${def.unlockRequirement}`,
           { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#806050',
             wordWrap: { width: DETAIL_W - 90 } })
+        if (progressText) {
+          makeText(DETAIL_X + 82, dy + 74, `▸ ${progressText}`,
+            { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#a07840' })
+        }
       }
 
       dy += 86
