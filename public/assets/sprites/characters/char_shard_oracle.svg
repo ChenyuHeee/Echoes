@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- 碎片先知：粉紫袍 + 第三只眼 -->
+  <!-- 头部 -->
+  <rect x="5" y="1" width="6" height="6" fill="#f0d8e0"/>
+  <!-- 长发 — 粉紫 -->
+  <rect x="4" y="1" width="8" height="2" fill="#a040a0"/>
+  <rect x="3" y="2" width="2" height="6" fill="#c060c8"/>
+  <rect x="11" y="2" width="2" height="6" fill="#c060c8"/>
+  <!-- 双眼 -->
+  <rect x="6" y="4" width="1" height="1" fill="#ff60c0"/>
+  <rect x="9" y="4" width="1" height="1" fill="#ff60c0"/>
+  <!-- 第三只眼（额心） -->
+  <rect x="7" y="2" width="2" height="1" fill="#ffffff"/>
+  <rect x="7" y="3" width="2" height="1" fill="#ff80d0"/>
+  <!-- 袍子 -->
+  <rect x="3" y="7" width="10" height="7" fill="#601850"/>
+  <rect x="4" y="7" width="8" height="6" fill="#a03080"/>
+  <!-- 胸前水晶 -->
+  <rect x="7" y="9" width="2" height="2" fill="#ff60c0"/>
+  <rect x="7" y="9" width="1" height="1" fill="#ffffff"/>
+  <!-- 飘带 -->
+  <rect x="2" y="9" width="1" height="3" fill="#ff80d0"/>
+  <rect x="13" y="9" width="1" height="3" fill="#ff80d0"/>
+  <!-- 下摆 -->
+  <rect x="4" y="14" width="8" height="2" fill="#400838"/>
+</svg>

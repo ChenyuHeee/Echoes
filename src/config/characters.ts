@@ -10,6 +10,9 @@ export type CharacterId =
   | 'chrono_sentinel'   // 时序哨兵 — 控制型
   | 'echo_phantom'      // 回响幻影 — 速度型
   | 'iron_warden'       // 铁甲守卫 — 防御型
+  | 'shard_oracle'      // 碎片先知 — 限定（限定抽卡）
+  | 'temporal_exile'    // 时之放逐者 — 限定（限定抽卡）
+  | 'echo_singularity'  // 回响奇点 — 限定（限定抽卡·高稀有度）
 
 export interface CharacterDef {
   id: CharacterId
@@ -181,6 +184,93 @@ export const CHARACTER_DEFINITIONS: Record<CharacterId, CharacterDef> = {
     spriteKey: 'char_iron_warden',
     accentColor: '#c08840',
   },
+
+  // ─── 限定角色（仅可通过抽卡获得）──────────────────
+  shard_oracle: {
+    id: 'shard_oracle',
+    name: '碎片先知',
+    nameEn: 'Shard Oracle',
+    lore: '能看见万千个平行世界的祖母，以预言为剑。',
+    role: '限定·双伤型',
+    roleColor: '#ff60c0',
+    startWeapon: 'arc_rifle',
+    baseHp: 100,
+    baseSpeed: 1.10,
+    baseDamage: 1.20,
+    passiveName: '预见',
+    passiveDesc: '每 6 秒下一发攻击必暴击，且对未被伤害过的敌人伤害 +30%。',
+    uniqueSkill: {
+      name: '预言之眼',
+      desc: '标记光标区域内所有敌人，5 秒内对它们造成的伤害变为两倍并贴上预言伤害。',
+      cooldownMs: 12000,
+      element: '#ff80d0',
+      iconColor: 0xff80d0,
+    },
+    unlockRequirement: '限定抽卡获得',
+    spriteKey: 'char_shard_oracle',
+    accentColor: '#ff60c0',
+  },
+
+  temporal_exile: {
+    id: 'temporal_exile',
+    name: '时之放逐者',
+    nameEn: 'Temporal Exile',
+    lore: '被逐出时间主线的反叛者，每一招都是代价。',
+    role: '限定·狂热型',
+    roleColor: '#ffaa20',
+    startWeapon: 'gravity_cannon',
+    baseHp: 80,
+    baseSpeed: 1.20,
+    baseDamage: 1.55,
+    passiveName: '狂热重击',
+    passiveDesc: 'HP 越低伤害越高：HP < 50% 时伤害 +25%，HP < 25% 时额外 +25%。',
+    uniqueSkill: {
+      name: '时间调换',
+      desc: '选择一个敌人交换位置并使其受到 200 点虚空伤害，自身恢复 30 HP。',
+      cooldownMs: 13000,
+      element: '#ffcc40',
+      iconColor: 0xffcc40,
+    },
+    unlockRequirement: '限定抽卡获得',
+    spriteKey: 'char_temporal_exile',
+    accentColor: '#ffaa20',
+  },
+
+  echo_singularity: {
+    id: 'echo_singularity',
+    name: '回响奇点',
+    nameEn: 'Echo Singularity',
+    lore: '在虚空中诞生的意识体，身处多个时间点。',
+    role: '限定·传说',
+    roleColor: '#80ffe0',
+    startWeapon: 'void_launcher',
+    baseHp: 130,
+    baseSpeed: 1.15,
+    baseDamage: 1.45,
+    passiveName: '多重回响',
+    passiveDesc: '每次攻击额外发射 1 枚追踪回响弹（伤害 50%）。',
+    uniqueSkill: {
+      name: '奇点坍缩',
+      desc: '在光标位置生成一个虚空黑洞，持续 4 秒吸引周围敌人并每秒造成 60 伤害。',
+      cooldownMs: 15000,
+      element: '#a0ffec',
+      iconColor: 0xa0ffec,
+    },
+    unlockRequirement: '限定抽卡获得 · 传说',
+    spriteKey: 'char_echo_singularity',
+    accentColor: '#80ffe0',
+  },
+}
+
+// 限定角色 ID 列表（仅从这里抽取）
+export const LIMITED_CHARACTER_IDS: CharacterId[] = ['shard_oracle', 'temporal_exile', 'echo_singularity']
+
+// 抽卡抽卡权重（在限定池内的比例）
+export const LIMITED_CHARACTER_WEIGHTS: Record<CharacterId, number> = {
+  echo_ranger: 0, void_breaker: 0, chrono_sentinel: 0, echo_phantom: 0, iron_warden: 0,
+  shard_oracle:     50,  // 限定 R
+  temporal_exile:   35,  // 限定 SR
+  echo_singularity: 15,  // 限定 SSR·传说
 }
 
 export const CHARACTER_LIST = Object.values(CHARACTER_DEFINITIONS)

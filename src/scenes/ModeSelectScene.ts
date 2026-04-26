@@ -113,6 +113,16 @@ export class ModeSelectScene extends Phaser.Scene {
         locked: false,
         action: () => this.scene.start('PuzzleScene', { community: true, mapIdx: 0 }),
       },
+      {
+        title: '限定回响召唤',
+        sub: '抽卡  ·  解锁限定角色',
+        desc: '消耗时砂召唤限定回响体\n碎片先知 / 时之放逐者 / 回响奇点\n30 抽保底 SSR，重复返还时砂',
+        color: '#ff80d0',
+        bg: 'bg_menu',
+        tag: '限定',
+        locked: false,
+        action: () => this.scene.start('GachaScene'),
+      },
     ]
 
     const cols = 3

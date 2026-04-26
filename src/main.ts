@@ -10,6 +10,7 @@ import { StormScene } from './scenes/StormScene'
 import { RaceScene } from './scenes/RaceScene'
 import { PuzzleScene } from './scenes/PuzzleScene'
 import { SanctuaryScene } from './scenes/SanctuaryScene'
+import { GachaScene } from './scenes/GachaScene'
 import { HUDScene } from './scenes/HUDScene'
 import { FactionScene } from './scenes/FactionScene'
 import { ChatScene } from './scenes/ChatScene'
@@ -56,6 +57,7 @@ const config: Phaser.Types.Core.GameConfig = {
     RaceScene,
     PuzzleScene,
     SanctuaryScene,
+    GachaScene,
     HUDScene,
     ChatScene,
   ],

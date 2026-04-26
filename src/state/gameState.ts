@@ -58,6 +58,10 @@ export interface RuntimePlayer {
   loginRewardClaimedDate: string  // 今日是否领取过
   // 成就
   achievements: string[]
+  // 限定抽卡
+  gachaPullsTotal: number          // 总抽取次数
+  gachaPityCounter: number         // 距离上次传说该走了多少发（保底计数）
+  gachaHistory: string[]           // 抽卡历史（最多保留最近 50 抽，格式：'<charId>:<ts>'）
 }
 
 export interface RuntimeRoom {
@@ -111,6 +115,9 @@ function createDefaultState(): RuntimeState {
       loginStreak: 0,
       loginRewardClaimedDate: '',
       achievements: [],
+      gachaPullsTotal: 0,
+      gachaPityCounter: 0,
+      gachaHistory: [],
     },
     room: null,
     diveStartAt: null,
@@ -313,6 +320,33 @@ export function setPlayerIdentity(id: string, username: string) {
       ...runtimeState.player,
       id,
       username,
+    },
+  }
+  persistState()
+}
+
+// ─── 限定抽卡 ────────────────────────────────────
+export function spendTimeSand(amount: number): boolean {
+  if (runtimeState.player.timeSand < amount) return false
+  runtimeState = {
+    ...runtimeState,
+    player: { ...runtimeState.player, timeSand: runtimeState.player.timeSand - amount },
+  }
+  persistState()
+  return true
+}
+
+export function recordGachaPull(charId: CharacterId, isLegendary: boolean) {
+  const p = runtimeState.player
+  const newPity = isLegendary ? 0 : p.gachaPityCounter + 1
+  const history = [`${charId}:${Date.now()}`, ...p.gachaHistory].slice(0, 50)
+  runtimeState = {
+    ...runtimeState,
+    player: {
+      ...runtimeState.player,
+      gachaPullsTotal: p.gachaPullsTotal + 1,
+      gachaPityCounter: newPity,
+      gachaHistory: history,
     },
   }
   persistState()

@@ -140,6 +140,10 @@ export class BootScene extends Phaser.Scene {
     this.load.svg('char_chrono_sentinel', 'assets/sprites/characters/char_chrono_sentinel.svg', portrait)
     this.load.svg('char_echo_phantom',    'assets/sprites/characters/char_echo_phantom.svg',    portrait)
     this.load.svg('char_iron_warden',     'assets/sprites/characters/char_iron_warden.svg',     portrait)
+    // 限定角色（抽卡获取）
+    this.load.svg('char_shard_oracle',     'assets/sprites/characters/char_shard_oracle.svg',     portrait)
+    this.load.svg('char_temporal_exile',   'assets/sprites/characters/char_temporal_exile.svg',   portrait)
+    this.load.svg('char_echo_singularity', 'assets/sprites/characters/char_echo_singularity.svg', portrait)
   }
 
   create() {

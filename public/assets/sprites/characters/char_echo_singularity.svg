@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- 回响奇点：青金传说之体 -->
+  <!-- 光环 -->
+  <rect x="5" y="0" width="6" height="1" fill="#80ffe0"/>
+  <rect x="4" y="1" width="1" height="1" fill="#80ffe0"/>
+  <rect x="11" y="1" width="1" height="1" fill="#80ffe0"/>
+  <!-- 头部（半透明能量） -->
+  <rect x="5" y="1" width="6" height="6" fill="#a0ffec"/>
+  <rect x="5" y="1" width="6" height="1" fill="#40e0c0"/>
+  <!-- 双眼 — 金白发光 -->
+  <rect x="6" y="4" width="1" height="1" fill="#ffffff"/>
+  <rect x="9" y="4" width="1" height="1" fill="#ffffff"/>
+  <rect x="6" y="3" width="1" height="1" fill="#ffd070"/>
+  <rect x="9" y="3" width="1" height="1" fill="#ffd070"/>
+  <!-- 黑洞核心（胸口） -->
+  <rect x="6" y="8" width="4" height="4" fill="#000000"/>
+  <rect x="7" y="9" width="2" height="2" fill="#ffd070"/>
+  <rect x="7" y="9" width="1" height="1" fill="#ffffff"/>
+  <!-- 能量肩翼 -->
+  <rect x="2" y="6" width="2" height="5" fill="#80ffe0"/>
+  <rect x="12" y="6" width="2" height="5" fill="#80ffe0"/>
+  <rect x="1" y="7" width="1" height="3" fill="#40e0c0"/>
+  <rect x="14" y="7" width="1" height="3" fill="#40e0c0"/>
+  <!-- 身体外环 -->
+  <rect x="4" y="7" width="2" height="6" fill="#206050"/>
+  <rect x="10" y="7" width="2" height="6" fill="#206050"/>
+  <!-- 飘散粒子 -->
+  <rect x="0" y="3" width="1" height="1" fill="#ffd070"/>
+  <rect x="15" y="12" width="1" height="1" fill="#ffd070"/>
+  <rect x="0" y="13" width="1" height="1" fill="#80ffe0"/>
+  <rect x="15" y="4" width="1" height="1" fill="#80ffe0"/>
+  <!-- 下摆 -->
+  <rect x="4" y="13" width="8" height="3" fill="#103830"/>
+  <rect x="5" y="13" width="6" height="1" fill="#206050"/>
+</svg>
