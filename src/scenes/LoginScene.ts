@@ -194,7 +194,11 @@ export class LoginScene extends Phaser.Scene {
     document.body.appendChild(overlay)
     this.overlay = overlay
 
-    // 阻止 pointer 事件透传到 Phaser canvas
+    // 禁用 Phaser 输入系统，防止点击穿透到下方场景按钮
+    this.input.enabled = false
+    // 同时阻止 pointer 事件冒泡（双重保险）
+    overlay.addEventListener('mousedown', e => e.stopPropagation())
+    overlay.addEventListener('mouseup', e => e.stopPropagation())
     overlay.addEventListener('pointerdown', e => e.stopPropagation())
     overlay.addEventListener('pointerup', e => e.stopPropagation())
     overlay.addEventListener('pointermove', e => e.stopPropagation())
@@ -216,6 +220,8 @@ export class LoginScene extends Phaser.Scene {
       this.overlay.remove()
       this.overlay = null
     }
+    // 恢复 Phaser 输入
+    this.input.enabled = true
   }
 
   // ─── 刷新当前登录状态 ────────────────────────────────
