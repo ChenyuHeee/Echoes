@@ -1036,8 +1036,9 @@ export class DiveScene extends Phaser.Scene {
       if (!dropImg.active) return
       const itemId = dropImg.getData('itemId') as ItemId
       if (!itemId) return
-      this.tryPickupItem(ITEM_DEFINITIONS[itemId], dropImg.x, dropImg.y)
-      dropImg.destroy()
+      if (this.tryPickupItem(ITEM_DEFINITIONS[itemId], dropImg.x, dropImg.y)) {
+        dropImg.destroy()
+      }
     })
 
     // ─── 武器拾取 ───────────────────────────────────
@@ -1056,8 +1057,9 @@ export class DiveScene extends Phaser.Scene {
       if (!dropImg.active) return
       const att = dropImg.getData('attDef') as AttachmentDef
       if (!att) return
-      this.tryPickupAttachment(att, dropImg.x, dropImg.y)
-      dropImg.destroy()
+      if (this.tryPickupAttachment(att, dropImg.x, dropImg.y)) {
+        dropImg.destroy()
+      }
     })
   }
 
@@ -2692,16 +2694,16 @@ export class DiveScene extends Phaser.Scene {
   }
 
   /** 尝试拾取装备到背包 */
-  private tryPickupItem(item: ItemDef, x: number, y: number) {
+  private tryPickupItem(item: ItemDef, x: number, y: number): boolean {
     if (this.diveInventory.length >= BAG_CAPACITY) {
-      // 背包满，弹出提示然后丢弃
-      this.emitHud('背包已满！')
+      // 背包满：物品留在地上，仅提示
+      this.emitHud('背包已满！(B 键查看)')
       const fullTxt = this.add.text(x, y - 30, '背包已满', {
         fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#ff8060',
         stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5).setDepth(92)
       this.tweens.add({ targets: fullTxt, y: fullTxt.y - 20, alpha: 0, duration: 800, onComplete: () => fullTxt.destroy() })
-      return
+      return false
     }
 
     this.diveInventory.push(item)
@@ -2729,6 +2731,7 @@ export class DiveScene extends Phaser.Scene {
     if (this.diveInventory.length >= BAG_CAPACITY) {
       this.emitHud('背包已满 (B 键查看)')
     }
+    return true
   }
 
   /** B 键 — 切换背包界面 */
@@ -3102,7 +3105,7 @@ export class DiveScene extends Phaser.Scene {
     this.time.addEvent({ delay: 100, repeat: -1, callback: () => { if (!drop.active) { glow.destroy(); label.destroy() } } })
   }
 
-  private tryPickupAttachment(att: AttachmentDef, x: number, y: number) {
+  private tryPickupAttachment(att: AttachmentDef, x: number, y: number): boolean {
     const maxSlots = this.equippedWeapon?.attachmentSlots ?? 0
     if (this.weaponAttachments.length >= maxSlots) {
       this.emitHud(`配件槽已满（${maxSlots} 槽），需要更高级的武器`)
@@ -3111,7 +3114,7 @@ export class DiveScene extends Phaser.Scene {
         stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5).setDepth(92)
       this.tweens.add({ targets: txt, y: txt.y - 24, alpha: 0, duration: 800, onComplete: () => txt.destroy() })
-      return
+      return false
     }
 
     this.weaponAttachments.push(att)
@@ -3124,6 +3127,7 @@ export class DiveScene extends Phaser.Scene {
       stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(92)
     this.tweens.add({ targets: fx, y: fx.y - 28, alpha: 0, duration: 900, onComplete: () => fx.destroy() })
+    return true
   }
 }
 
