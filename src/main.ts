@@ -4,6 +4,7 @@ import { MenuScene } from './scenes/MenuScene'
 import { ModeSelectScene } from './scenes/ModeSelectScene'
 import { LoginScene } from './scenes/LoginScene'
 import { LobbyScene } from './scenes/LobbyScene'
+import { LoadoutScene } from './scenes/LoadoutScene'
 import { DiveScene } from './scenes/DiveScene'
 import { StormScene } from './scenes/StormScene'
 import { RaceScene } from './scenes/RaceScene'
@@ -29,6 +30,7 @@ const config: Phaser.Types.Core.GameConfig = {
     LoginScene,
     FactionScene,
     LobbyScene,
+    LoadoutScene,
     DiveScene,
     StormScene,
     RaceScene,

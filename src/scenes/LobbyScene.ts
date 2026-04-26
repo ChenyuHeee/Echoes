@@ -121,8 +121,7 @@ export class LobbyScene extends Phaser.Scene {
     this.makeBtn(width / 2 + 220, btnY, '离线深潜', 170, () => {
       audioManager.playClick()
       const rt2 = getRuntimeState()
-      this.scene.start('DiveScene', { offline: true, mapFragment: rt2.selectedFragment })
-      if (!this.scene.isActive('HUDScene')) this.scene.launch('HUDScene')
+      this.scene.start('LoadoutScene', { offline: true, mapFragment: rt2.selectedFragment })
     })
 
     this.makeBtn(width / 2, height - 14, '← 返回庇护所', 200, () => {
@@ -291,8 +290,7 @@ export class LobbyScene extends Phaser.Scene {
     // 延迟 200ms 给广播时间传播
     this.time.delayedCall(200, () => {
       this.cleanupLobbyChannel()
-      this.scene.start('DiveScene', { offline: false, roomCode: this.roomCode, mapFragment: this.mapFragment })
-      if (!this.scene.isActive('HUDScene')) this.scene.launch('HUDScene')
+      this.scene.start('LoadoutScene', { offline: false, roomCode: this.roomCode, mapFragment: this.mapFragment })
     })
   }
 
@@ -351,8 +349,7 @@ export class LobbyScene extends Phaser.Scene {
         const mapFrag = (payload as { mapFragment: FragmentId }).mapFragment
         this.startingGame = true
         this.cleanupLobbyChannel()
-        this.scene.start('DiveScene', { offline: false, roomCode: this.roomCode, mapFragment: mapFrag })
-        if (!this.scene.isActive('HUDScene')) this.scene.launch('HUDScene')
+        this.scene.start('LoadoutScene', { offline: false, roomCode: this.roomCode, mapFragment: mapFrag })
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') this.broadcastSelf()

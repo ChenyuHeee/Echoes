@@ -48,6 +48,11 @@ type DiveInit = {
   offline?: boolean
   roomCode?: string
   mapFragment?: FragmentId
+  loadout?: {
+    weaponId: string | null
+    attachmentIds: string[]
+    itemIds: string[]
+  }
 }
 
 type EnemyBody = Phaser.Types.Physics.Arcade.SpriteWithDynamicBody & {
@@ -210,16 +215,17 @@ export class DiveScene extends Phaser.Scene {
     this.currentTheme = FRAGMENT_THEMES[this.currentFragmentId]
     this.isHost = !this.offline && (runtime.player.id === (runtime.room?.hostId || ''))
 
-    // 从仓库加载上次成功撤离的装备
+    // 从战前准备选择的装备（或仓库全部）加载
     const stash = runtime.player.stash ?? { weaponId: null, attachmentIds: [], itemIds: [] }
-    if (stash.weaponId) {
-      const w = (WEAPON_DEFINITIONS as Record<string, WeaponDef | undefined>)[stash.weaponId]
+    const loadout = data.loadout ?? stash
+    if (loadout.weaponId) {
+      const w = (WEAPON_DEFINITIONS as Record<string, WeaponDef | undefined>)[loadout.weaponId]
       if (w) this.equippedWeapon = w
     }
-    this.weaponAttachments = stash.attachmentIds
+    this.weaponAttachments = loadout.attachmentIds
       .map(id => (ATTACHMENT_DEFINITIONS as Record<string, AttachmentDef | undefined>)[id])
       .filter((a): a is AttachmentDef => a !== undefined)
-    this.diveInventory = stash.itemIds
+    this.diveInventory = loadout.itemIds
       .map(id => (ITEM_DEFINITIONS as Record<string, ItemDef | undefined>)[id])
       .filter((i): i is ItemDef => i !== undefined)
       .slice(0, BAG_CAPACITY)
