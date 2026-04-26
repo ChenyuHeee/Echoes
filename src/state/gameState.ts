@@ -112,14 +112,16 @@ function loadState(): RuntimeState {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return fallback
     const parsed = JSON.parse(raw) as Partial<RuntimeState>
-    return {
-      ...fallback,
-      ...parsed,
-      player: {
-        ...fallback.player,
-        ...(parsed.player || {}),
-      },
+    const mergedPlayer = {
+      ...fallback.player,
+      ...(parsed.player || {}),
     }
+    // 迁移：旧存档用 persistentItems(string[])，新版用 stash
+    const legacy = (mergedPlayer as Record<string, unknown>)['persistentItems'] as string[] | undefined
+    if (legacy && legacy.length > 0 && !mergedPlayer.stash?.weaponId && mergedPlayer.stash?.itemIds?.length === 0) {
+      mergedPlayer.stash = { weaponId: null, attachmentIds: [], itemIds: legacy }
+    }
+    return { ...fallback, ...parsed, player: mergedPlayer }
   } catch {
     return fallback
   }
