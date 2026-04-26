@@ -355,6 +355,22 @@ export function recordGachaPull(charId: CharacterId, isLegendary: boolean) {
   persistState()
 }
 
+// 非角色掉落（碎片）— 仍计入总抽数与保底
+export function recordGachaShardPull(amount: number) {
+  const p = runtimeState.player
+  const history = [`__shards_${amount}:${Date.now()}`, ...p.gachaHistory].slice(0, 50)
+  runtimeState = {
+    ...runtimeState,
+    player: {
+      ...runtimeState.player,
+      gachaPullsTotal: p.gachaPullsTotal + 1,
+      gachaPityCounter: p.gachaPityCounter + 1,
+      gachaHistory: history,
+    },
+  }
+  persistState()
+}
+
 export function addTimeSand(amount: number) {
   runtimeState = {
     ...runtimeState,

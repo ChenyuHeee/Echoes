@@ -11,6 +11,7 @@ import {
   spendTimeSand,
   unlockCharacter,
   recordGachaPull,
+  recordGachaShardPull,
   addTimeSand,
   spendEchoShards,
   addEchoShards,
@@ -19,20 +20,42 @@ import {
 /**
  * 限定角色抽卡场景
  *
- * 规则：
- * - 单抽消耗 100 时砂；十连消耗 900 时砂（省 100）
- * - 仅可抽到 3 个限定角色（shard_oracle / temporal_exile / echo_singularity）
- * - 加权抽卡：先知 50 / 放逐者 35 / 奇点 15
- * - 保底：累计 30 抽未出"奇点（传说）"则下次必出
- * - 重复抽到的限定角色：返还 60 时砂（碎片折算）
+ * 规则（重制）：
+ * - 单抽 100⌛ / 十连 900⌛  ·  单抽 1500◆ / 十连 13500◆
+ * - 每抽 75% 概率掉落「回响碎片」(50/200/800◆)，25% 概率获得限定角色
+ *   - R  shard_oracle      17%
+ *   - SR temporal_exile    6.5%
+ *   - SSR echo_singularity 1.5%
+ * - 保底：累计 60 抽未出 SSR 则下次必出
+ * - 重复角色：时砂路径退 60⌛，碎片路径退 600◆
  */
 
 const COST_SINGLE = 100
 const COST_TEN = 900
 const COST_SINGLE_SHARDS = 1500       // 碎片单抽价格
 const COST_TEN_SHARDS = 13500         // 碎片十连
-const PITY_THRESHOLD = 30          // 30 抽内必出传说
+const PITY_THRESHOLD = 60          // 60 抽内必出传说
 const DUPLICATE_REFUND = 60        // 重复返还时砂
+
+// 角色出货率（合计 25%）
+const CHAR_RATE = {
+  shard_oracle:     0.170,
+  temporal_exile:   0.065,
+  echo_singularity: 0.015,
+} as const
+// 碎片档位（合计 75%）
+const SHARD_TIERS = [
+  { p: 0.600, amount: 50,  color: 0x8090a0, label: '回响残屑'  },
+  { p: 0.120, amount: 200, color: 0x60c0ff, label: '回响晶簇'  },
+  { p: 0.030, amount: 800, color: 0xffaa40, label: '完整回响晶' },
+] as const
+
+type PullResult =
+  | { kind: 'char';   id: CharacterId; isLegendary: boolean }
+  | { kind: 'shards'; amount: number;  tier: 0 | 1 | 2 }
+type PullDisplay =
+  | { kind: 'char';   id: CharacterId; isLegendary: boolean; isDuplicate: boolean }
+  | { kind: 'shards'; amount: number;  tier: 0 | 1 | 2 }
 
 const RARITY_LABEL: Record<CharacterId, string> = {
   echo_ranger: '', void_breaker: '', chrono_sentinel: '', echo_phantom: '', iron_warden: '',
@@ -184,19 +207,27 @@ export class GachaScene extends Phaser.Scene {
   }
 
   // ── 抽卡逻辑 ───────────────────────────────────────────
-  private rollOne(): { id: CharacterId; isLegendary: boolean } {
+  private rollOne(): PullResult {
     const p = getRuntimeState().player
     // 保底：累计 PITY_THRESHOLD-1 后下一抽必出 SSR
     if (p.gachaPityCounter >= PITY_THRESHOLD - 1) {
-      return { id: 'echo_singularity', isLegendary: true }
+      return { kind: 'char', id: 'echo_singularity', isLegendary: true }
     }
-    const total = LIMITED_CHARACTER_IDS.reduce((s, id) => s + LIMITED_CHARACTER_WEIGHTS[id], 0)
-    let roll = Math.random() * total
-    for (const id of LIMITED_CHARACTER_IDS) {
-      roll -= LIMITED_CHARACTER_WEIGHTS[id]
-      if (roll <= 0) return { id, isLegendary: id === 'echo_singularity' }
-    }
-    return { id: 'shard_oracle', isLegendary: false }
+    const r = Math.random()
+    let acc = 0
+    // 角色（25%）
+    acc += CHAR_RATE.echo_singularity
+    if (r < acc) return { kind: 'char', id: 'echo_singularity', isLegendary: true }
+    acc += CHAR_RATE.temporal_exile
+    if (r < acc) return { kind: 'char', id: 'temporal_exile', isLegendary: false }
+    acc += CHAR_RATE.shard_oracle
+    if (r < acc) return { kind: 'char', id: 'shard_oracle', isLegendary: false }
+    // 碎片（75%）— 大→小遍历，落空则给最小档
+    acc += SHARD_TIERS[2].p
+    if (r < acc) return { kind: 'shards', amount: SHARD_TIERS[2].amount, tier: 2 }
+    acc += SHARD_TIERS[1].p
+    if (r < acc) return { kind: 'shards', amount: SHARD_TIERS[1].amount, tier: 1 }
+    return { kind: 'shards', amount: SHARD_TIERS[0].amount, tier: 0 }
   }
 
   private pullCards(count: number, currency: 'sand' | 'shards' = 'sand') {
@@ -214,20 +245,25 @@ export class GachaScene extends Phaser.Scene {
     }
     audioManager.playClick()
 
-    const results: Array<{ id: CharacterId; isLegendary: boolean; isDuplicate: boolean }> = []
+    const results: PullDisplay[] = []
     for (let i = 0; i < count; i++) {
       const r = this.rollOne()
-      const wasUnlocked = getRuntimeState().player.unlockedCharacters.includes(r.id)
-      const isDuplicate = wasUnlocked
-      if (isDuplicate) {
-        // 重复返还：时砂路径返还时砂，碎片路径返还碎片
-        if (currency === 'sand') addTimeSand(DUPLICATE_REFUND)
-        else addEchoShards(DUPLICATE_REFUND * 10)
+      if (r.kind === 'char') {
+        const wasUnlocked = getRuntimeState().player.unlockedCharacters.includes(r.id)
+        const isDuplicate = wasUnlocked
+        if (isDuplicate) {
+          if (currency === 'sand') addTimeSand(DUPLICATE_REFUND)
+          else addEchoShards(DUPLICATE_REFUND * 10)
+        } else {
+          unlockCharacter(r.id)
+        }
+        recordGachaPull(r.id, r.isLegendary)
+        results.push({ kind: 'char', id: r.id, isLegendary: r.isLegendary, isDuplicate })
       } else {
-        unlockCharacter(r.id)
+        addEchoShards(r.amount)
+        recordGachaShardPull(r.amount)
+        results.push({ kind: 'shards', amount: r.amount, tier: r.tier })
       }
-      recordGachaPull(r.id, r.isLegendary)
-      results.push({ ...r, isDuplicate })
     }
 
     this.refreshSand()
@@ -237,7 +273,7 @@ export class GachaScene extends Phaser.Scene {
   }
 
   // ── 结果展示 ───────────────────────────────────────────
-  private showResults(results: Array<{ id: CharacterId; isLegendary: boolean; isDuplicate: boolean }>) {
+  private showResults(results: PullDisplay[]) {
     const { width, height } = this.scale
     if (this.overlayLayer) this.overlayLayer.destroy()
     this.overlayLayer = this.add.container(0, 0).setDepth(200)
@@ -262,6 +298,37 @@ export class GachaScene extends Phaser.Scene {
     results.forEach((r, i) => {
       const cx = startX + (i % cols) * (cardW + gx)
       const cy = startY + Math.floor(i / cols) * (cardH + gy)
+
+      if (r.kind === 'shards') {
+        // 碎片掉落卡
+        const tier = SHARD_TIERS[r.tier]
+        const colorN = tier.color
+        const bg = this.add.rectangle(cx, cy, cardW, cardH, 0x081020, 1).setStrokeStyle(2, colorN, 0.85)
+        this.overlayLayer.add(bg)
+        const icon = this.add.text(cx, cy - 30, '◆', {
+          fontFamily: '"Noto Sans SC", monospace', fontSize: '48px',
+          color: `#${colorN.toString(16).padStart(6, '0')}`,
+        }).setOrigin(0.5)
+        this.overlayLayer.add(icon)
+        const tierTxt = this.add.text(cx, cy + 22, tier.label, {
+          fontFamily: '"Noto Sans SC", monospace', fontSize: '12px',
+          color: `#${colorN.toString(16).padStart(6, '0')}`,
+        }).setOrigin(0.5)
+        this.overlayLayer.add(tierTxt)
+        const amtTxt = this.add.text(cx, cy + 44, `+${r.amount}◆`, {
+          fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color: '#a0d0ff',
+        }).setOrigin(0.5)
+        this.overlayLayer.add(amtTxt)
+        const tag = this.add.text(cx, cy + 62, '回响碎片', {
+          fontFamily: '"Noto Sans SC", monospace', fontSize: '9px', color: '#506070',
+        }).setOrigin(0.5)
+        this.overlayLayer.add(tag)
+        bg.setAlpha(0); icon.setAlpha(0); icon.setScale(0.4)
+        this.tweens.add({ targets: [bg, tierTxt, amtTxt, tag], alpha: 1, duration: 300, delay: i * 80 })
+        this.tweens.add({ targets: icon, alpha: 1, scale: 1, duration: 400, delay: i * 80, ease: 'Back.easeOut' })
+        return
+      }
+
       const def = CHARACTER_DEFINITIONS[r.id]
       const colorN = RARITY_COLOR[r.id]
 
@@ -339,11 +406,24 @@ export class GachaScene extends Phaser.Scene {
       return
     }
     history.forEach((entry, i) => {
-      const [cidStr] = entry.split(':')
+      const [cidStr, _ts] = entry.split(':')
+      void _ts
+      const cy = baseY + 8 + i * 26
+      // 碎片掉落条目
+      if (cidStr.startsWith('__shards_')) {
+        const amount = parseInt(cidStr.replace('__shards_', ''), 10) || 0
+        const colorN = amount >= 800 ? 0xffaa40 : amount >= 200 ? 0x60c0ff : 0x8090a0
+        const bg = this.add.rectangle(baseX, cy, 200, 22, 0x081420, 0.9).setOrigin(0, 0).setStrokeStyle(1, colorN, 0.5)
+        const tag = this.add.text(baseX + 8, cy + 11, `◆ 碎片掉落  +${amount}◆`, {
+          fontFamily: '"Noto Sans SC", monospace', fontSize: '10px',
+          color: `#${colorN.toString(16).padStart(6, '0')}`,
+        }).setOrigin(0, 0.5)
+        this.historyContainer.add([bg, tag])
+        return
+      }
       const cid = cidStr as CharacterId
       const def = CHARACTER_DEFINITIONS[cid]
       if (!def) return
-      const cy = baseY + 8 + i * 26
       const colorN = RARITY_COLOR[cid] ?? 0xa0a0a0
       const bg = this.add.rectangle(baseX, cy, 200, 22, 0x10081a, 0.9).setOrigin(0, 0).setStrokeStyle(1, colorN, 0.5)
       const dot = this.add.image(baseX + 14, cy + 11, def.spriteKey).setScale(0.8)
