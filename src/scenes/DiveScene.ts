@@ -19,7 +19,8 @@ import {
   addLoreEntry,
   getDamageMultiplier,
   getSpeedMultiplier,
-  saveExtractedItems,
+  saveStash,
+  type Stash,
 } from '../state/gameState'
 import { LORE_ENTRIES } from '../config/lore'
 import type { SkillType } from '../types/game.types'
@@ -30,8 +31,11 @@ import {
   type ItemId,
   type WeaponDef,
   type AttachmentDef,
+  type AttachmentSlot,
   ITEM_DEFINITIONS,
   WEAPON_DEFINITIONS,
+  ATTACHMENT_DEFINITIONS,
+  ATTACHMENT_SLOTS,
   RARITY_COLORS,
   RARITY_NAMES,
   BAG_CAPACITY,
@@ -206,12 +210,19 @@ export class DiveScene extends Phaser.Scene {
     this.currentTheme = FRAGMENT_THEMES[this.currentFragmentId]
     this.isHost = !this.offline && (runtime.player.id === (runtime.room?.hostId || ''))
 
-    // 加载上次成功撤离的持久物品
-    const savedIds = runtime.player.persistentItems ?? []
-    this.diveInventory = savedIds
+    // 从仓库加载上次成功撤离的装备
+    const stash = runtime.player.stash ?? { weaponId: null, attachmentIds: [], itemIds: [] }
+    if (stash.weaponId) {
+      const w = (WEAPON_DEFINITIONS as Record<string, WeaponDef | undefined>)[stash.weaponId]
+      if (w) this.equippedWeapon = w
+    }
+    this.weaponAttachments = stash.attachmentIds
+      .map(id => (ATTACHMENT_DEFINITIONS as Record<string, AttachmentDef | undefined>)[id])
+      .filter((a): a is AttachmentDef => a !== undefined)
+    this.diveInventory = stash.itemIds
       .map(id => (ITEM_DEFINITIONS as Record<string, ItemDef | undefined>)[id])
-      .filter((item): item is ItemDef => item !== undefined)
-      .slice(0, 6)
+      .filter((i): i is ItemDef => i !== undefined)
+      .slice(0, BAG_CAPACITY)
   }
 
   create() {
@@ -2353,9 +2364,13 @@ export class DiveScene extends Phaser.Scene {
     })
     recordDiveComplete(this.diveKills, result === 'success')
 
-    // 成功撤离时持久化背包物品
+    // 成功撤离时持久化背包物品到仓库
     if (result === 'success') {
-      saveExtractedItems(this.diveInventory.map(i => i.id))
+      saveStash({
+        weaponId: this.equippedWeapon.id,
+        attachmentIds: this.weaponAttachments.map(a => a.id),
+        itemIds: this.diveInventory.map(i => i.id),
+      })
     }
 
     // 保存引用以供后续广播结算使用
@@ -2535,17 +2550,24 @@ export class DiveScene extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
     // 本次找到的装备
-    if (this.diveInventory.length > 0) {
+    if (this.diveInventory.length > 0 || this.weaponAttachments.length > 0) {
+      const totalValue = this.diveInventory.reduce((s, i) => s + (i.sandValue ?? 0), 0)
+        + (isSuccess ? (this.equippedWeapon?.sandValue ?? 0) : 0)
+        + this.weaponAttachments.reduce((s, a) => s + (a.sandValue ?? 0), 0)
+
       this.add.text(width / 2, height * 0.56,
-        isSuccess ? '✦ 装备已保留，下次深潜生效：' : '✦ 背包已损失，装备清空：', {
-        fontFamily: '"Silkscreen", monospace', fontSize: '11px',
-        color: isSuccess ? '#7ce0bc' : '#e07c7c',
+        isSuccess ? `✦ 带回物资总估值：${totalValue} 时砂` : '✦ 背包已损失：', {
+        fontFamily: '"Silkscreen", monospace', fontSize: '12px',
+        color: isSuccess ? '#f0d060' : '#e07c7c',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
-      const itemNames = this.diveInventory.map(i => i.name).join('  ·  ')
-      this.add.text(width / 2, height * 0.63, itemNames, {
-        fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#9090c0',
-        wordWrap: { width: 480 }, align: 'center',
+      const parts: string[] = []
+      if (isSuccess) parts.push(`[武器] ${this.equippedWeapon.name}`)
+      if (this.weaponAttachments.length) parts.push(this.weaponAttachments.map(a => a.name).join(' · '))
+      if (this.diveInventory.length) parts.push(this.diveInventory.map(i => i.name).join(' · '))
+      this.add.text(width / 2, height * 0.63, parts.join('  |  '), {
+        fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#9090c0',
+        wordWrap: { width: 520 }, align: 'center',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
     }
 
@@ -2773,12 +2795,12 @@ export class DiveScene extends Phaser.Scene {
     const objs: Array<Phaser.GameObjects.GameObject | Phaser.Input.Keyboard.Key> = []
 
     // 半透明背景
-    const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.72)
+    const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.76)
       .setScrollFactor(0).setDepth(300).setInteractive()
     objs.push(dim)
 
     // 面板背景
-    const panelW = 520, panelH = 400
+    const panelW = 580, panelH = 430
     const panelX = width / 2, panelY = height / 2
 
     const panel = this.add.rectangle(panelX, panelY, panelW, panelH, 0x060c18, 1)
@@ -2792,112 +2814,119 @@ export class DiveScene extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(302))
 
     // ── 武器区域 ─────────────────────────────────────────
-    const weapSectionY = panelY - 140
-    objs.push(this.add.text(panelX, panelY - panelH / 2 + 42, '── 武器 ──', {
+    const weapSectionY = panelY - 148
+    objs.push(this.add.text(panelX - panelW / 2 + 10, panelY - panelH / 2 + 40, '── 武器 ──', {
       fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#446688',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(302))
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(302))
 
-    // 武器背景框
-    const weapBg = this.add.rectangle(panelX, weapSectionY, panelW - 20, 80, 0x0a1828, 1)
+    const weapBg = this.add.rectangle(panelX, weapSectionY, panelW - 20, 72, 0x0a1828, 1)
       .setScrollFactor(0).setDepth(302)
     const weapRarityColor = RARITY_COLORS[this.equippedWeapon.rarity]
     weapBg.setStrokeStyle(1, weapRarityColor, 0.7)
     objs.push(weapBg)
 
-    // 武器图标
-    const weapIconX = panelX - 220
+    const weapIconX = panelX - 255
     objs.push(this.add.image(weapIconX, weapSectionY, this.equippedWeapon.spriteKey)
       .setScale(3).setScrollFactor(0).setDepth(303))
 
-    // 武器名+稀有度
     const weapColorHex = `#${weapRarityColor.toString(16).padStart(6, '0')}`
-    objs.push(this.add.text(weapIconX + 30, weapSectionY - 22, this.equippedWeapon.name, {
+    objs.push(this.add.text(weapIconX + 26, weapSectionY - 18, this.equippedWeapon.name, {
       fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: weapColorHex,
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(303))
 
-    objs.push(this.add.text(weapIconX + 30, weapSectionY - 6,
+    objs.push(this.add.text(weapIconX + 26, weapSectionY - 4,
       `[${RARITY_NAMES[this.equippedWeapon.rarity]}]  ${this.equippedWeapon.desc}`, {
       fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#607080',
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(303))
 
-    // 武器当前属性（含配件加成）
     const finalDmg = this.getWeaponBaseDamage()
     const finalRate = this.getWeaponFireRateMs()
     const finalCrit = Math.round(this.getWeaponCritChance() * 100)
     const pelletStr = this.equippedWeapon.pellets ? ` ×${this.equippedWeapon.pellets}弹` : ''
-    objs.push(this.add.text(weapIconX + 30, weapSectionY + 10,
+    objs.push(this.add.text(weapIconX + 26, weapSectionY + 12,
       `伤害 ${finalDmg}${pelletStr}   射速 ${finalRate}ms   暴击 ${finalCrit}%`, {
       fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#88aacc',
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(303))
 
-    // 配件槽
-    const maxSlots = this.equippedWeapon.attachmentSlots
-    const attSlotW = 44, attSlotGap = 6
-    const attStartX = panelX + 80
-    for (let ai = 0; ai < maxSlots; ai++) {
-      const ax = attStartX + ai * (attSlotW + attSlotGap) + attSlotW / 2
-      const att = this.weaponAttachments[ai]
-      const slotBg = this.add.rectangle(ax, weapSectionY, attSlotW, 60, 0x0c1c30, 1)
+    // 武器估值
+    objs.push(this.add.text(weapIconX + 26, weapSectionY + 26,
+      `估值 ${this.equippedWeapon.sandValue} ⌛`, {
+      fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#906030',
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(303))
+
+    // ── 4 槽位配件（每槽一格：枪管/瞄准镜/弹匣/枪托）────────────
+    const slotNames: Record<AttachmentSlot, string> = { barrel: '枪管', scope: '镜', magazine: '弹匣', stock: '枪托' }
+    const attSlotW = 56, attSlotH = 64, attSlotGap = 6
+    const attStartX = panelX + 35
+    ATTACHMENT_SLOTS.forEach((slotType, ai) => {
+      const ax = attStartX + ai * (attSlotW + attSlotGap)
+      const ay = weapSectionY
+      const att = this.weaponAttachments.find(a => a.slotType === slotType)
+      const slotBg = this.add.rectangle(ax, ay, attSlotW, attSlotH, 0x0c1c30, 1)
         .setScrollFactor(0).setDepth(302)
+      objs.push(slotBg)
       if (att) {
         slotBg.setStrokeStyle(2, RARITY_COLORS[att.rarity], 0.8)
-        objs.push(this.add.image(ax, weapSectionY - 10, att.spriteKey).setScale(2.4).setScrollFactor(0).setDepth(303))
-        objs.push(this.add.text(ax, weapSectionY + 18, att.name, {
+        objs.push(this.add.image(ax, ay - 14, att.spriteKey).setScale(2.4).setScrollFactor(0).setDepth(303))
+        objs.push(this.add.text(ax, ay + 4, att.name, {
           fontFamily: '"Silkscreen", monospace', fontSize: '7px',
           color: `#${RARITY_COLORS[att.rarity].toString(16).padStart(6, '0')}`,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
+        objs.push(this.add.text(ax, ay + 16, `${att.sandValue}⌛`, {
+          fontFamily: '"Silkscreen", monospace', fontSize: '7px', color: '#806030',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
       } else {
         slotBg.setStrokeStyle(1, 0x1e3050, 0.5)
-        objs.push(this.add.text(ax, weapSectionY, '空', {
+        objs.push(this.add.text(ax, ay - 6, slotNames[slotType], {
+          fontFamily: '"Silkscreen", monospace', fontSize: '8px', color: '#2a4060',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
+        objs.push(this.add.text(ax, ay + 8, '空', {
           fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#1e3050',
         }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
       }
-      objs.push(slotBg)
-    }
-
-    objs.push(this.add.text(attStartX + (maxSlots * (attSlotW + attSlotGap) - attSlotGap) / 2,
-      weapSectionY + 34, `配件 ${this.weaponAttachments.length}/${maxSlots} 槽`, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '8px', color: '#304858',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
+    })
 
     // ── 物品区域 ─────────────────────────────────────────
-    objs.push(this.add.text(panelX, panelY - 65, '── 物品 ──', {
+    objs.push(this.add.text(panelX - panelW / 2 + 10, panelY - 67, '── 物品 ──', {
       fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#446688',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(302))
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(302))
 
-    const SLOT_SIZE = 62, SLOT_GAP = 10, COLS = 3, ROWS = 2
+    const SLOT_SIZE = 56, SLOT_GAP = 8, COLS = 5
+    const ROWS = Math.ceil(BAG_CAPACITY / COLS)  // 9格→2行(5+4)
     const gridW = COLS * SLOT_SIZE + (COLS - 1) * SLOT_GAP
     const gridX = panelX - gridW / 2
-    const gridY = panelY - 40
+    const gridY = panelY - 44
 
-    for (let row = 0; row < ROWS; row++) {
-      for (let col = 0; col < COLS; col++) {
-        const idx = row * COLS + col
-        const sx = gridX + col * (SLOT_SIZE + SLOT_GAP) + SLOT_SIZE / 2
-        const sy = gridY + row * (SLOT_SIZE + SLOT_GAP) + SLOT_SIZE / 2
-        const slotBg = this.add.rectangle(sx, sy, SLOT_SIZE, SLOT_SIZE, 0x0a1020, 1)
-          .setScrollFactor(0).setDepth(302)
-        objs.push(slotBg)
+    for (let i = 0; i < BAG_CAPACITY; i++) {
+      const col = i % COLS
+      const row = Math.floor(i / COLS)
+      const sx = gridX + col * (SLOT_SIZE + SLOT_GAP) + SLOT_SIZE / 2
+      const sy = gridY + row * (SLOT_SIZE + SLOT_GAP) + SLOT_SIZE / 2
+      const slotBg = this.add.rectangle(sx, sy, SLOT_SIZE, SLOT_SIZE, 0x0a1020, 1)
+        .setScrollFactor(0).setDepth(302)
+      objs.push(slotBg)
 
-        if (idx < this.diveInventory.length) {
-          const item = this.diveInventory[idx]
-          const rarityColor = RARITY_COLORS[item.rarity]
-          slotBg.setStrokeStyle(2, rarityColor, 0.9)
-          objs.push(this.add.image(sx, sy - 6, item.spriteKey).setScale(2.8).setScrollFactor(0).setDepth(303))
-          objs.push(this.add.text(sx, sy + 22, item.name, {
-            fontFamily: '"Silkscreen", monospace', fontSize: '8px',
-            color: `#${rarityColor.toString(16).padStart(6, '0')}`,
-          }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
-        } else {
-          slotBg.setStrokeStyle(1, 0x1e3050, 0.5)
-          objs.push(this.add.text(sx, sy, '空', {
-            fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#1e3050',
-          }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
-        }
+      if (i < this.diveInventory.length) {
+        const item = this.diveInventory[i]
+        const rarityColor = RARITY_COLORS[item.rarity]
+        const rcHex = `#${rarityColor.toString(16).padStart(6, '0')}`
+        slotBg.setStrokeStyle(2, rarityColor, 0.9)
+        objs.push(this.add.image(sx, sy - 8, item.spriteKey).setScale(2.6).setScrollFactor(0).setDepth(303))
+        objs.push(this.add.text(sx, sy + 14, item.name, {
+          fontFamily: '"Silkscreen", monospace', fontSize: '7px', color: rcHex,
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
+        objs.push(this.add.text(sx, sy + 23, `${item.sandValue}⌛`, {
+          fontFamily: '"Silkscreen", monospace', fontSize: '7px', color: '#906030',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
+      } else {
+        slotBg.setStrokeStyle(1, 0x1e3050, 0.5)
+        objs.push(this.add.text(sx, sy, '空', {
+          fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#1e3050',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
       }
     }
 
-    // ── 效果汇总 ─────────────────────────────────────────
+    // ── 效果汇总 & 总估值 ─────────────────────────────────
     const effectLines: string[] = []
     const dmgBonus = this.getDiveDamageBonus()
     const spdBonus = this.getDiveSpeedBonus()
@@ -2918,13 +2947,17 @@ export class DiveScene extends Phaser.Scene {
     if (this.diveInventory.some(i => i.shieldCooldownMs)) effectLines.push('回响盾 已激活')
     if (this.diveInventory.some(i => i.paradoxChainChance)) effectLines.push('悖论引擎 已激活')
 
-    const effectStr = effectLines.length > 0 ? effectLines.join('   ') : '暂无加成'
-    objs.push(this.add.text(panelX, panelY + 125, `加成：${effectStr}`, {
+    const effectStr = effectLines.length > 0 ? effectLines.join('  ') : '暂无加成'
+    objs.push(this.add.text(panelX, panelY + 140, `加成：${effectStr}`, {
       fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#6090b0',
       wordWrap: { width: panelW - 30 }, align: 'center',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(302))
 
-    objs.push(this.add.text(panelX, panelY + 150, `${this.diveInventory.length}/${BAG_CAPACITY} 格物品  —  撤离后装备带回，下次深潜生效`, {
+    const totalValue = this.diveInventory.reduce((s, i) => s + (i.sandValue ?? 0), 0)
+      + (this.equippedWeapon?.sandValue ?? 0)
+      + this.weaponAttachments.reduce((s, a) => s + (a.sandValue ?? 0), 0)
+    objs.push(this.add.text(panelX, panelY + 158,
+      `${this.diveInventory.length}/${BAG_CAPACITY} 格物品  ·  配件 ${this.weaponAttachments.length}/4  ·  总估值 ${totalValue} ⌛  —  撤离后存入仓库`, {
       fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#304050',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(302))
 
@@ -3089,8 +3122,7 @@ export class DiveScene extends Phaser.Scene {
   private tryEquipWeapon(weapon: WeaponDef, x: number, y: number) {
     const old = this.equippedWeapon
     this.equippedWeapon = weapon
-    // 配件槽数减少时裁剪配件
-    this.weaponAttachments = this.weaponAttachments.slice(0, weapon.attachmentSlots)
+    // 换武器保留所有配件（配件按槽位类型绑定，不受武器限制）
 
     audioManager.playPickup()
     const msg = old
@@ -3128,20 +3160,20 @@ export class DiveScene extends Phaser.Scene {
   }
 
   private tryPickupAttachment(att: AttachmentDef, x: number, y: number): boolean {
-    const maxSlots = this.equippedWeapon?.attachmentSlots ?? 0
-    if (this.weaponAttachments.length >= maxSlots) {
-      this.emitHud(`配件槽已满（${maxSlots} 槽），需要更高级的武器`)
-      const txt = this.add.text(x, y - 20, '配件槽已满', {
-        fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#ff8060',
-        stroke: '#000', strokeThickness: 2,
-      }).setOrigin(0.5).setDepth(92)
-      this.tweens.add({ targets: txt, y: txt.y - 24, alpha: 0, duration: 800, onComplete: () => txt.destroy() })
-      return false
+    // 每种槽位只能装一个配件，拾取同槽位新配件时自动替换
+    const existingIdx = this.weaponAttachments.findIndex(a => a.slotType === att.slotType)
+    const slotNames: Record<AttachmentSlot, string> = { barrel: '枪管', scope: '瞄准镜', magazine: '弹匣', stock: '枪托' }
+
+    if (existingIdx >= 0) {
+      const old = this.weaponAttachments[existingIdx]
+      this.weaponAttachments[existingIdx] = att
+      this.emitHud(`🔧 替换 [${slotNames[att.slotType]}]：${old.name} → ${att.name}  — ${att.desc}`)
+    } else {
+      this.weaponAttachments.push(att)
+      this.emitHud(`🔧 安装配件 [${slotNames[att.slotType]}]：${att.name}  — ${att.desc}`)
     }
 
-    this.weaponAttachments.push(att)
     audioManager.playPickup()
-    this.emitHud(`🔧 安装配件：${att.name}  — ${att.desc}  (${this.weaponAttachments.length}/${maxSlots})`)
 
     const color = `#${RARITY_COLORS[att.rarity].toString(16).padStart(6, '0')}`
     const fx = this.add.text(x, y - 18, `+${att.name}`, {

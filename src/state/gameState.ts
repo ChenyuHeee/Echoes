@@ -4,6 +4,13 @@ import type { SkillType } from '../types/game.types'
 import type { CharacterId } from '../config/characters'
 import { DEFAULT_CHARACTER } from '../config/characters'
 
+/** 玩家仓库 — 跨局持久化 */
+export interface Stash {
+  weaponId: string | null        // 武器 ID (WeaponId)
+  attachmentIds: string[]        // 配件 ID 列表（最多 4 个，每槽位 1 个）
+  itemIds: string[]              // 物品 ID 列表（最多 BAG_CAPACITY 个）
+}
+
 export interface DailyProgress {
   date: string
   kills: number
@@ -43,7 +50,7 @@ export interface RuntimePlayer {
   dailyProgress: DailyProgress
   selectedCharacter: CharacterId
   unlockedCharacters: CharacterId[]
-  persistentItems: string[]   // 上次成功撤离带回的物品 ID 列表
+  stash: Stash   // 仓库：跨局持久化的装备
 }
 
 export interface RuntimeRoom {
@@ -91,7 +98,7 @@ function createDefaultState(): RuntimeState {
       dailyProgress: { date: '', kills: 0, dives: 0, extractions: 0, killsRewarded: false, divesRewarded: false, extractionsRewarded: false },
       selectedCharacter: DEFAULT_CHARACTER,
       unlockedCharacters: [DEFAULT_CHARACTER],
-      persistentItems: [],
+      stash: { weaponId: null, attachmentIds: [], itemIds: [] },
     },
     room: null,
     diveStartAt: null,
@@ -168,10 +175,24 @@ export function unlockCharacter(characterId: CharacterId) {
   persistState()
 }
 
-export function saveExtractedItems(itemIds: string[]) {
+export function saveStash(stash: Stash) {
   runtimeState = {
     ...runtimeState,
-    player: { ...runtimeState.player, persistentItems: itemIds },
+    player: { ...runtimeState.player, stash },
+  }
+  persistState()
+}
+
+export function discardFromStash(type: 'weapon' | 'attachment' | 'item', id: string) {
+  const s = runtimeState.player.stash
+  const updated: Stash = {
+    weaponId:      type === 'weapon'     ? null                             : s.weaponId,
+    attachmentIds: type === 'attachment' ? s.attachmentIds.filter(x => x !== id) : s.attachmentIds,
+    itemIds:       type === 'item'       ? s.itemIds.filter(x => x !== id)       : s.itemIds,
+  }
+  runtimeState = {
+    ...runtimeState,
+    player: { ...runtimeState.player, stash: updated },
   }
   persistState()
 }

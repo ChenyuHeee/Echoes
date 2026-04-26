@@ -1,6 +1,6 @@
 // ─── 深潜装备系统 ─────────────────────────────────────────────────
-// 装备在战斗中从敌人身上掉落，存入背包（最多6格）
-// 效果仅在当次深潜中生效，撤离/阵亡后清除
+// 装备在战斗中从敌人身上掉落，存入背包（最多9格）
+// 撤离后存入仓库，下次深潜自动携带
 
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'legendary'
 
@@ -24,6 +24,8 @@ export interface ItemDef {
   desc: string
   rarity: ItemRarity
   spriteKey: string
+  /** 时砂估值（用于仓库/结算显示） */
+  sandValue: number
   /** 伤害倍率（乘积叠加，1.15 = +15%） */
   damageMult?: number
   /** 速度倍率 */
@@ -53,68 +55,68 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDef> = {
   rusty_blade: {
     id: 'rusty_blade', name: '锈蚀刀片', rarity: 'common',
     desc: '伤害 +15%',
-    spriteKey: 'item_rusty_blade', damageMult: 1.15, weight: 30,
+    spriteKey: 'item_rusty_blade', damageMult: 1.15, sandValue: 15, weight: 30,
   },
   sand_magnet: {
     id: 'sand_magnet', name: '时砂磁铁', rarity: 'common',
     desc: '时砂磁吸范围 ×2',
-    spriteKey: 'item_sand_magnet', magnetRadiusMult: 2.0, weight: 30,
+    spriteKey: 'item_sand_magnet', magnetRadiusMult: 2.0, sandValue: 12, weight: 30,
   },
   nanite_patch: {
     id: 'nanite_patch', name: '纳米胶布', rarity: 'common',
     desc: '每秒回血 2 HP',
-    spriteKey: 'item_nanite_patch', regenPerSec: 2, weight: 25,
+    spriteKey: 'item_nanite_patch', regenPerSec: 2, sandValue: 12, weight: 25,
   },
 
   // ─── Uncommon ─────────────────────────────────────
   resonance_coil: {
     id: 'resonance_coil', name: '共鸣线圈', rarity: 'uncommon',
     desc: '回响技能伤害 +30%',
-    spriteKey: 'item_resonance_coil', echoSkillMult: 1.30, weight: 15,
+    spriteKey: 'item_resonance_coil', echoSkillMult: 1.30, sandValue: 30, weight: 15,
   },
   drift_boots: {
     id: 'drift_boots', name: '漂移靴', rarity: 'uncommon',
     desc: '移动速度 +20%',
-    spriteKey: 'item_drift_boots', speedMult: 1.20, weight: 15,
+    spriteKey: 'item_drift_boots', speedMult: 1.20, sandValue: 28, weight: 15,
   },
   chrono_lens: {
     id: 'chrono_lens', name: '时相镜', rarity: 'uncommon',
     desc: '暴击率 +12%',
-    spriteKey: 'item_chrono_lens', critChance: 0.12, weight: 15,
+    spriteKey: 'item_chrono_lens', critChance: 0.12, sandValue: 30, weight: 15,
   },
   time_weave_vest: {
     id: 'time_weave_vest', name: '时编护甲', rarity: 'uncommon',
     desc: '最大 HP +40',
-    spriteKey: 'item_time_weave_vest', maxHpBonus: 40, weight: 14,
+    spriteKey: 'item_time_weave_vest', maxHpBonus: 40, sandValue: 35, weight: 14,
   },
 
   // ─── Rare ─────────────────────────────────────────
   void_shard: {
     id: 'void_shard', name: '虚空碎片', rarity: 'rare',
     desc: '伤害 +25%，造成伤害回血 8%',
-    spriteKey: 'item_void_shard', damageMult: 1.25, lifesteal: 0.08, weight: 8,
+    spriteKey: 'item_void_shard', damageMult: 1.25, lifesteal: 0.08, sandValue: 65, weight: 8,
   },
   overclock_chip: {
     id: 'overclock_chip', name: '超频芯片', rarity: 'rare',
     desc: '伤害 +20%，速度 +10%',
-    spriteKey: 'item_overclock_chip', damageMult: 1.20, speedMult: 1.10, weight: 8,
+    spriteKey: 'item_overclock_chip', damageMult: 1.20, speedMult: 1.10, sandValue: 60, weight: 8,
   },
   echo_shield: {
     id: 'echo_shield', name: '回响盾', rarity: 'rare',
     desc: '每 8 秒格挡一次伤害',
-    spriteKey: 'item_echo_shield', shieldCooldownMs: 8000, weight: 7,
+    spriteKey: 'item_echo_shield', shieldCooldownMs: 8000, sandValue: 55, weight: 7,
   },
 
   // ─── Legendary ────────────────────────────────────
   echo_crystal_core: {
     id: 'echo_crystal_core', name: '回响晶核', rarity: 'legendary',
     desc: '回响技能伤害 ×2，普通伤害 +15%',
-    spriteKey: 'item_echo_crystal_core', echoSkillMult: 2.0, damageMult: 1.15, weight: 3,
+    spriteKey: 'item_echo_crystal_core', echoSkillMult: 2.0, damageMult: 1.15, sandValue: 130, weight: 3,
   },
   paradox_engine: {
     id: 'paradox_engine', name: '悖论引擎', rarity: 'legendary',
     desc: '击杀时 30% 触发免费链式闪电',
-    spriteKey: 'item_paradox_engine', paradoxChainChance: 0.30, weight: 2,
+    spriteKey: 'item_paradox_engine', paradoxChainChance: 0.30, sandValue: 120, weight: 2,
   },
 }
 
@@ -181,11 +183,14 @@ export function rollItemDrop(isBoss: boolean, isElite: boolean): ItemDef | null 
 // ─── 武器系统 ──────────────────────────────────────────────────────
 export type WeaponId = 'pulse_pistol' | 'void_smg' | 'chrono_shotgun' | 'echo_sniper'
 export type AttachmentId =
-  | 'carbon_barrel' | 'plasma_barrel'
-  | 'reflex_scope'  | 'hawk_scope'
-  | 'rapid_mag'     | 'drum_mag'
-  | 'stabilizer'    | 'precision_stock'
+  | 'carbon_barrel' | 'plasma_barrel' | 'void_suppressor' | 'plasma_accelerator'
+  | 'reflex_scope'  | 'hawk_scope'    | 'echo_sight'      | 'quantum_scope'
+  | 'rapid_mag'     | 'drum_mag'      | 'extended_mag'    | 'void_magazine'
+  | 'stabilizer'    | 'precision_stock' | 'combat_grip'   | 'resonance_stock'
 export type AttachmentSlot = 'barrel' | 'scope' | 'magazine' | 'stock'
+
+/** 每个槽位只能装 1 个配件，所有武器均可装 4 种槽位各一 */
+export const ATTACHMENT_SLOTS: AttachmentSlot[] = ['barrel', 'scope', 'magazine', 'stock']
 
 export interface WeaponDef {
   id: WeaponId
@@ -198,7 +203,8 @@ export interface WeaponDef {
   baseCritChance: number // 基础暴击率 0~1
   pellets?: number       // 霰弹枪：每次射击弹片数
   spreadAngle?: number   // 弹片散布角（弧度，仅 pellets>1）
-  attachmentSlots: number
+  /** 时砂估值 */
+  sandValue: number
   weight: number
 }
 
@@ -212,49 +218,64 @@ export interface AttachmentDef {
   damageMult?: number
   fireRateMult?: number  // <1 = 射速更快
   critBonus?: number
+  /** 时砂估值 */
+  sandValue: number
   weight: number
 }
 
 export const WEAPON_DEFINITIONS: Record<WeaponId, WeaponDef> = {
   pulse_pistol: {
     id: 'pulse_pistol', name: '脉冲手枪', rarity: 'common',
-    desc: '标准配备，射速均衡', spriteKey: 'weapon_pistol',
+    desc: '标准配备，射速均衡，各项数值平衡', spriteKey: 'weapon_pistol',
     baseDamage: 12, fireRateMs: 150, baseCritChance: 0.08,
-    attachmentSlots: 1, weight: 30,
+    sandValue: 20, weight: 30,
   },
   void_smg: {
     id: 'void_smg', name: '虚空冲锋枪', rarity: 'uncommon',
-    desc: '射速极快，适合连续输出', spriteKey: 'weapon_smg',
-    baseDamage: 7, fireRateMs: 80, baseCritChance: 0.05,
-    attachmentSlots: 2, weight: 15,
+    desc: '射速极快，连续输出能力强', spriteKey: 'weapon_smg',
+    baseDamage: 10, fireRateMs: 75, baseCritChance: 0.08,
+    sandValue: 50, weight: 15,
   },
   chrono_shotgun: {
     id: 'chrono_shotgun', name: '时序霰弹枪', rarity: 'rare',
-    desc: '近距离爆发，散射 3 枚弹片', spriteKey: 'weapon_shotgun',
-    baseDamage: 14, fireRateMs: 700, baseCritChance: 0.15,
-    pellets: 3, spreadAngle: 0.40,
-    attachmentSlots: 2, weight: 8,
+    desc: '近距离爆发，散射 5 枚弹片', spriteKey: 'weapon_shotgun',
+    baseDamage: 20, fireRateMs: 420, baseCritChance: 0.15,
+    pellets: 5, spreadAngle: 0.50,
+    sandValue: 90, weight: 8,
   },
   echo_sniper: {
     id: 'echo_sniper', name: '回响狙击枪', rarity: 'legendary',
-    desc: '极高单发伤害与暴击率', spriteKey: 'weapon_sniper',
-    baseDamage: 45, fireRateMs: 1400, baseCritChance: 0.30,
-    attachmentSlots: 3, weight: 3,
+    desc: '极高单发伤害，暴击必杀', spriteKey: 'weapon_sniper',
+    baseDamage: 80, fireRateMs: 900, baseCritChance: 0.45,
+    sandValue: 160, weight: 3,
   },
 }
 
 export const ATTACHMENT_DEFINITIONS: Record<AttachmentId, AttachmentDef> = {
-  carbon_barrel:   { id: 'carbon_barrel',   name: '碳纤枪管',   rarity: 'uncommon', slotType: 'barrel',   spriteKey: 'att_barrel',   desc: '伤害 +15%',            damageMult: 1.15, weight: 20 },
-  plasma_barrel:   { id: 'plasma_barrel',   name: '等离子枪管', rarity: 'rare',     slotType: 'barrel',   spriteKey: 'att_barrel',   desc: '伤害 +30%',            damageMult: 1.30, weight: 10 },
-  reflex_scope:    { id: 'reflex_scope',    name: '反射瞄准镜', rarity: 'uncommon', slotType: 'scope',    spriteKey: 'att_scope',    desc: '暴击 +12%',            critBonus: 0.12, weight: 20 },
-  hawk_scope:      { id: 'hawk_scope',      name: '鹰眼瞄准镜', rarity: 'rare',     slotType: 'scope',    spriteKey: 'att_scope',    desc: '暴击 +22%',            critBonus: 0.22, weight: 10 },
-  rapid_mag:       { id: 'rapid_mag',       name: '速射弹匣',   rarity: 'uncommon', slotType: 'magazine', spriteKey: 'att_magazine', desc: '射速 +18%',            fireRateMult: 0.82, weight: 20 },
-  drum_mag:        { id: 'drum_mag',        name: '鼓形弹匣',   rarity: 'rare',     slotType: 'magazine', spriteKey: 'att_magazine', desc: '射速 +30%',            fireRateMult: 0.70, weight: 10 },
-  stabilizer:      { id: 'stabilizer',      name: '稳定器',     rarity: 'uncommon', slotType: 'stock',    spriteKey: 'att_stock',    desc: '暴击 +6%，伤害 +8%',  critBonus: 0.06, damageMult: 1.08, weight: 20 },
-  precision_stock: { id: 'precision_stock', name: '精准枪托',   rarity: 'rare',     slotType: 'stock',    spriteKey: 'att_stock',    desc: '暴击 +10%，伤害 +15%', critBonus: 0.10, damageMult: 1.15, weight: 10 },
-}
+  // ── 枪管（barrel）──────────────────────────────────
+  carbon_barrel:      { id: 'carbon_barrel',      name: '碳纤枪管',     rarity: 'uncommon',  slotType: 'barrel',   spriteKey: 'att_barrel',   desc: '伤害 +15%',            damageMult: 1.15, sandValue: 30, weight: 20 },
+  plasma_barrel:      { id: 'plasma_barrel',      name: '等离子枪管',   rarity: 'rare',      slotType: 'barrel',   spriteKey: 'att_barrel',   desc: '伤害 +30%',            damageMult: 1.30, sandValue: 70, weight: 10 },
+  void_suppressor:    { id: 'void_suppressor',    name: '虚空消音器',   rarity: 'rare',      slotType: 'barrel',   spriteKey: 'att_barrel',   desc: '伤害 +20%，暴击 +5%', damageMult: 1.20, critBonus: 0.05, sandValue: 65, weight: 8 },
+  plasma_accelerator: { id: 'plasma_accelerator', name: '等离子加速管', rarity: 'legendary', slotType: 'barrel',   spriteKey: 'att_barrel',   desc: '伤害 +45%',            damageMult: 1.45, sandValue: 130, weight: 3 },
 
-export const MAX_ATTACHMENTS = 3
+  // ── 瞄准镜（scope）────────────────────────────────
+  reflex_scope:  { id: 'reflex_scope',  name: '反射瞄准镜', rarity: 'uncommon',  slotType: 'scope',    spriteKey: 'att_scope',    desc: '暴击 +12%', critBonus: 0.12, sandValue: 28, weight: 20 },
+  hawk_scope:    { id: 'hawk_scope',    name: '鹰眼瞄准镜', rarity: 'rare',      slotType: 'scope',    spriteKey: 'att_scope',    desc: '暴击 +22%', critBonus: 0.22, sandValue: 60, weight: 10 },
+  echo_sight:    { id: 'echo_sight',    name: '回响瞄准镜', rarity: 'rare',      slotType: 'scope',    spriteKey: 'att_scope',    desc: '暴击 +28%', critBonus: 0.28, sandValue: 65, weight: 8 },
+  quantum_scope: { id: 'quantum_scope', name: '量子瞄准镜', rarity: 'legendary', slotType: 'scope',    spriteKey: 'att_scope',    desc: '暴击 +45%', critBonus: 0.45, sandValue: 130, weight: 3 },
+
+  // ── 弹匣（magazine）───────────────────────────────
+  extended_mag: { id: 'extended_mag', name: '延长弹匣',   rarity: 'common',    slotType: 'magazine', spriteKey: 'att_magazine', desc: '射速 +10%',             fireRateMult: 0.90, sandValue: 15, weight: 25 },
+  rapid_mag:    { id: 'rapid_mag',    name: '速射弹匣',   rarity: 'uncommon',  slotType: 'magazine', spriteKey: 'att_magazine', desc: '射速 +18%',             fireRateMult: 0.82, sandValue: 30, weight: 20 },
+  drum_mag:     { id: 'drum_mag',     name: '鼓形弹匣',   rarity: 'rare',      slotType: 'magazine', spriteKey: 'att_magazine', desc: '射速 +30%',             fireRateMult: 0.70, sandValue: 65, weight: 10 },
+  void_magazine: { id: 'void_magazine', name: '虚空弹匣', rarity: 'rare',      slotType: 'magazine', spriteKey: 'att_magazine', desc: '射速 +25%，伤害 +12%', fireRateMult: 0.75, damageMult: 1.12, sandValue: 70, weight: 8 },
+
+  // ── 枪托（stock）──────────────────────────────────
+  combat_grip:     { id: 'combat_grip',     name: '战术握把',   rarity: 'common',    slotType: 'stock',    spriteKey: 'att_stock',    desc: '伤害 +8%',             damageMult: 1.08, sandValue: 15, weight: 25 },
+  stabilizer:      { id: 'stabilizer',      name: '稳定器',     rarity: 'uncommon',  slotType: 'stock',    spriteKey: 'att_stock',    desc: '暴击 +6%，伤害 +8%',  critBonus: 0.06, damageMult: 1.08, sandValue: 32, weight: 20 },
+  precision_stock: { id: 'precision_stock', name: '精准枪托',   rarity: 'rare',      slotType: 'stock',    spriteKey: 'att_stock',    desc: '暴击 +10%，伤害 +15%', critBonus: 0.10, damageMult: 1.15, sandValue: 65, weight: 10 },
+  resonance_stock: { id: 'resonance_stock', name: '共鸣枪托',   rarity: 'legendary', slotType: 'stock',    spriteKey: 'att_stock',    desc: '伤害 +22%，暴击 +15%', damageMult: 1.22, critBonus: 0.15, sandValue: 130, weight: 3 },
+}
 
 // ─── 武器掉落 ────────────────────────────────────────────
 const WEAPON_LIST = Object.values(WEAPON_DEFINITIONS)
@@ -292,8 +313,10 @@ export function rollWeaponDrop(isBoss: boolean, isElite: boolean): WeaponDef | n
 
 // ─── 配件掉落 ────────────────────────────────────────────
 const ATT_LIST     = Object.values(ATTACHMENT_DEFINITIONS)
+const ATT_COMMON   = ATT_LIST.filter(a => a.rarity === 'common')
 const ATT_UNCOMMON = ATT_LIST.filter(a => a.rarity === 'uncommon')
 const ATT_RARE     = ATT_LIST.filter(a => a.rarity === 'rare')
+const ATT_LEGENDARY = ATT_LIST.filter(a => a.rarity === 'legendary')
 
 function wPickAtt(pool: AttachmentDef[]): AttachmentDef {
   const total = pool.reduce((s, a) => s + a.weight, 0)
@@ -305,15 +328,21 @@ function wPickAtt(pool: AttachmentDef[]): AttachmentDef {
 export function rollAttachmentDrop(isBoss: boolean, isElite: boolean): AttachmentDef | null {
   const r = Math.random()
   if (isBoss) {
-    if (r > 0.75) return null
-    return Math.random() < 0.4 ? wPickAtt(ATT_RARE) : wPickAtt(ATT_UNCOMMON)
+    if (r > 0.80) return null
+    const q = Math.random()
+    if (q < 0.10) return wPickAtt(ATT_LEGENDARY)
+    if (q < 0.50) return wPickAtt(ATT_RARE)
+    return wPickAtt(ATT_UNCOMMON)
   }
   if (isElite) {
-    if (r > 0.35) return null
-    return Math.random() < 0.25 ? wPickAtt(ATT_RARE) : wPickAtt(ATT_UNCOMMON)
+    if (r > 0.45) return null
+    const q = Math.random()
+    if (q < 0.05) return wPickAtt(ATT_LEGENDARY)
+    if (q < 0.35) return wPickAtt(ATT_RARE)
+    return wPickAtt(ATT_UNCOMMON)
   }
-  if (r > 0.06) return null
-  return wPickAtt(ATT_UNCOMMON)
+  if (r > 0.10) return null
+  return Math.random() < 0.3 ? wPickAtt(ATT_UNCOMMON) : wPickAtt(ATT_COMMON)
 }
 
-export const BAG_CAPACITY = 6
+export const BAG_CAPACITY = 9

@@ -9,6 +9,7 @@ import {
   upgradeAttribute,
   claimDailyQuest,
   setSelectedCharacter,
+  discardFromStash,
   UPGRADE_MAX_LEVEL,
   UPGRADE_COST_PER_LEVEL,
 } from '../state/gameState'
@@ -18,10 +19,13 @@ import { CHARACTER_DEFINITIONS, CHARACTER_LIST } from '../config/characters'
 import type { CharacterId } from '../config/characters'
 import { FACTION_DEFINITIONS } from '../config/factions'
 import type { SkillType } from '../types/game.types'
-import { ITEM_DEFINITIONS } from '../config/items'
+import {
+  ITEM_DEFINITIONS, WEAPON_DEFINITIONS, ATTACHMENT_DEFINITIONS, ATTACHMENT_SLOTS,
+  RARITY_COLORS, RARITY_NAMES,
+} from '../config/items'
 import type { PlayerUpgrades } from '../state/gameState'
 
-type TabId = 'overview' | 'workshop' | 'upgrade' | 'character' | 'lore'
+type TabId = 'overview' | 'workshop' | 'upgrade' | 'character' | 'lore' | 'stash'
 
 export class SanctuaryScene extends Phaser.Scene {
   private tipText!: Phaser.GameObjects.Text
@@ -66,6 +70,7 @@ export class SanctuaryScene extends Phaser.Scene {
       { id: 'overview', label: '概览' },
       { id: 'workshop', label: '技能工坊' },
       { id: 'upgrade', label: '属性强化' },
+      { id: 'stash', label: '仓库' },
       { id: 'character', label: '选择角色' },
       { id: 'lore', label: '残响档案' },
     ]
@@ -119,6 +124,7 @@ export class SanctuaryScene extends Phaser.Scene {
       case 'overview': this.buildOverview(); break
       case 'workshop': this.buildWorkshop(); break
       case 'upgrade': this.buildUpgrade(); break
+      case 'stash': this.buildStash(); break
       case 'character': this.buildCharacter(); break
       case 'lore': this.buildLore(); break
     }
@@ -608,44 +614,202 @@ export class SanctuaryScene extends Phaser.Scene {
     const charDef = CHARACTER_DEFINITIONS[rt.player.selectedCharacter ?? 'echo_ranger']
     this.contentLayer.add(this.make.text({
       x: cx, y: y + 34,
-      text: `当前角色：${charDef?.name ?? '时间游侠'}  [${charDef?.role ?? '均衡'}]  — 点击上方「选择角色」可更换`,
+      text: `当前角色：${charDef?.name ?? '时间游侠'}  [${charDef?.role ?? '均衡'}]  — 点击「仓库」查看携带装备`,
       style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#4a7090' },
       add: false,
     }).setOrigin(0.5))
+  }
 
-    // ── 已带回装备（持久化物品） ──────────────────────────
-    const savedIds = rt.player.persistentItems ?? []
-    if (savedIds.length > 0) {
-      y += 60
+  // ─────────────────── TAB: 仓库 ──────────────────────
+  private buildStash() {
+    const { width } = this.scale
+    const rt = getRuntimeState()
+    const stash = rt.player.stash ?? { weaponId: null, attachmentIds: [], itemIds: [] }
+    const W = 700, leftX = width / 2 - W / 2
+    let y = 8
+
+    this.contentLayer.add(this.make.text({
+      x: width / 2, y,
+      text: '仓库  ─  撤离后装备存入此处，下次深潜自动携带',
+      style: { fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#506070' },
+      add: false,
+    }).setOrigin(0.5, 0))
+    y += 24
+
+    // 计算总价值
+    const weapDef = stash.weaponId
+      ? (WEAPON_DEFINITIONS as Record<string, import('../config/items').WeaponDef | undefined>)[stash.weaponId]
+      : null
+    const attDefs = stash.attachmentIds
+      .map(id => (ATTACHMENT_DEFINITIONS as Record<string, import('../config/items').AttachmentDef | undefined>)[id])
+      .filter(Boolean) as import('../config/items').AttachmentDef[]
+    const itemDefs = stash.itemIds
+      .map(id => (ITEM_DEFINITIONS as Record<string, import('../config/items').ItemDef | undefined>)[id])
+      .filter(Boolean) as import('../config/items').ItemDef[]
+
+    const totalValue = (weapDef?.sandValue ?? 0)
+      + attDefs.reduce((s, a) => s + a.sandValue, 0)
+      + itemDefs.reduce((s, i) => s + i.sandValue, 0)
+
+    this.contentLayer.add(this.make.text({
+      x: leftX, y,
+      text: `总估值：${totalValue} ⌛`,
+      style: { fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#e8d060' },
+      add: false,
+    }))
+    y += 22
+
+    // ── 武器 ─────────────────────────────────────────────
+    this.contentLayer.add(this.make.text({
+      x: leftX, y,
+      text: '── 武器 ──',
+      style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#446688' },
+      add: false,
+    }))
+    y += 18
+
+    if (weapDef) {
+      const wColor = RARITY_COLORS[weapDef.rarity]
+      const wColorHex = `#${wColor.toString(16).padStart(6, '0')}`
+      const wBg = this.add.rectangle(width / 2, y + 22, W, 44, 0x0a1828)
+      wBg.setStrokeStyle(1, wColor, 0.7)
+      this.contentLayer.add(wBg)
       this.contentLayer.add(this.make.text({
-        x: cx - CARD_W / 2, y,
-        text: '✦ 携带装备（上次撤离带回，下次深潜生效）',
-        style: { fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#7ce0bc' },
+        x: leftX + 8, y: y + 8,
+        text: `[${RARITY_NAMES[weapDef.rarity]}] ${weapDef.name}  —  ${weapDef.desc}`,
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: wColorHex },
         add: false,
       }))
-      y += 18
-      const rowH = 36
-      savedIds.forEach((id, idx) => {
-        const item = (ITEM_DEFINITIONS as Record<string, import('../config/items').ItemDef | undefined>)[id]
-        if (!item) return
-        const itemBg = this.add.rectangle(cx, y + rowH / 2, CARD_W, rowH, 0x080f1e)
-        itemBg.setStrokeStyle(1, 0x2a4060, 0.6)
-        this.contentLayer.add(itemBg)
-        this.contentLayer.add(this.make.text({
-          x: cx - CARD_W / 2 + 10, y: y + 8,
-          text: `[${idx + 1}] ${item.name}`,
-          style: { fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#c0c8e8' },
-          add: false,
-        }))
-        this.contentLayer.add(this.make.text({
-          x: cx - CARD_W / 2 + 10, y: y + 22,
-          text: item.desc,
-          style: { fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#4a6080' },
-          add: false,
-        }))
-        y += rowH + 4
+      this.contentLayer.add(this.make.text({
+        x: leftX + 8, y: y + 24,
+        text: `伤害 ${weapDef.baseDamage}${weapDef.pellets ? ` ×${weapDef.pellets}弹` : ''}  射速 ${weapDef.fireRateMs}ms  暴击 ${Math.round(weapDef.baseCritChance * 100)}%  估值 ${weapDef.sandValue}⌛`,
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#6090b0' },
+        add: false,
+      }))
+      // 丢弃按钮
+      const discardW = this.add.rectangle(leftX + W - 40, y + 22, 60, 28, 0x180808)
+      discardW.setStrokeStyle(1, 0x603030, 0.7).setInteractive({ useHandCursor: true })
+      discardW.on('pointerdown', () => {
+        discardFromStash('weapon', weapDef.id)
+        audioManager.playClick()
+        this.buildStash()
+        this.tipText.setText(`已丢弃：${weapDef.name}`)
       })
+      this.contentLayer.add(discardW)
+      this.contentLayer.add(this.make.text({
+        x: leftX + W - 40, y: y + 22,
+        text: '丢弃', style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#804040' },
+        add: false,
+      }).setOrigin(0.5))
+    } else {
+      this.contentLayer.add(this.make.text({
+        x: leftX + 8, y: y + 4,
+        text: '（空  —  深潜结束后自动存入武器）',
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#2a3848' },
+        add: false,
+      }))
     }
+    y += 52
+
+    // ── 配件 ─────────────────────────────────────────────
+    this.contentLayer.add(this.make.text({
+      x: leftX, y,
+      text: `── 配件  (${attDefs.length}/4) ──`,
+      style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#446688' },
+      add: false,
+    }))
+    y += 18
+
+    const slotNames: Record<string, string> = { barrel: '枪管', scope: '瞄准镜', magazine: '弹匣', stock: '枪托' }
+    ATTACHMENT_SLOTS.forEach(slot => {
+      const att = attDefs.find(a => a.slotType === slot)
+      const aColor = att ? RARITY_COLORS[att.rarity] : 0x1e3050
+      const aColorHex = `#${aColor.toString(16).padStart(6, '0')}`
+      const aBg = this.add.rectangle(width / 2, y + 17, W, 34, att ? 0x0a1520 : 0x080c14)
+      aBg.setStrokeStyle(1, aColor, att ? 0.7 : 0.3)
+      this.contentLayer.add(aBg)
+      this.contentLayer.add(this.make.text({
+        x: leftX + 8, y: y + 10,
+        text: att
+          ? `[${slotNames[slot]}] ${att.name}  —  ${att.desc}  (${att.sandValue}⌛)`
+          : `[${slotNames[slot]}]  空`,
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: att ? aColorHex : '#2a3848' },
+        add: false,
+      }))
+      if (att) {
+        const discardA = this.add.rectangle(leftX + W - 40, y + 17, 60, 24, 0x180808)
+        discardA.setStrokeStyle(1, 0x603030, 0.7).setInteractive({ useHandCursor: true })
+        const attRef = att
+        discardA.on('pointerdown', () => {
+          discardFromStash('attachment', attRef.id)
+          audioManager.playClick()
+          this.buildStash()
+          this.tipText.setText(`已丢弃：${attRef.name}`)
+        })
+        this.contentLayer.add(discardA)
+        this.contentLayer.add(this.make.text({
+          x: leftX + W - 40, y: y + 17,
+          text: '丢弃', style: { fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#804040' },
+          add: false,
+        }).setOrigin(0.5))
+      }
+      y += 38
+    })
+
+    // ── 物品 ─────────────────────────────────────────────
+    y += 4
+    this.contentLayer.add(this.make.text({
+      x: leftX, y,
+      text: `── 物品  (${itemDefs.length}/9) ──`,
+      style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#446688' },
+      add: false,
+    }))
+    y += 18
+
+    if (itemDefs.length === 0) {
+      this.contentLayer.add(this.make.text({
+        x: leftX + 8, y,
+        text: '（空  —  深潜中拾取并成功撤离后存入）',
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#2a3848' },
+        add: false,
+      }))
+    }
+
+    itemDefs.forEach(item => {
+      const iColor = RARITY_COLORS[item.rarity]
+      const iColorHex = `#${iColor.toString(16).padStart(6, '0')}`
+      const iBg = this.add.rectangle(width / 2, y + 17, W, 34, 0x0a1020)
+      iBg.setStrokeStyle(1, iColor, 0.6)
+      this.contentLayer.add(iBg)
+      this.contentLayer.add(this.make.text({
+        x: leftX + 8, y: y + 5,
+        text: `[${RARITY_NAMES[item.rarity]}] ${item.name}`,
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: iColorHex },
+        add: false,
+      }))
+      this.contentLayer.add(this.make.text({
+        x: leftX + 8, y: y + 20,
+        text: `${item.desc}  (${item.sandValue}⌛)`,
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#4a6080' },
+        add: false,
+      }))
+      const discardI = this.add.rectangle(leftX + W - 40, y + 17, 60, 24, 0x180808)
+      discardI.setStrokeStyle(1, 0x603030, 0.7).setInteractive({ useHandCursor: true })
+      const itemRef = item
+      discardI.on('pointerdown', () => {
+        discardFromStash('item', itemRef.id)
+        audioManager.playClick()
+        this.buildStash()
+        this.tipText.setText(`已丢弃：${itemRef.name}`)
+      })
+      this.contentLayer.add(discardI)
+      this.contentLayer.add(this.make.text({
+        x: leftX + W - 40, y: y + 17,
+        text: '丢弃', style: { fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#804040' },
+        add: false,
+      }).setOrigin(0.5))
+      y += 38
+    })
   }
 
   // ─────────────────── TAB: 角色档案 ──────────────────
