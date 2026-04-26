@@ -35,6 +35,38 @@ export interface NetDiveResult {
   duration: number
 }
 
+/** Host 每帧广播所有存活敌人的位置/HP */
+export interface NetEnemyState {
+  id: number
+  x: number
+  y: number
+  hp: number
+  maxHp: number
+}
+
+/** Host 广播掉落物生成（物品/武器/配件/时砂） */
+export interface NetDropSpawn {
+  dropId: string       // 全局唯一，用于拾取同步
+  type: 'item' | 'weapon' | 'attachment' | 'sand'
+  refId: string        // item/weapon/attachment ID，sand 时为空
+  sandValue?: number   // type='sand' 时有效
+  x: number
+  y: number
+}
+
+/** 任意玩家广播拾取事件，所有客户端删除该 dropId */
+export interface NetPickup {
+  dropId: string
+  playerId: string
+}
+
+/** 远程音效（射击/拾取等），用于其他客户端播放 */
+export interface NetSoundEvent {
+  type: 'shot' | 'pickup' | 'enemyDeath' | 'extract'
+  x: number
+  y: number
+}
+
 export class RoomRealtime {
   private channel: RealtimeChannel | null = null
 
@@ -119,6 +151,54 @@ export class RoomRealtime {
     if (!this.channel) return
     this.channel.on('broadcast', { event: 'dive_result' }, ({ payload }) => {
       handler(payload as NetDiveResult)
+    })
+  }
+
+  // ── 敌人状态 (Host → All) ──────────────────────────
+  sendEnemyStates(states: NetEnemyState[]) {
+    this.channel?.send({ type: 'broadcast', event: 'enemy_states', payload: { states } })
+  }
+
+  onEnemyStates(handler: (states: NetEnemyState[]) => void) {
+    if (!this.channel) return
+    this.channel.on('broadcast', { event: 'enemy_states' }, ({ payload }) => {
+      handler((payload as { states: NetEnemyState[] }).states)
+    })
+  }
+
+  // ── 掉落物生成 (Host → All) ───────────────────────
+  sendDropSpawn(drops: NetDropSpawn[]) {
+    this.channel?.send({ type: 'broadcast', event: 'drop_spawn', payload: { drops } })
+  }
+
+  onDropSpawn(handler: (drops: NetDropSpawn[]) => void) {
+    if (!this.channel) return
+    this.channel.on('broadcast', { event: 'drop_spawn' }, ({ payload }) => {
+      handler((payload as { drops: NetDropSpawn[] }).drops)
+    })
+  }
+
+  // ── 拾取同步 (Any → All) ─────────────────────────
+  sendPickup(pickup: NetPickup) {
+    this.channel?.send({ type: 'broadcast', event: 'pickup', payload: pickup })
+  }
+
+  onPickup(handler: (p: NetPickup) => void) {
+    if (!this.channel) return
+    this.channel.on('broadcast', { event: 'pickup' }, ({ payload }) => {
+      handler(payload as NetPickup)
+    })
+  }
+
+  // ── 音效广播 (Any → All) ─────────────────────────
+  sendSound(evt: NetSoundEvent) {
+    this.channel?.send({ type: 'broadcast', event: 'sound_event', payload: evt })
+  }
+
+  onSound(handler: (evt: NetSoundEvent) => void) {
+    if (!this.channel) return
+    this.channel.on('broadcast', { event: 'sound_event' }, ({ payload }) => {
+      handler(payload as NetSoundEvent)
     })
   }
 

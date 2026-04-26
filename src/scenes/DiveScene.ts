@@ -8,7 +8,7 @@ import { closeRoomBeacon, getCurrentUser, saveDiveRecord } from '../lib/supabase
 import { audioManager } from '../systems/AudioManager'
 import { getKeybindings, keyCodeFromStr } from '../systems/SettingsManager'
 import { voiceManager, getSpeakerRole } from '../systems/VoiceManager'
-import { RoomRealtime, type NetEnemyDeath, type NetDiveResult } from '../net/realtime'
+import { RoomRealtime, type NetEnemyDeath, type NetDiveResult, type NetEnemyState, type NetDropSpawn, type NetPickup } from '../net/realtime'
 import {
   addTimeSand,
   getRuntimeState,
@@ -92,6 +92,8 @@ export class DiveScene extends Phaser.Scene {
   }
   private onlineDiveResults: NetDiveResult[] = []
   private lastHpSyncAt = 0
+  private lastEnemySyncAt = 0                         // Host 敌人广播时间戳
+  private dropRegistry = new Map<string, Phaser.GameObjects.GameObject>() // dropId → sprite
 
   private offline = true
   private roomCode = ''
@@ -181,6 +183,8 @@ export class DiveScene extends Phaser.Scene {
     this._rngState = seed
     this.onlineDiveResults = []
     this.lastHpSyncAt = 0
+    this.lastEnemySyncAt = 0
+    this.dropRegistry.clear()
     this.diveFinished = false
     this.waveNumber = 0
     this.waveInProgress = false
@@ -326,6 +330,23 @@ export class DiveScene extends Phaser.Scene {
         hp: this.hp,
         t: Date.now(),
       })
+    }
+
+    // Host 每 150ms 广播所有存活敌人状态
+    if (!this.offline && this.isHost && this.roomRealtime && time - this.lastEnemySyncAt > 150) {
+      this.lastEnemySyncAt = time
+      const states: NetEnemyState[] = []
+      this.enemies.children.each(child => {
+        const e = child as EnemyBody
+        if (!e.active) return true
+        states.push({
+          id: e.getData('enemyId') as number,
+          x: e.x, y: e.y,
+          hp: e.hp, maxHp: e.maxHp,
+        })
+        return true
+      })
+      if (states.length > 0) this.roomRealtime.sendEnemyStates(states)
     }
     if (Phaser.Input.Keyboard.JustDown(this.keys.digit1)) {
       this.tryCast(0)
@@ -1053,13 +1074,18 @@ export class DiveScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.pickups, (_, p) => {
       const pickup = p as Phaser.Physics.Arcade.Image
       const baseGain: number = pickup.getData('sandValue') ?? (18 + Math.floor(Math.random() * 12))
-      // 连击加成：3连 +25%，6连 +60%，10连 +100%
       const comboMult = this.comboCount >= 10 ? 2.0 : this.comboCount >= 6 ? 1.6 : this.comboCount >= 3 ? 1.25 : 1.0
       const gain = Math.floor(baseGain * comboMult)
+      const dropId = pickup.getData('dropId') as string | undefined
       pickup.destroy()
+      if (dropId) {
+        this.dropRegistry.delete(dropId)
+        if (!this.offline) this.roomRealtime?.sendPickup({ dropId, playerId: getRuntimeState().player.id })
+      }
       this.timeSand += gain
       addTimeSand(gain)
       audioManager.playPickup()
+      if (!this.offline) this.roomRealtime?.sendSound({ type: 'pickup', x: this.player.x, y: this.player.y })
       const label = comboMult > 1 ? `时砂 +${gain}  ×${comboMult.toFixed(2)}` : `时砂 +${gain}`
       this.emitHud(label)
     })
@@ -1071,7 +1097,12 @@ export class DiveScene extends Phaser.Scene {
       const itemId = dropImg.getData('itemId') as ItemId
       if (!itemId) return
       if (this.tryPickupItem(ITEM_DEFINITIONS[itemId], dropImg.x, dropImg.y)) {
+        const dropId = dropImg.getData('dropId') as string | undefined
         dropImg.destroy()
+        if (dropId) {
+          this.dropRegistry.delete(dropId)
+          if (!this.offline) this.roomRealtime?.sendPickup({ dropId, playerId: getRuntimeState().player.id })
+        }
       }
     })
 
@@ -1081,8 +1112,14 @@ export class DiveScene extends Phaser.Scene {
       if (!dropImg.active) return
       const weapon = dropImg.getData('weaponDef') as WeaponDef
       if (!weapon) return
+      const dropId = dropImg.getData('dropId') as string | undefined
       this.tryEquipWeapon(weapon, dropImg.x, dropImg.y)
       dropImg.destroy()
+      if (dropId) {
+        this.dropRegistry.delete(dropId)
+        if (!this.offline) this.roomRealtime?.sendPickup({ dropId, playerId: getRuntimeState().player.id })
+      }
+      if (!this.offline) this.roomRealtime?.sendSound({ type: 'pickup', x: this.player.x, y: this.player.y })
     })
 
     // ─── 配件拾取 ───────────────────────────────────
@@ -1092,7 +1129,12 @@ export class DiveScene extends Phaser.Scene {
       const att = dropImg.getData('attDef') as AttachmentDef
       if (!att) return
       if (this.tryPickupAttachment(att, dropImg.x, dropImg.y)) {
+        const dropId = dropImg.getData('dropId') as string | undefined
         dropImg.destroy()
+        if (dropId) {
+          this.dropRegistry.delete(dropId)
+          if (!this.offline) this.roomRealtime?.sendPickup({ dropId, playerId: getRuntimeState().player.id })
+        }
       }
     })
   }
@@ -1411,6 +1453,7 @@ export class DiveScene extends Phaser.Scene {
           tx: targetX, ty: targetY,
           isEcho: false, t: Date.now(),
         })
+        this.roomRealtime.sendSound({ type: 'shot', x: this.player.x, y: this.player.y })
       }
     }
   }
@@ -2018,11 +2061,12 @@ export class DiveScene extends Phaser.Scene {
     const dropY = enemy.y
     const enemyId = enemy.getData('enemyId') as number
 
-    // 联机：广播敌人死亡
+    // 联机：广播敌人死亡 + 音效
     if (!this.offline && this.roomRealtime && enemyId) {
       if (!this.killedEnemyIds.has(enemyId)) {
         this.killedEnemyIds.add(enemyId)
         this.roomRealtime.sendEnemyDeath({ enemyId, killerId: getRuntimeState().player.id })
+        this.roomRealtime.sendSound({ type: 'enemyDeath', x: dropX, y: dropY })
       }
     }
 
@@ -2087,39 +2131,60 @@ export class DiveScene extends Phaser.Scene {
     }
 
     const dropChance = isBoss ? 1 : isElite ? 0.9 : 0.55
-    if (Math.random() < dropChance) {
-      const dropCount = isBoss ? 3 : isElite ? 2 : 1
-      // 基础时砂值：普通 18-29，精英 35-50，Boss 80-100
-      const baseValue = isBoss
-        ? 80 + Math.floor(Math.random() * 20)
-        : isElite
-          ? 35 + Math.floor(Math.random() * 15)
-          : 18 + Math.floor(Math.random() * 12)
-      for (let i = 0; i < dropCount; i++) {
-        const ox = (Math.random() - 0.5) * 60
-        const oy = (Math.random() - 0.5) * 60
-        const p = this.physics.add.image(dropX + ox, dropY + oy, 'pickup')
-        p.setScale(isBoss ? 2.2 : isElite ? 1.8 : 1.5)
-        p.setData('sandValue', baseValue)
-        this.pickups.add(p)
-        const shine = this.add.image(dropX + ox, dropY + oy, 'effect_pickup_shine').setScale(isBoss ? 1.8 : 1.1)
-        this.tweens.add({ targets: shine, alpha: 0, duration: 550, onComplete: () => shine.destroy() })
-        this.tweens.add({ targets: p, y: p.y - 6, duration: 700, yoyo: true, repeat: -1 })
-      }
-    }
+    // 多人模式：只有 Host 生成掉落物（并广播给所有人），避免各自独立随机
+    if (this.offline || this.isHost) {
+      const netDrops: NetDropSpawn[] = []
 
-    // ─── 掉落：物品 / 武器 / 配件 ─────────────────────
-    const itemDef = rollItemDrop(isBoss, isElite)
-    if (itemDef) {
-      this.spawnItemDrop(itemDef, dropX + (Math.random() - 0.5) * 40, dropY + (Math.random() - 0.5) * 40)
-    }
-    const weaponDef = rollWeaponDrop(isBoss, isElite)
-    if (weaponDef) {
-      this.spawnWeaponDrop(weaponDef, dropX + 30, dropY + (Math.random() - 0.5) * 30)
-    }
-    const attDef = rollAttachmentDrop(isBoss, isElite)
-    if (attDef) {
-      this.spawnAttachmentDrop(attDef, dropX - 30, dropY + (Math.random() - 0.5) * 30)
+      if (Math.random() < dropChance) {
+        const dropCount = isBoss ? 3 : isElite ? 2 : 1
+        const baseValue = isBoss
+          ? 80 + Math.floor(Math.random() * 20)
+          : isElite
+            ? 35 + Math.floor(Math.random() * 15)
+            : 18 + Math.floor(Math.random() * 12)
+        for (let i = 0; i < dropCount; i++) {
+          const ox = (Math.random() - 0.5) * 60
+          const oy = (Math.random() - 0.5) * 60
+          const sid = crypto.randomUUID()
+          const p = this.physics.add.image(dropX + ox, dropY + oy, 'pickup')
+          p.setScale(isBoss ? 2.2 : isElite ? 1.8 : 1.5)
+          p.setData('sandValue', baseValue)
+          p.setData('dropId', sid)
+          this.pickups.add(p)
+          this.dropRegistry.set(sid, p)
+          const shine = this.add.image(dropX + ox, dropY + oy, 'effect_pickup_shine').setScale(isBoss ? 1.8 : 1.1)
+          this.tweens.add({ targets: shine, alpha: 0, duration: 550, onComplete: () => shine.destroy() })
+          this.tweens.add({ targets: p, y: p.y - 6, duration: 700, yoyo: true, repeat: -1 })
+          if (!this.offline) netDrops.push({ dropId: sid, type: 'sand', refId: '', sandValue: baseValue, x: dropX + ox, y: dropY + oy })
+        }
+      }
+
+      // ─── 掉落：物品 / 武器 / 配件 ─────────────────────
+      const itemDef = rollItemDrop(isBoss, isElite)
+      if (itemDef) {
+        const ix = dropX + (Math.random() - 0.5) * 40, iy = dropY + (Math.random() - 0.5) * 40
+        const did = crypto.randomUUID()
+        this.spawnItemDrop(itemDef, ix, iy, did)
+        if (!this.offline) netDrops.push({ dropId: did, type: 'item', refId: itemDef.id, x: ix, y: iy })
+      }
+      const weaponDef = rollWeaponDrop(isBoss, isElite)
+      if (weaponDef) {
+        const wx = dropX + 30, wy = dropY + (Math.random() - 0.5) * 30
+        const did = crypto.randomUUID()
+        this.spawnWeaponDrop(weaponDef, wx, wy, did)
+        if (!this.offline) netDrops.push({ dropId: did, type: 'weapon', refId: weaponDef.id, x: wx, y: wy })
+      }
+      const attDef = rollAttachmentDrop(isBoss, isElite)
+      if (attDef) {
+        const ax = dropX - 30, ay = dropY + (Math.random() - 0.5) * 30
+        const did = crypto.randomUUID()
+        this.spawnAttachmentDrop(attDef, ax, ay, did)
+        if (!this.offline) netDrops.push({ dropId: did, type: 'attachment', refId: attDef.id, x: ax, y: ay })
+      }
+
+      if (!this.offline && netDrops.length > 0) {
+        this.roomRealtime?.sendDropSpawn(netDrops)
+      }
     }
   }
 
@@ -2274,6 +2339,72 @@ export class DiveScene extends Phaser.Scene {
         if (!this.onlineDiveResults.find(r => r.id === res.id)) {
           this.onlineDiveResults.push(res)
         }
+      })
+
+      // ── 敌人状态（非 Host 接收，更新敌人位置/HP）─────
+      if (!this.isHost) {
+        this.roomRealtime!.onEnemyStates((states) => {
+          states.forEach(state => {
+            this.enemies.children.each(child => {
+              const e = child as EnemyBody
+              if (!e.active) return true
+              if ((e.getData('enemyId') as number) === state.id) {
+                // 平滑插值到 Host 权威位置
+                e.x = Phaser.Math.Linear(e.x, state.x, 0.4)
+                e.y = Phaser.Math.Linear(e.y, state.y, 0.4)
+                e.hp = state.hp
+                e.maxHp = state.maxHp
+              }
+              return true
+            })
+          })
+        })
+      }
+
+      // ── 掉落物生成（非 Host 接收 Host 广播的掉落）────
+      if (!this.isHost) {
+        this.roomRealtime!.onDropSpawn((drops) => {
+          drops.forEach(d => {
+            if (this.dropRegistry.has(d.dropId)) return // 已存在
+            if (d.type === 'sand') {
+              const p = this.physics.add.image(d.x, d.y, 'pickup')
+              p.setScale(1.5)
+              p.setData('sandValue', d.sandValue ?? 20)
+              p.setData('dropId', d.dropId)
+              this.pickups.add(p)
+              this.dropRegistry.set(d.dropId, p)
+              this.tweens.add({ targets: p, y: p.y - 6, duration: 700, yoyo: true, repeat: -1 })
+            } else if (d.type === 'item') {
+              const item = (ITEM_DEFINITIONS as Record<string, ItemDef | undefined>)[d.refId]
+              if (item) this.spawnItemDrop(item, d.x, d.y, d.dropId)
+            } else if (d.type === 'weapon') {
+              const weapon = (WEAPON_DEFINITIONS as Record<string, WeaponDef | undefined>)[d.refId]
+              if (weapon) this.spawnWeaponDrop(weapon, d.x, d.y, d.dropId)
+            } else if (d.type === 'attachment') {
+              const att = (ATTACHMENT_DEFINITIONS as Record<string, AttachmentDef | undefined>)[d.refId]
+              if (att) this.spawnAttachmentDrop(att, d.x, d.y, d.dropId)
+            }
+          })
+        })
+      }
+
+      // ── 拾取同步（任意玩家拾取 → 所有客户端删除）───
+      this.roomRealtime!.onPickup(({ dropId, playerId }) => {
+        const rt = getRuntimeState()
+        if (playerId === rt.player.id) return // 自己的拾取已在本地处理
+        const obj = this.dropRegistry.get(dropId)
+        if (obj && (obj as Phaser.GameObjects.Image).active) {
+          (obj as Phaser.GameObjects.Image).destroy()
+        }
+        this.dropRegistry.delete(dropId)
+      })
+
+      // ── 远程音效 ──────────────────────────────────────
+      this.roomRealtime!.onSound((evt) => {
+        // 根据距离决定音量（可选：距离越远越小，目前直接播放）
+        if (evt.type === 'shot') audioManager.playShoot()
+        else if (evt.type === 'pickup') audioManager.playPickup()
+        else if (evt.type === 'enemyDeath') audioManager.playEnemyDeath()
       })
     }
 
@@ -2696,12 +2827,15 @@ export class DiveScene extends Phaser.Scene {
   // ─────────────────── 装备系统 ────────────────────────────────────
 
   /** 在指定位置生成装备掉落物 */
-  private spawnItemDrop(item: ItemDef, x: number, y: number) {
+  private spawnItemDrop(item: ItemDef, x: number, y: number, dropId?: string) {
+    const id = dropId ?? crypto.randomUUID()
     const drop = this.physics.add.image(x, y, item.spriteKey)
     drop.setScale(2)
     drop.setData('itemId', item.id)
+    drop.setData('dropId', id)
     drop.setDepth(15)
     this.itemDropGroup.add(drop)
+    this.dropRegistry.set(id, drop)
 
     // 稀有度光晕边框色
     const rarityColor = RARITY_COLORS[item.rarity]
@@ -3104,10 +3238,13 @@ export class DiveScene extends Phaser.Scene {
 
   // ── 武器 / 配件掉落物 ─────────────────────────────────────────
 
-  private spawnWeaponDrop(weapon: WeaponDef, x: number, y: number) {
+  private spawnWeaponDrop(weapon: WeaponDef, x: number, y: number, dropId?: string) {
+    const id = dropId ?? crypto.randomUUID()
     const drop = this.physics.add.image(x, y, weapon.spriteKey).setScale(2.5).setDepth(15)
     drop.setData('weaponDef', weapon)
+    drop.setData('dropId', id)
     this.weaponDropGroup.add(drop)
+    this.dropRegistry.set(id, drop)
     this.tweens.add({ targets: drop, y: y - 8, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
 
     const color = RARITY_COLORS[weapon.rarity]
@@ -3149,10 +3286,13 @@ export class DiveScene extends Phaser.Scene {
     this.tweens.add({ targets: fx, y: fx.y - 32, alpha: 0, duration: 1000, onComplete: () => fx.destroy() })
   }
 
-  private spawnAttachmentDrop(att: AttachmentDef, x: number, y: number) {
+  private spawnAttachmentDrop(att: AttachmentDef, x: number, y: number, dropId?: string) {
+    const id = dropId ?? crypto.randomUUID()
     const drop = this.physics.add.image(x, y, att.spriteKey).setScale(2.2).setDepth(15)
     drop.setData('attDef', att)
+    drop.setData('dropId', id)
     this.attachmentDropGroup.add(drop)
+    this.dropRegistry.set(id, drop)
     this.tweens.add({ targets: drop, y: y - 7, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
 
     const color = RARITY_COLORS[att.rarity]
