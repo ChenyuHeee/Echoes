@@ -21,6 +21,7 @@ import {
   getSpeedMultiplier,
   saveStash,
   mergeIntoStash,
+  addToStash,
   setRoom,
   type Stash,
 } from '../state/gameState'
@@ -539,7 +540,7 @@ export class DiveScene extends Phaser.Scene {
 
   private spawnPlayer() {
     this.player = this.physics.add.sprite(240, 220, this.charSpriteKey)
-    this.player.setScale(1)   // 64px 角色 SVG 不需要放大
+    this.player.setScale(2)   // 32px 精灵 ×2，与原来手感一致
     this.player.setCollideWorldBounds(true)
     this.player.setDrag(1000, 1000)
     this.player.setMaxVelocity(220, 220)
@@ -982,50 +983,75 @@ export class DiveScene extends Phaser.Scene {
       return true
     })
 
-    // 优先拾取武器（距离相近时），F键触发
+    // 配件自动拾取
+    const na = nearestAtt as Phaser.Physics.Arcade.Image | null
+    if (na && nearestAttDist <= PICKUP_RADIUS) {
+      const att = na.getData('attDef') as AttachmentDef
+      if (att) {
+        // 配件始终自动拾取，不需按 F
+        if (this.tryPickupAttachment(att, na.x, na.y)) {
+          const dropId = na.getData('dropId') as string | undefined
+          na.destroy()
+          if (dropId) {
+            this.dropRegistry.delete(dropId)
+            if (!this.offline) this.roomRealtime?.sendPickup({ dropId, playerId: getRuntimeState().player.id })
+          }
+        }
+      }
+    }
+
+    // 武器：F 键两次确认模式（首次提示，再次执行）
     const nw = nearestWeapon as Phaser.Physics.Arcade.Image | null
     if (nw && nearestWeaponDist <= PICKUP_RADIUS) {
       const w = nw.getData('weaponDef') as WeaponDef
-      if (w && !this._pickupHintShown) {
-        this.emitHud(`[F] 拾取武器：${w.name}  [${RARITY_NAMES[w.rarity]}]`)
-        this._pickupHintShown = true
-      }
-      if (justPressedF) {
-        this.tryEquipWeapon(w, nw.x, nw.y)
-        const dropId = nw.getData('dropId') as string | undefined
-        nw.destroy()
-        if (dropId) {
-          this.dropRegistry.delete(dropId)
-          if (!this.offline) this.roomRealtime?.sendPickup({ dropId, playerId: getRuntimeState().player.id })
-        }
-        if (!this.offline) this.roomRealtime?.sendSound({ type: 'pickup', x: px, y: py })
-        this._pickupHintShown = false
-      }
-    } else {
-      const na = nearestAtt as Phaser.Physics.Arcade.Image | null
-      if (na && nearestAttDist <= PICKUP_RADIUS) {
-        const att = na.getData('attDef') as AttachmentDef
-        if (att && !this._pickupHintShown) {
-          this.emitHud(`[F] 拾取配件：${att.name}  [${RARITY_NAMES[att.rarity]}]`)
+      if (w) {
+        const hasWeapon = !!this.equippedWeapon
+        const hint = hasWeapon
+          ? `[F]替换成 ${w.name}  /  再次 F入仓库`
+          : `[F] 装备 ${w.name}  [${RARITY_NAMES[w.rarity]}]`
+        if (!this._pickupHintShown) {
+          this.emitHud(hint)
           this._pickupHintShown = true
         }
         if (justPressedF) {
-          if (this.tryPickupAttachment(att, na.x, na.y)) {
-            const dropId = na.getData('dropId') as string | undefined
-            na.destroy()
+          if (hasWeapon && this._weaponPickupPending === w.id) {
+            // 第二次按 F — 入仓库（不替换手中武器）
+            addToStash('weapon', w.id)
+            const dropId = nw.getData('dropId') as string | undefined
+            nw.destroy()
             if (dropId) {
               this.dropRegistry.delete(dropId)
               if (!this.offline) this.roomRealtime?.sendPickup({ dropId, playerId: getRuntimeState().player.id })
             }
+            if (!this.offline) this.roomRealtime?.sendSound({ type: 'pickup', x: px, y: py })
+            this.emitHud(`入仓库：${w.name}  [${RARITY_NAMES[w.rarity]}]`)
+            this._weaponPickupPending = null
+          } else {
+            // 第一次按 F — 替换手中武器
+            this.tryEquipWeapon(w, nw.x, nw.y)
+            const dropId = nw.getData('dropId') as string | undefined
+            nw.destroy()
+            if (dropId) {
+              this.dropRegistry.delete(dropId)
+              if (!this.offline) this.roomRealtime?.sendPickup({ dropId, playerId: getRuntimeState().player.id })
+            }
+            if (!this.offline) this.roomRealtime?.sendSound({ type: 'pickup', x: px, y: py })
+            this._weaponPickupPending = hasWeapon ? null : null
           }
           this._pickupHintShown = false
+          this._weaponPickupPending = null
+        } else {
+          // 没按 F：记录候选武器以支持二次确认
+          if (hasWeapon) this._weaponPickupPending = w.id
         }
-      } else {
-        this._pickupHintShown = false
       }
+    } else {
+      this._pickupHintShown = false
+      this._weaponPickupPending = null
     }
   }
   private _pickupHintShown = false
+  private _weaponPickupPending: string | null = null
 
   /** 磁吸拾取：120px 内时砂自动向玩家飞 */
   private updatePickupMagnet() {
@@ -1347,8 +1373,18 @@ export class DiveScene extends Phaser.Scene {
 
   private updateVisuals(time: number) {
     const speed = this.player.body ? this.player.body.velocity.length() : 0
-    // 始终使用角色 SVG，不再切换 player_idle/walk/dash
+    // 始终使用角色 SVG；用 scaleY 轻微跟脚动画模拟行走手感
     this.player.setTexture(this.charSpriteKey)
+    if (Date.now() < this.dashVisualUntil) {
+      // 冲刺时水平拉伸
+      this.player.setScale(2.4, 1.6)
+    } else if (speed > 10) {
+      // 行走跟脚轻微上下跳动
+      const bob = 1 + 0.07 * Math.sin(time / 90)
+      this.player.setScale(2, 2 * bob)
+    } else {
+      this.player.setScale(2, 2)
+    }
 
     this.extractionHint.setAlpha(Math.floor(time / 400) % 2 === 0 ? 1 : 0.6)
 
