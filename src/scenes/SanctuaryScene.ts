@@ -49,6 +49,7 @@ export class SanctuaryScene extends Phaser.Scene {
   private contentBaseY = 108
   private scrollOffset = 0
   private scrollMax = 0
+  private detailLayer: Phaser.GameObjects.Container | null = null
 
   constructor() {
     super('SanctuaryScene')
@@ -135,6 +136,8 @@ export class SanctuaryScene extends Phaser.Scene {
   private switchTab(tab: TabId) {
     this.activeTab = tab
     this.contentLayer.removeAll(true)
+    // 销毁固定详情层（角色页专用）
+    if (this.detailLayer) { this.detailLayer.destroy(); this.detailLayer = null }
     this.tipText.setText('')
     // 重置滚动状态
     this.scrollOffset = 0
@@ -897,141 +900,93 @@ export class SanctuaryScene extends Phaser.Scene {
     const unlocked: CharacterId[] = rt.player.unlockedCharacters ?? ['echo_ranger']
     let selected: CharacterId = rt.player.selectedCharacter ?? 'echo_ranger'
 
-    // 布局常量（相对于 contentLayer 本地坐标，contentLayer 位于屏幕 y=108）
-    const LIST_LEFT = 20      // 左侧列表区起始 x
+    // 布局常量
+    const LIST_LEFT = 20
     const CARD_W = 190
     const CARD_H = 52
-    const DETAIL_X = 240      // 右侧详情区起始 x
+    const DETAIL_X = 240      // 右侧详情区起始 x（相对于固定 detailLayer）
     const DETAIL_W = width - DETAIL_X - 20
 
-    // ── 标题 ────────────────────────────────────────────
+    // ── 标题 & 分割线（固定，不随列表滚动）─────────────
     this.contentLayer.add(
       this.make.text({ x: width / 2, y: 8,
         text: '选择角色', add: false,
         style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color: '#5090b0' },
       }).setOrigin(0.5)
     )
-
-    // 分割线
     this.contentLayer.add(this.add.rectangle(width / 2, 26, width - 20, 1, 0x304050, 0.4))
 
-    // ── 追踪所有可重建对象 ─────────────────────────────
-    const allObjs: Phaser.GameObjects.GameObject[] = []
+    // ── 固定详情层（不跟随 contentLayer 滚动）─────────
+    if (this.detailLayer) this.detailLayer.destroy()
+    this.detailLayer = this.add.container(0, this.contentBaseY).setDepth(4)
 
-    const clearAll = () => {
-      allObjs.forEach(o => { if ((o as Phaser.GameObjects.GameObject).active !== false) o.destroy() })
-      allObjs.length = 0
+    // ── 追踪左侧可重建列表对象 ─────────────────────────
+    const listObjs: Phaser.GameObjects.GameObject[] = []
+    const detailObjs: Phaser.GameObjects.GameObject[] = []
+
+    const clearList = () => {
+      listObjs.forEach(o => { if (o.active !== false) o.destroy() })
+      listObjs.length = 0
+    }
+    const clearDetail = () => {
+      detailObjs.forEach(o => { if (o.active !== false) o.destroy() })
+      detailObjs.length = 0
     }
 
-    const addTo = (go: Phaser.GameObjects.GameObject) => {
+    const addToList = (go: Phaser.GameObjects.GameObject) => {
       this.contentLayer.add(go)
-      allObjs.push(go)
+      listObjs.push(go)
+      return go
+    }
+    const addToDetail = (go: Phaser.GameObjects.GameObject) => {
+      this.detailLayer!.add(go)
+      detailObjs.push(go)
       return go
     }
 
-    const makeText = (x: number, y: number, text: string, style: object, originX = 0, originY = 0) => {
-      const t = this.make.text({ x, y, text, style, add: false } as Phaser.Types.GameObjects.Text.TextConfig)
-        .setOrigin(originX, originY)
-      return addTo(t) as Phaser.GameObjects.Text
+    const makeListText = (x: number, y: number, text: string, style: object, originX = 0, originY = 0) => {
+      const t = this.make.text({ x, y, text, style, add: false } as Phaser.Types.GameObjects.Text.TextConfig).setOrigin(originX, originY)
+      return addToList(t) as Phaser.GameObjects.Text
     }
-
-    const makeRect = (x: number, y: number, w: number, h: number, fill: number, alpha = 1) => {
+    const makeDetailText = (x: number, y: number, text: string, style: object, originX = 0, originY = 0) => {
+      const t = this.make.text({ x, y, text, style, add: false } as Phaser.Types.GameObjects.Text.TextConfig).setOrigin(originX, originY)
+      return addToDetail(t) as Phaser.GameObjects.Text
+    }
+    const makeDetailRect = (x: number, y: number, w: number, h: number, fill: number, alpha = 1) => {
       const r = this.add.rectangle(x, y, w, h, fill, alpha)
-      return addTo(r) as Phaser.GameObjects.Rectangle
+      return addToDetail(r) as Phaser.GameObjects.Rectangle
     }
 
-    // ── 绘制右侧详情 ─────────────────────────────────────
-    const drawDetail = (id: CharacterId) => {
-      // 只清除右侧详情区对象（通过 tag 区分）
-      // 实际做法：重建全部，因为 clearAll + rebuildList + rebuildDetail
-    }
-
-    const rebuild = () => {
-      clearAll()
-      // ── rebuild 时重新读取最新状态 ────────────────────
+    // ── 绘制右侧详情（固定位置，不受滚动影响）─────────
+    const rebuildDetail = () => {
+      clearDetail()
       const currentRt = getRuntimeState()
       const currentUnlocked: CharacterId[] = currentRt.player.unlockedCharacters ?? ['echo_ranger']
-
-      let ly = 34
-      for (const def of CHARACTER_LIST) {
-        const id = def.id
-        const isUnlocked = currentUnlocked.includes(id)
-        const isSel = selected === id
-
-        // 卡片背景
-        const cardBg = this.add.rectangle(LIST_LEFT + CARD_W / 2, ly + CARD_H / 2, CARD_W, CARD_H,
-          isSel ? 0x143050 : 0x0c1820)
-        cardBg.setStrokeStyle(1, isSel ? 0x5090d0 : 0x203040, 1)
-        addTo(cardBg)
-
-        // 角色头像
-        const portrait = this.add.image(LIST_LEFT + 24, ly + CARD_H / 2, `char_${id}`)
-          .setDisplaySize(36, 36).setAlpha(isUnlocked ? 1 : 0.25)
-        addTo(portrait)
-
-        // 角色名
-        makeText(LIST_LEFT + 48, ly + 8, def.name,
-          { fontFamily: '"Noto Sans SC", monospace', fontSize: '12px',
-            color: isUnlocked ? (isSel ? '#c8e8ff' : '#a0b8c8') : '#384858' })
-
-        // 定位标签
-        makeText(LIST_LEFT + 48, ly + 26, isUnlocked ? `[${def.role}]` : `🔒 ${def.role}`,
-          { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: isSel ? '#6090d0' : '#4a6070' })
-
-        // 当前选中徽标
-        if (isSel) {
-          makeText(LIST_LEFT + CARD_W - 10, ly + CARD_H / 2 - 7, '◀',
-            { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#5090d0' }, 1, 0)
-        }
-
-        // 点击切换
-        cardBg.setInteractive({ useHandCursor: true })
-        const capturedId = id
-        cardBg.on('pointerdown', () => {
-          audioManager.playClick()
-          selected = capturedId
-          rebuild()
-        })
-
-        ly += CARD_H + 6
-      }
-
-      // 计算滚动范围（以列表高度为准）
-      const visibleH = this.scale.height - this.contentBaseY - 20
-      this.scrollMax = Math.max(0, ly - visibleH + 20)
-
-      // 分隔竖线
-      makeRect(DETAIL_X - 8, 34 + (CARD_H + 6) * 5 / 2, 1, (CARD_H + 6) * 5, 0x304050, 0.5)
-
-      // ── 右侧详情区 ───────────────────────────────────
       const def = CHARACTER_DEFINITIONS[selected]
       if (!def) return
       const isUnlocked = currentUnlocked.includes(selected)
+
+      // 分隔竖线（固定位置，相对于 detailLayer）
+      makeDetailRect(DETAIL_X - 8, 34 + (CARD_H + 6) * CHARACTER_LIST.length / 2,
+        1, (CARD_H + 6) * CHARACTER_LIST.length, 0x304050, 0.5)
 
       let dy = 34
 
       // 角色大头像
       const bigPortrait = this.add.image(DETAIL_X + 36, dy + 36, `char_${selected}`)
         .setDisplaySize(72, 72).setAlpha(isUnlocked ? 1 : 0.3)
-      addTo(bigPortrait)
+      addToDetail(bigPortrait)
 
-      // 名字
-      makeText(DETAIL_X + 82, dy + 6, def.name,
+      makeDetailText(DETAIL_X + 82, dy + 6, def.name,
         { fontFamily: '"Noto Sans SC", monospace', fontSize: '17px',
           color: isUnlocked ? '#e8d8a0' : '#405060' })
-
-      // 定位标签
-      makeText(DETAIL_X + 82, dy + 28, `[${def.role}]  ${def.nameEn}`,
+      makeDetailText(DETAIL_X + 82, dy + 28, `[${def.role}]  ${def.nameEn}`,
         { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#6090b0' })
-
-      // lore 一句话
-      makeText(DETAIL_X + 82, dy + 44, def.lore,
+      makeDetailText(DETAIL_X + 82, dy + 44, def.lore,
         { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#506070',
           wordWrap: { width: DETAIL_W - 90 } })
 
-      // 未解锁提示 + 实时进度
       if (!isUnlocked && def.unlockRequirement) {
-        // 计算实时进度文字
         let progressText = ''
         if (selected === 'void_breaker') {
           const cur = currentRt.player.totalExtractions ?? 0
@@ -1046,11 +1001,11 @@ export class SanctuaryScene extends Phaser.Scene {
           const cur = currentRt.player.totalDives
           progressText = cur >= 10 ? '条件已达成' : `深潜 ${cur}/10 次`
         }
-        makeText(DETAIL_X + 82, dy + 60, `🔒 ${def.unlockRequirement}`,
+        makeDetailText(DETAIL_X + 82, dy + 60, `🔒 ${def.unlockRequirement}`,
           { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#806050',
             wordWrap: { width: DETAIL_W - 90 } })
         if (progressText) {
-          makeText(DETAIL_X + 82, dy + 74, `▸ ${progressText}`,
+          makeDetailText(DETAIL_X + 82, dy + 74, `▸ ${progressText}`,
             { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#a07840' })
         }
       }
@@ -1065,53 +1020,46 @@ export class SanctuaryScene extends Phaser.Scene {
       ]
       const BAR_W = Math.min(200, DETAIL_W - 80)
       for (const [label, pct, val] of ATTRS) {
-        makeText(DETAIL_X, dy, label,
+        makeDetailText(DETAIL_X, dy, label,
           { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#607080' })
-        makeRect(DETAIL_X + 44 + BAR_W / 2, dy + 6, BAR_W, 8, 0x1a2a30)
+        makeDetailRect(DETAIL_X + 44 + BAR_W / 2, dy + 6, BAR_W, 8, 0x1a2a30)
         const fillW = Math.max(4, Math.round(pct / 100 * BAR_W))
-        makeRect(DETAIL_X + 44 + fillW / 2, dy + 6, fillW, 8, isUnlocked ? 0x3a8aaa : 0x3a4a50)
-        makeText(DETAIL_X + 44 + BAR_W + 6, dy, val,
+        makeDetailRect(DETAIL_X + 44 + fillW / 2, dy + 6, fillW, 8, isUnlocked ? 0x3a8aaa : 0x3a4a50)
+        makeDetailText(DETAIL_X + 44 + BAR_W + 6, dy, val,
           { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#a0c0d0' })
         dy += 20
       }
 
-      // 初始武器
-      makeText(DETAIL_X, dy + 4, `初始武器：${def.startWeapon.replace(/_/g, ' ')}`,
+      makeDetailText(DETAIL_X, dy + 4, `初始武器：${def.startWeapon.replace(/_/g, ' ')}`,
         { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#90a868' })
       dy += 24
 
-      // 分隔线
-      makeRect(DETAIL_X + DETAIL_W / 2, dy, DETAIL_W, 1, 0x304050, 0.4)
+      makeDetailRect(DETAIL_X + DETAIL_W / 2, dy, DETAIL_W, 1, 0x304050, 0.4)
       dy += 10
 
-      // 被动
-      makeText(DETAIL_X, dy, `被动  ${def.passiveName}`,
+      makeDetailText(DETAIL_X, dy, `被动  ${def.passiveName}`,
         { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#c8a060' })
       dy += 16
-      makeText(DETAIL_X, dy, def.passiveDesc,
+      makeDetailText(DETAIL_X, dy, def.passiveDesc,
         { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#708090',
           wordWrap: { width: DETAIL_W } })
       dy += 28
 
-      // Q 技能
       const sk = def.uniqueSkill
-      makeText(DETAIL_X, dy, `Q  ${sk.name}   CD ${sk.cooldownMs / 1000}s`,
+      makeDetailText(DETAIL_X, dy, `Q  ${sk.name}   CD ${sk.cooldownMs / 1000}s`,
         { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#80c0e0' })
       dy += 16
-      makeText(DETAIL_X, dy, sk.desc,
+      makeDetailText(DETAIL_X, dy, sk.desc,
         { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#708090',
           wordWrap: { width: DETAIL_W } })
       dy += 32
 
-      // 选择按钮
       if (isUnlocked) {
         const isCurrent = selected === currentRt.player.selectedCharacter
         const btnX = DETAIL_X + 100
-        const btnBg = this.add.rectangle(btnX, dy, 200, 32,
-          isCurrent ? 0x1a4060 : 0x0c1a2a)
+        const btnBg = this.add.rectangle(btnX, dy, 200, 32, isCurrent ? 0x1a4060 : 0x0c1a2a)
         btnBg.setStrokeStyle(1, isCurrent ? 0x60c0ff : 0x305070, 1)
-        addTo(btnBg)
-
+        addToDetail(btnBg)
         const btnTxt = this.make.text({
           x: btnX, y: dy,
           text: isCurrent ? '✓ 当前角色' : '选择此角色',
@@ -1119,8 +1067,7 @@ export class SanctuaryScene extends Phaser.Scene {
             color: isCurrent ? '#80e0ff' : '#a0c8e8' },
           add: false,
         }).setOrigin(0.5)
-        addTo(btnTxt)
-
+        addToDetail(btnTxt)
         if (!isCurrent) {
           btnBg.setInteractive({ useHandCursor: true })
           btnBg.on('pointerover',  () => { btnBg.setFillStyle(0x1a2a40); (btnTxt as Phaser.GameObjects.Text).setColor('#c8e8ff') })
@@ -1128,17 +1075,67 @@ export class SanctuaryScene extends Phaser.Scene {
           btnBg.on('pointerdown',  () => {
             audioManager.playClick()
             setSelectedCharacter(selected)
-            rebuild()
+            rebuildDetail()
           })
         }
       } else if (def.unlockRequirement) {
-        makeText(DETAIL_X + 100, dy, `🔒 ${def.unlockRequirement}`,
+        makeDetailText(DETAIL_X + 100, dy, `🔒 ${def.unlockRequirement}`,
           { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#806050',
             wordWrap: { width: DETAIL_W } }, 0.5, 0)
       }
     }
 
-    rebuild()
+    // ── 绘制左侧列表（可滚动）─────────────────────────
+    const rebuildList = () => {
+      clearList()
+      const currentRt = getRuntimeState()
+      const currentUnlocked: CharacterId[] = currentRt.player.unlockedCharacters ?? ['echo_ranger']
+
+      let ly = 34
+      for (const def of CHARACTER_LIST) {
+        const id = def.id
+        const isUnlocked = currentUnlocked.includes(id)
+        const isSel = selected === id
+
+        const cardBg = this.add.rectangle(LIST_LEFT + CARD_W / 2, ly + CARD_H / 2, CARD_W, CARD_H,
+          isSel ? 0x143050 : 0x0c1820)
+        cardBg.setStrokeStyle(1, isSel ? 0x5090d0 : 0x203040, 1)
+        addToList(cardBg)
+
+        const portrait = this.add.image(LIST_LEFT + 24, ly + CARD_H / 2, `char_${id}`)
+          .setDisplaySize(36, 36).setAlpha(isUnlocked ? 1 : 0.25)
+        addToList(portrait)
+
+        makeListText(LIST_LEFT + 48, ly + 8, def.name,
+          { fontFamily: '"Noto Sans SC", monospace', fontSize: '12px',
+            color: isUnlocked ? (isSel ? '#c8e8ff' : '#a0b8c8') : '#384858' })
+        makeListText(LIST_LEFT + 48, ly + 26, isUnlocked ? `[${def.role}]` : `🔒 ${def.role}`,
+          { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: isSel ? '#6090d0' : '#4a6070' })
+
+        if (isSel) {
+          makeListText(LIST_LEFT + CARD_W - 10, ly + CARD_H / 2 - 7, '◀',
+            { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#5090d0' }, 1, 0)
+        }
+
+        cardBg.setInteractive({ useHandCursor: true })
+        const capturedId = id
+        cardBg.on('pointerdown', () => {
+          audioManager.playClick()
+          selected = capturedId
+          rebuildList()
+          rebuildDetail()
+        })
+
+        ly += CARD_H + 6
+      }
+
+      // 计算滚动范围（仅基于左侧列表高度）
+      const visibleH = this.scale.height - this.contentBaseY - 20
+      this.scrollMax = Math.max(0, ly - visibleH + 20)
+    }
+
+    rebuildList()
+    rebuildDetail()
   }
 
   // ─────────────────── TAB: 碎片兑换 ──────────────────
