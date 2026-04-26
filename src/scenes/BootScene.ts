@@ -102,6 +102,18 @@ export class BootScene extends Phaser.Scene {
     this.load.svg('item_sand_magnet',       'assets/sprites/items/sand_magnet.svg')
     this.load.svg('item_echo_crystal_core', 'assets/sprites/items/echo_crystal_core.svg')
     this.load.svg('item_paradox_engine',    'assets/sprites/items/paradox_engine.svg')
+
+    // ─── 武器图标 ───────────────────────────────────────
+    this.load.svg('weapon_pistol',   'assets/sprites/items/weapon_pistol.svg')
+    this.load.svg('weapon_smg',      'assets/sprites/items/weapon_smg.svg')
+    this.load.svg('weapon_shotgun',  'assets/sprites/items/weapon_shotgun.svg')
+    this.load.svg('weapon_sniper',   'assets/sprites/items/weapon_sniper.svg')
+
+    // ─── 配件图标（按槽型共用贴图） ────────────────────
+    this.load.svg('att_barrel',   'assets/sprites/items/att_barrel.svg')
+    this.load.svg('att_scope',    'assets/sprites/items/att_scope.svg')
+    this.load.svg('att_magazine', 'assets/sprites/items/att_magazine.svg')
+    this.load.svg('att_stock',    'assets/sprites/items/att_stock.svg')
   }
 
   create() {

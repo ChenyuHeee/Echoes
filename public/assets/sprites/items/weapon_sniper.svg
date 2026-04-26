@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- long barrel -->
+  <rect x="5" y="6" width="10" height="2" fill="#33aaaa"/>
+  <rect x="14" y="6" width="2" height="2" fill="#88ffff"/>
+  <!-- scope -->
+  <rect x="8" y="4" width="4" height="3" fill="#226688"/>
+  <rect x="9" y="4" width="2" height="1" fill="#44aacc"/>
+  <rect x="9" y="5" width="1" height="1" fill="#ffffff"/>
+  <!-- body -->
+  <rect x="2" y="6" width="4" height="3" fill="#226677"/>
+  <!-- stock -->
+  <rect x="0" y="6" width="3" height="3" fill="#1a4455"/>
+  <rect x="0" y="7" width="2" height="1" fill="#33aacc"/>
+  <!-- grip -->
+  <rect x="3" y="8" width="2" height="4" fill="#112233"/>
+  <!-- echo glow on barrel -->
+  <rect x="12" y="6" width="1" height="1" fill="#aaffff"/>
+</svg>

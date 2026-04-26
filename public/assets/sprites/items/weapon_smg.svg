@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- barrel (short) -->
+  <rect x="9" y="5" width="6" height="2" fill="#9955cc"/>
+  <rect x="14" y="5" width="2" height="2" fill="#cc88ff"/>
+  <!-- upper body -->
+  <rect x="3" y="5" width="7" height="3" fill="#6633aa"/>
+  <!-- lower receiver -->
+  <rect x="3" y="7" width="6" height="3" fill="#4422880"/>
+  <rect x="3" y="7" width="6" height="3" fill="#442288"/>
+  <!-- magazine (down) -->
+  <rect x="5" y="9" width="3" height="5" fill="#331166"/>
+  <rect x="6" y="10" width="1" height="3" fill="#7744bb"/>
+  <!-- grip -->
+  <rect x="3" y="9" width="3" height="4" fill="#220044"/>
+  <!-- void swirl -->
+  <rect x="10" y="5" width="1" height="1" fill="#ffffff"/>
+  <rect x="4" y="6" width="1" height="1" fill="#cc88ff"/>
+</svg>

@@ -25,11 +25,16 @@ import type { SkillType } from '../types/game.types'
 import {
   type ItemDef,
   type ItemId,
+  type WeaponDef,
+  type AttachmentDef,
   ITEM_DEFINITIONS,
+  WEAPON_DEFINITIONS,
   RARITY_COLORS,
   RARITY_NAMES,
   BAG_CAPACITY,
   rollItemDrop,
+  rollWeaponDrop,
+  rollAttachmentDrop,
 } from '../config/items'
 
 type DiveInit = {
@@ -130,6 +135,12 @@ export class DiveScene extends Phaser.Scene {
   private lastRegenAt = 0           // 纳米胶布：上次回血时间
   private autoFireCooldownUntil = 0 // 持续按住左键时的射击冷却
 
+  // ✦ 武器系统
+  private equippedWeapon!: WeaponDef
+  private weaponAttachments: AttachmentDef[] = []
+  private weaponDropGroup!: Phaser.Physics.Arcade.Group
+  private attachmentDropGroup!: Phaser.Physics.Arcade.Group
+
   // 连击系统
   private comboCount = 0
   private comboResetAt = 0
@@ -167,6 +178,8 @@ export class DiveScene extends Phaser.Scene {
     this.shieldBlockedUntil = 0
     this.lastRegenAt = 0
     this.autoFireCooldownUntil = 0
+    this.equippedWeapon = WEAPON_DEFINITIONS.pulse_pistol  // 初始武器
+    this.weaponAttachments = []
     const runtime = getRuntimeState()
     this.currentFragmentId = data.mapFragment || runtime.room?.mapFragment || runtime.selectedFragment
     this.currentTheme = FRAGMENT_THEMES[this.currentFragmentId]
@@ -293,8 +306,8 @@ export class DiveScene extends Phaser.Scene {
     ) {
       const p = this.input.activePointer
       this.fireGun(p.worldX, p.worldY)
-      // 装载了技能时单发即释放，普通弹保持 120ms 射速
-      this.autoFireCooldownUntil = time + (this.loadedSkill ? 400 : 120)
+      // 装载了技能时单发即释放，普通弹保持 weapon fire rate
+      this.autoFireCooldownUntil = time + (this.loadedSkill ? 400 : this.getWeaponFireRateMs())
     }
 
     // 被动回血（纳米胶布）
@@ -481,6 +494,8 @@ export class DiveScene extends Phaser.Scene {
   private spawnPickupsAndExtraction() {
     this.pickups = this.physics.add.group()
     this.itemDropGroup = this.physics.add.group()
+    this.weaponDropGroup = this.physics.add.group()
+    this.attachmentDropGroup = this.physics.add.group()
 
     this.extractionZone = this.add.zone(1650, 1040, 120, 120)
     this.physics.add.existing(this.extractionZone, true)
@@ -988,6 +1003,26 @@ export class DiveScene extends Phaser.Scene {
       this.tryPickupItem(ITEM_DEFINITIONS[itemId], dropImg.x, dropImg.y)
       dropImg.destroy()
     })
+
+    // ─── 武器拾取 ───────────────────────────────────
+    this.physics.add.overlap(this.player, this.weaponDropGroup, (_, drop) => {
+      const dropImg = drop as Phaser.Physics.Arcade.Image
+      if (!dropImg.active) return
+      const weapon = dropImg.getData('weaponDef') as WeaponDef
+      if (!weapon) return
+      this.tryEquipWeapon(weapon, dropImg.x, dropImg.y)
+      dropImg.destroy()
+    })
+
+    // ─── 配件拾取 ───────────────────────────────────
+    this.physics.add.overlap(this.player, this.attachmentDropGroup, (_, drop) => {
+      const dropImg = drop as Phaser.Physics.Arcade.Image
+      if (!dropImg.active) return
+      const att = dropImg.getData('attDef') as AttachmentDef
+      if (!att) return
+      this.tryPickupAttachment(att, dropImg.x, dropImg.y)
+      dropImg.destroy()
+    })
   }
 
   private movePlayer() {
@@ -1241,7 +1276,7 @@ export class DiveScene extends Phaser.Scene {
       this.loadedSkill = null
       const b = this.physics.add.image(this.player.x, this.player.y, 'bullet')
       b.setScale(1.4)
-      b.setData('damage', 12)
+      b.setData('damage', this.getWeaponBaseDamage())
       b.rotation = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY)
 
       // 枪口闪光：亮斑 + 十字光芒
@@ -1277,6 +1312,24 @@ export class DiveScene extends Phaser.Scene {
       this.physics.moveTo(b, targetX, targetY, 540)
       audioManager.playShoot()
       this.time.delayedCall(1100, () => { trailEvent.remove(); b.destroy() })
+
+      // 霸弹枪额外散射弹片
+      const pellets = this.equippedWeapon?.pellets ?? 1
+      if (pellets > 1) {
+        const spread = this.equippedWeapon!.spreadAngle ?? 0.35
+        const baseAngle = b.rotation
+        for (let pi = 1; pi < pellets; pi++) {
+          const side = pi % 2 === 1 ? 1 : -1
+          const offset = Math.ceil(pi / 2) * (spread / Math.max(1, pellets - 1))
+          const angle = baseAngle + side * offset
+          const pellet = this.physics.add.image(this.player.x, this.player.y, 'bullet').setScale(1.1).setDepth(18)
+          pellet.setData('damage', this.getWeaponBaseDamage())
+          pellet.rotation = angle
+          this.bullets.add(pellet)
+          pellet.setVelocity(Math.cos(angle) * 510, Math.sin(angle) * 510)
+          this.time.delayedCall(900, () => { if (pellet.active) pellet.destroy() })
+        }
+      }
 
       if (!this.offline && this.roomRealtime) {
         const rt = getRuntimeState()
@@ -1826,8 +1879,8 @@ export class DiveScene extends Phaser.Scene {
   }
 
   private damageEnemy(enemy: EnemyBody, amount: number, showNumber = true) {
-    // 暴击检测（时相镜）
-    const critChance = this.diveInventory.reduce((s, i) => s + (i.critChance ?? 0), 0)
+    // 暴击检测（武器暴击率 + 时相镜 + 配件加成）
+    const critChance = this.getWeaponCritChance()
     const isCrit = Math.random() < critChance
     const critMult = isCrit ? 2.0 : 1.0
     const finalAmount = Math.round(amount * getDamageMultiplier() * this.getDiveDamageBonus() * critMult)
@@ -1982,10 +2035,18 @@ export class DiveScene extends Phaser.Scene {
       }
     }
 
-    // ─── 装备掉落 ─────────────────────────────────────
+    // ─── 掉落：物品 / 武器 / 配件 ─────────────────────
     const itemDef = rollItemDrop(isBoss, isElite)
     if (itemDef) {
       this.spawnItemDrop(itemDef, dropX + (Math.random() - 0.5) * 40, dropY + (Math.random() - 0.5) * 40)
+    }
+    const weaponDef = rollWeaponDrop(isBoss, isElite)
+    if (weaponDef) {
+      this.spawnWeaponDrop(weaponDef, dropX + 30, dropY + (Math.random() - 0.5) * 30)
+    }
+    const attDef = rollAttachmentDrop(isBoss, isElite)
+    if (attDef) {
+      this.spawnAttachmentDrop(attDef, dropX - 30, dropY + (Math.random() - 0.5) * 30)
     }
   }
 
@@ -2655,7 +2716,7 @@ export class DiveScene extends Phaser.Scene {
     objs.push(dim)
 
     // 面板背景
-    const panelW = 500, panelH = 340
+    const panelW = 520, panelH = 400
     const panelX = width / 2, panelY = height / 2
 
     const panel = this.add.rectangle(panelX, panelY, panelW, panelH, 0x060c18, 1)
@@ -2664,26 +2725,94 @@ export class DiveScene extends Phaser.Scene {
     objs.push(panel)
 
     // 标题
-    const title = this.add.text(panelX, panelY - panelH / 2 + 18, '✦  背包  (B 关闭)', {
-      fontFamily: '"Silkscreen", monospace', fontSize: '16px', color: '#c8a96e',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(302)
-    objs.push(title)
+    objs.push(this.add.text(panelX, panelY - panelH / 2 + 16, '✦  背包  (B 关闭)', {
+      fontFamily: '"Silkscreen", monospace', fontSize: '15px', color: '#c8a96e',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(302))
 
-    // 槽位布局：3列×2行
-    const SLOT_SIZE = 72
-    const SLOT_GAP = 12
-    const COLS = 3, ROWS = 2
+    // ── 武器区域 ─────────────────────────────────────────
+    const weapSectionY = panelY - 140
+    objs.push(this.add.text(panelX, panelY - panelH / 2 + 42, '── 武器 ──', {
+      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#446688',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(302))
+
+    // 武器背景框
+    const weapBg = this.add.rectangle(panelX, weapSectionY, panelW - 20, 80, 0x0a1828, 1)
+      .setScrollFactor(0).setDepth(302)
+    const weapRarityColor = RARITY_COLORS[this.equippedWeapon.rarity]
+    weapBg.setStrokeStyle(1, weapRarityColor, 0.7)
+    objs.push(weapBg)
+
+    // 武器图标
+    const weapIconX = panelX - 220
+    objs.push(this.add.image(weapIconX, weapSectionY, this.equippedWeapon.spriteKey)
+      .setScale(3).setScrollFactor(0).setDepth(303))
+
+    // 武器名+稀有度
+    const weapColorHex = `#${weapRarityColor.toString(16).padStart(6, '0')}`
+    objs.push(this.add.text(weapIconX + 30, weapSectionY - 22, this.equippedWeapon.name, {
+      fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: weapColorHex,
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(303))
+
+    objs.push(this.add.text(weapIconX + 30, weapSectionY - 6,
+      `[${RARITY_NAMES[this.equippedWeapon.rarity]}]  ${this.equippedWeapon.desc}`, {
+      fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#607080',
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(303))
+
+    // 武器当前属性（含配件加成）
+    const finalDmg = this.getWeaponBaseDamage()
+    const finalRate = this.getWeaponFireRateMs()
+    const finalCrit = Math.round(this.getWeaponCritChance() * 100)
+    const pelletStr = this.equippedWeapon.pellets ? ` ×${this.equippedWeapon.pellets}弹` : ''
+    objs.push(this.add.text(weapIconX + 30, weapSectionY + 10,
+      `伤害 ${finalDmg}${pelletStr}   射速 ${finalRate}ms   暴击 ${finalCrit}%`, {
+      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#88aacc',
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(303))
+
+    // 配件槽
+    const maxSlots = this.equippedWeapon.attachmentSlots
+    const attSlotW = 44, attSlotGap = 6
+    const attStartX = panelX + 80
+    for (let ai = 0; ai < maxSlots; ai++) {
+      const ax = attStartX + ai * (attSlotW + attSlotGap) + attSlotW / 2
+      const att = this.weaponAttachments[ai]
+      const slotBg = this.add.rectangle(ax, weapSectionY, attSlotW, 60, 0x0c1c30, 1)
+        .setScrollFactor(0).setDepth(302)
+      if (att) {
+        slotBg.setStrokeStyle(2, RARITY_COLORS[att.rarity], 0.8)
+        objs.push(this.add.image(ax, weapSectionY - 10, att.spriteKey).setScale(2.4).setScrollFactor(0).setDepth(303))
+        objs.push(this.add.text(ax, weapSectionY + 18, att.name, {
+          fontFamily: '"Silkscreen", monospace', fontSize: '7px',
+          color: `#${RARITY_COLORS[att.rarity].toString(16).padStart(6, '0')}`,
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
+      } else {
+        slotBg.setStrokeStyle(1, 0x1e3050, 0.5)
+        objs.push(this.add.text(ax, weapSectionY, '空', {
+          fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#1e3050',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
+      }
+      objs.push(slotBg)
+    }
+
+    objs.push(this.add.text(attStartX + (maxSlots * (attSlotW + attSlotGap) - attSlotGap) / 2,
+      weapSectionY + 34, `配件 ${this.weaponAttachments.length}/${maxSlots} 槽`, {
+      fontFamily: '"Silkscreen", monospace', fontSize: '8px', color: '#304858',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
+
+    // ── 物品区域 ─────────────────────────────────────────
+    objs.push(this.add.text(panelX, panelY - 65, '── 物品 ──', {
+      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#446688',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(302))
+
+    const SLOT_SIZE = 62, SLOT_GAP = 10, COLS = 3, ROWS = 2
     const gridW = COLS * SLOT_SIZE + (COLS - 1) * SLOT_GAP
     const gridX = panelX - gridW / 2
-    const gridY = panelY - 60
+    const gridY = panelY - 40
 
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
         const idx = row * COLS + col
         const sx = gridX + col * (SLOT_SIZE + SLOT_GAP) + SLOT_SIZE / 2
         const sy = gridY + row * (SLOT_SIZE + SLOT_GAP) + SLOT_SIZE / 2
-
-        // 槽位背景
         const slotBg = this.add.rectangle(sx, sy, SLOT_SIZE, SLOT_SIZE, 0x0a1020, 1)
           .setScrollFactor(0).setDepth(302)
         objs.push(slotBg)
@@ -2692,71 +2821,54 @@ export class DiveScene extends Phaser.Scene {
           const item = this.diveInventory[idx]
           const rarityColor = RARITY_COLORS[item.rarity]
           slotBg.setStrokeStyle(2, rarityColor, 0.9)
-
-          // 装备图标
-          const icon = this.add.image(sx, sy - 8, item.spriteKey)
-            .setScale(3).setScrollFactor(0).setDepth(303)
-          objs.push(icon)
-
-          // 装备名
-          const nameColor = `#${rarityColor.toString(16).padStart(6, '0')}`
-          const nameTxt = this.add.text(sx, sy + 26, item.name, {
-            fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: nameColor,
-          }).setOrigin(0.5).setScrollFactor(0).setDepth(303)
-          objs.push(nameTxt)
-
-          // 稀有度标签
-          const rarityTxt = this.add.text(sx, sy + 36, RARITY_NAMES[item.rarity], {
-            fontFamily: '"Silkscreen", monospace', fontSize: '8px', color: '#405060',
-          }).setOrigin(0.5).setScrollFactor(0).setDepth(303)
-          objs.push(rarityTxt)
+          objs.push(this.add.image(sx, sy - 6, item.spriteKey).setScale(2.8).setScrollFactor(0).setDepth(303))
+          objs.push(this.add.text(sx, sy + 22, item.name, {
+            fontFamily: '"Silkscreen", monospace', fontSize: '8px',
+            color: `#${rarityColor.toString(16).padStart(6, '0')}`,
+          }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
         } else {
           slotBg.setStrokeStyle(1, 0x1e3050, 0.5)
-          // 空槽提示
-          const emptyTxt = this.add.text(sx, sy, '空', {
+          objs.push(this.add.text(sx, sy, '空', {
             fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#1e3050',
-          }).setOrigin(0.5).setScrollFactor(0).setDepth(303)
-          objs.push(emptyTxt)
+          }).setOrigin(0.5).setScrollFactor(0).setDepth(303))
         }
       }
     }
 
-    // 效果汇总
+    // ── 效果汇总 ─────────────────────────────────────────
     const effectLines: string[] = []
     const dmgBonus = this.getDiveDamageBonus()
     const spdBonus = this.getDiveSpeedBonus()
     const echoBonus = this.getDiveEchoBonus()
     const totalRegen = this.diveInventory.reduce((s, i) => s + (i.regenPerSec ?? 0), 0)
-    const totalCrit = this.diveInventory.reduce((s, i) => s + (i.critChance ?? 0), 0)
     const magnetMult = this.diveInventory.reduce((s, i) => s * (i.magnetRadiusMult ?? 1), 1)
-    if (dmgBonus > 1) effectLines.push(`伤害 ×${dmgBonus.toFixed(2)}`)
+    const attDmgMult = this.weaponAttachments.reduce((acc, a) => acc * (a.damageMult ?? 1), 1)
+    const attRateMult = this.weaponAttachments.reduce((acc, a) => acc * (a.fireRateMult ?? 1), 1)
+    const attCrit = this.weaponAttachments.reduce((s, a) => s + (a.critBonus ?? 0), 0)
+    if (dmgBonus > 1) effectLines.push(`物品伤害 ×${dmgBonus.toFixed(2)}`)
+    if (attDmgMult > 1) effectLines.push(`配件伤害 ×${attDmgMult.toFixed(2)}`)
+    if (attRateMult < 1) effectLines.push(`配件射速 +${Math.round((1 - attRateMult) * 100)}%`)
+    if (attCrit > 0) effectLines.push(`配件暴击 +${Math.round(attCrit * 100)}%`)
     if (spdBonus > 1) effectLines.push(`速度 ×${spdBonus.toFixed(2)}`)
     if (echoBonus > 1) effectLines.push(`回响 ×${echoBonus.toFixed(2)}`)
     if (totalRegen > 0) effectLines.push(`回血 +${totalRegen}/s`)
-    if (totalCrit > 0) effectLines.push(`暴击 +${Math.round(totalCrit * 100)}%`)
     if (magnetMult > 1) effectLines.push(`磁吸 ×${magnetMult.toFixed(1)}`)
-    const hasShield = this.diveInventory.some(i => i.shieldCooldownMs)
-    if (hasShield) effectLines.push('回响盾：已激活')
-    const hasParadox = this.diveInventory.some(i => i.paradoxChainChance)
-    if (hasParadox) effectLines.push('悖论引擎：已激活')
+    if (this.diveInventory.some(i => i.shieldCooldownMs)) effectLines.push('回响盾 已激活')
+    if (this.diveInventory.some(i => i.paradoxChainChance)) effectLines.push('悖论引擎 已激活')
 
     const effectStr = effectLines.length > 0 ? effectLines.join('   ') : '暂无加成'
-    const effectTxt = this.add.text(panelX, panelY + panelH / 2 - 38, `效果：${effectStr}`, {
-      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#7090b0',
+    objs.push(this.add.text(panelX, panelY + 125, `加成：${effectStr}`, {
+      fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#6090b0',
       wordWrap: { width: panelW - 30 }, align: 'center',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(302)
-    objs.push(effectTxt)
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(302))
 
-    // 数量提示
-    const countTxt = this.add.text(panelX, panelY + panelH / 2 - 18, `${this.diveInventory.length}/${BAG_CAPACITY} 格  —  撤离成功才能保留本次加成记录`, {
+    objs.push(this.add.text(panelX, panelY + 150, `${this.diveInventory.length}/${BAG_CAPACITY} 格物品  —  撤离成功才保留加成`, {
       fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#304050',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(302)
-    objs.push(countTxt)
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(302))
 
     // ESC 关闭
     const escKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
-    const escHandler = () => { if (this.bagOpen) this.toggleBag() }
-    escKey.once('down', escHandler)
+    escKey.once('down', () => { if (this.bagOpen) this.toggleBag() })
     objs.push(escKey)
 
     this.bagObjects = objs
@@ -2787,6 +2899,118 @@ export class DiveScene extends Phaser.Scene {
   /** 计算回响技能额外倍率 */
   private getDiveEchoBonus(): number {
     return this.diveInventory.reduce((acc, i) => acc * (i.echoSkillMult ?? 1), 1)
+  }
+
+  // ── 武器属性计算 ────────────────────────────────────────────────
+
+  /** 当前武器单发基础伤害（含配件加成） */
+  private getWeaponBaseDamage(): number {
+    const base = this.equippedWeapon?.baseDamage ?? 12
+    const attMult = this.weaponAttachments.reduce((acc, a) => acc * (a.damageMult ?? 1), 1)
+    return Math.max(1, Math.round(base * attMult))
+  }
+
+  /** 当前武器射击间隔 ms（含配件加成） */
+  private getWeaponFireRateMs(): number {
+    const base = this.equippedWeapon?.fireRateMs ?? 150
+    const attMult = this.weaponAttachments.reduce((acc, a) => acc * (a.fireRateMult ?? 1), 1)
+    return Math.max(50, Math.round(base * attMult))
+  }
+
+  /** 当前总暴击率（武器基础 + 物品加成 + 配件加成） */
+  private getWeaponCritChance(): number {
+    const base = this.equippedWeapon?.baseCritChance ?? 0.08
+    const fromItems = this.diveInventory.reduce((s, i) => s + (i.critChance ?? 0), 0)
+    const fromAtts  = this.weaponAttachments.reduce((s, a) => s + (a.critBonus ?? 0), 0)
+    return Math.min(base + fromItems + fromAtts, 0.95)
+  }
+
+  // ── 武器 / 配件掉落物 ─────────────────────────────────────────
+
+  private spawnWeaponDrop(weapon: WeaponDef, x: number, y: number) {
+    const drop = this.physics.add.image(x, y, weapon.spriteKey).setScale(2.5).setDepth(15)
+    drop.setData('weaponDef', weapon)
+    this.weaponDropGroup.add(drop)
+    this.tweens.add({ targets: drop, y: y - 8, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+
+    const color = RARITY_COLORS[weapon.rarity]
+    const glow = this.add.graphics().setDepth(14)
+    glow.fillStyle(color, 0.25)
+    glow.fillCircle(x, y, 18)
+
+    const label = this.add.text(x, y - 22, `🔫 ${weapon.name}`, {
+      fontFamily: '"Silkscreen", monospace', fontSize: '10px',
+      color: `#${color.toString(16).padStart(6, '0')}`,
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(16)
+    this.tweens.add({ targets: label, y: y - 30, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+
+    this.time.addEvent({ delay: 100, repeat: -1, callback: () => { if (!drop.active) { glow.destroy(); label.destroy() } } })
+  }
+
+  private tryEquipWeapon(weapon: WeaponDef, x: number, y: number) {
+    const old = this.equippedWeapon
+    this.equippedWeapon = weapon
+    // 配件槽数减少时裁剪配件
+    this.weaponAttachments = this.weaponAttachments.slice(0, weapon.attachmentSlots)
+
+    audioManager.playPickup()
+    const msg = old
+      ? `换装：${old.name} → ${weapon.name}  [${RARITY_NAMES[weapon.rarity]}]`
+      : `装备：${weapon.name}  [${RARITY_NAMES[weapon.rarity]}]`
+    this.emitHud(`🔫 ${msg}`)
+
+    const color = `#${RARITY_COLORS[weapon.rarity].toString(16).padStart(6, '0')}`
+    const fx = this.add.text(x, y - 20, `+ ${weapon.name}`, {
+      fontFamily: '"Silkscreen", monospace', fontSize: '12px', color,
+      stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(92)
+    this.tweens.add({ targets: fx, y: fx.y - 32, alpha: 0, duration: 1000, onComplete: () => fx.destroy() })
+  }
+
+  private spawnAttachmentDrop(att: AttachmentDef, x: number, y: number) {
+    const drop = this.physics.add.image(x, y, att.spriteKey).setScale(2.2).setDepth(15)
+    drop.setData('attDef', att)
+    this.attachmentDropGroup.add(drop)
+    this.tweens.add({ targets: drop, y: y - 7, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+
+    const color = RARITY_COLORS[att.rarity]
+    const glow = this.add.graphics().setDepth(14)
+    glow.fillStyle(color, 0.20)
+    glow.fillCircle(x, y, 14)
+
+    const label = this.add.text(x, y - 20, att.name, {
+      fontFamily: '"Silkscreen", monospace', fontSize: '9px',
+      color: `#${color.toString(16).padStart(6, '0')}`,
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(16)
+    this.tweens.add({ targets: label, y: y - 28, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+
+    this.time.addEvent({ delay: 100, repeat: -1, callback: () => { if (!drop.active) { glow.destroy(); label.destroy() } } })
+  }
+
+  private tryPickupAttachment(att: AttachmentDef, x: number, y: number) {
+    const maxSlots = this.equippedWeapon?.attachmentSlots ?? 0
+    if (this.weaponAttachments.length >= maxSlots) {
+      this.emitHud(`配件槽已满（${maxSlots} 槽），需要更高级的武器`)
+      const txt = this.add.text(x, y - 20, '配件槽已满', {
+        fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#ff8060',
+        stroke: '#000', strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(92)
+      this.tweens.add({ targets: txt, y: txt.y - 24, alpha: 0, duration: 800, onComplete: () => txt.destroy() })
+      return
+    }
+
+    this.weaponAttachments.push(att)
+    audioManager.playPickup()
+    this.emitHud(`🔧 安装配件：${att.name}  — ${att.desc}  (${this.weaponAttachments.length}/${maxSlots})`)
+
+    const color = `#${RARITY_COLORS[att.rarity].toString(16).padStart(6, '0')}`
+    const fx = this.add.text(x, y - 18, `+${att.name}`, {
+      fontFamily: '"Silkscreen", monospace', fontSize: '11px', color,
+      stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(92)
+    this.tweens.add({ targets: fx, y: fx.y - 28, alpha: 0, duration: 900, onComplete: () => fx.destroy() })
   }
 }
 
