@@ -24,6 +24,14 @@ if (_dpr > 1) {
     function (x, y, text, style) {
       return _origText.call(this, x, y, text, { resolution: _dpr, ...(style ?? {}) })
     }
+  // 同时 patch make.text()（GameObjectCreator），修复 Retina 屏模糊
+  type TextCreator = (config: Phaser.Types.GameObjects.Text.TextConfig, addToScene?: boolean) => Phaser.GameObjects.Text
+  const _origMake = Phaser.GameObjects.GameObjectCreator.prototype.text as TextCreator
+  ;(Phaser.GameObjects.GameObjectCreator.prototype as unknown as { text: TextCreator }).text =
+    function (config, addToScene) {
+      const c = config as Phaser.Types.GameObjects.Text.TextConfig & { style?: Phaser.Types.GameObjects.Text.TextStyle }
+      return _origMake.call(this, { ...c, style: { resolution: _dpr, ...(c.style ?? {}) } }, addToScene)
+    }
 }
 
 const config: Phaser.Types.Core.GameConfig = {

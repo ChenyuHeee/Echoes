@@ -27,6 +27,11 @@ export class LoadoutScene extends Phaser.Scene {
   private selectedItems: string[] = []
   private diveParams!: LoadoutInit
   private container!: Phaser.GameObjects.Container
+  private leftCol!: Phaser.GameObjects.Container
+  private leftMask!: Phaser.GameObjects.Graphics
+  private stashScrollY = 0
+  private stashMaxScroll = 0
+  private _tgt!: Phaser.GameObjects.Container
 
   constructor() {
     super({ key: 'LoadoutScene' })
@@ -55,6 +60,7 @@ export class LoadoutScene extends Phaser.Scene {
     })
 
     this.selectedItems = []   // 默认不携带仓库物资，玩家手动勾选
+    this.stashScrollY = 0
   }
 
   create() {
@@ -63,6 +69,10 @@ export class LoadoutScene extends Phaser.Scene {
     this.add.image(width / 2, height / 2, 'bg_lobby').setDisplaySize(width, height).setAlpha(0.12)
     audioManager.startMenuBgm()
     this.buildUI()
+    this.input.on('wheel', (_p: unknown, _go: unknown, _dx: number, dy: number) => {
+      this.stashScrollY = Phaser.Math.Clamp(this.stashScrollY + dy * 0.4, 0, this.stashMaxScroll)
+      if (this.leftCol) this.leftCol.y = -this.stashScrollY
+    })
   }
 
   private buildUI() {
@@ -95,9 +105,19 @@ export class LoadoutScene extends Phaser.Scene {
     const stash = getRuntimeState().player.stash ?? { weaponIds: [], attachmentIds: [], itemIds: [] }
     const slotNames: Record<string, string> = { barrel: '枪管', scope: '瞄准镜', magazine: '弹匣', stock: '枪托', underbarrel: '下挂', enhancement: '强化核' }
 
+    // 左栏滚动容器 + 裁剪遮罩
+    if (this.leftCol) this.leftCol.destroy()
+    if (this.leftMask) this.leftMask.destroy()
+    this.leftCol = this.add.container(0, -this.stashScrollY).setDepth(1)
+    this._tgt = this.leftCol
+    this.leftMask = this.add.graphics()
+    this.leftMask.fillStyle(0xffffff)
+    this.leftMask.fillRect(lx - 4, 62, LEFT_W + 8, height - 62 - 55)
+    this.leftCol.setMask(this.leftMask.createGeometryMask())
+
     // ════ 左栏：仓库物品（可选择） ═══════════════════════
     // 武器（多把，单选）
-    this.container.add(this.make.text({
+    this.leftCol.add(this.make.text({
       x: lx, y: ly,
       text: `── 武器  (仓库 ${stash.weaponIds.length}) ──`,
       style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#446688' },
@@ -109,7 +129,7 @@ export class LoadoutScene extends Phaser.Scene {
       .map(id => (WEAPON_DEFINITIONS as Record<string, WeaponDef | undefined>)[id])
       .filter(Boolean) as WeaponDef[]
     if (stashWeapDefs.length === 0) {
-      this.container.add(this.make.text({
+      this.leftCol.add(this.make.text({
         x: lx + 8, y: ly,
         text: '（仓库中无武器，深潜中从地图拾取）',
         style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#2a3848' },
@@ -136,7 +156,7 @@ export class LoadoutScene extends Phaser.Scene {
 
     // 配件（按槽位分组，每槽单选）
     ly += 6
-    this.container.add(this.make.text({
+    this.leftCol.add(this.make.text({
       x: lx, y: ly,
       text: `── 配件  (仓库 ${stash.attachmentIds.length}) ──`,
       style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#446688' },
@@ -149,7 +169,7 @@ export class LoadoutScene extends Phaser.Scene {
       .filter(Boolean) as AttachmentDef[]
 
     if (stashAttDefs.length === 0) {
-      this.container.add(this.make.text({
+      this.leftCol.add(this.make.text({
         x: lx + 8, y: ly,
         text: '（仓库中无配件）',
         style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#2a3848' },
@@ -161,7 +181,7 @@ export class LoadoutScene extends Phaser.Scene {
         const slotAtts = stashAttDefs.filter(a => a.slotType === slot)
         if (slotAtts.length === 0) return
         // 槽位标题
-        this.container.add(this.make.text({
+        this.leftCol.add(this.make.text({
           x: lx + 4, y: ly,
           text: `[${slotNames[slot]}]`,
           style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#3a5878' },
@@ -194,7 +214,7 @@ export class LoadoutScene extends Phaser.Scene {
       .map(id => (ITEM_DEFINITIONS as Record<string, ItemDef | undefined>)[id])
       .filter(Boolean) as ItemDef[]
 
-    this.container.add(this.make.text({
+    this.leftCol.add(this.make.text({
       x: lx, y: ly,
       text: `── 物品  (${this.selectedItems.length}/${BAG_CAPACITY} 格) ──`,
       style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#446688' },
@@ -203,7 +223,7 @@ export class LoadoutScene extends Phaser.Scene {
     ly += 18
 
     if (stashItemDefs.length === 0) {
-      this.container.add(this.make.text({
+      this.leftCol.add(this.make.text({
         x: lx + 8, y: ly,
         text: '（仓库中无物品）',
         style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#2a3848' },
@@ -234,6 +254,11 @@ export class LoadoutScene extends Phaser.Scene {
         ly += 42
       })
     }
+
+    // 计算左栏最大滚动量（超出底部按钮上沿的部分可滚）
+    this.stashMaxScroll = Math.max(0, ly - (height - 55) + 10)
+    this.stashScrollY = Math.min(this.stashScrollY, this.stashMaxScroll)
+    this.leftCol.y = -this.stashScrollY
 
     // ════ 右栏：已选装备预览 ════════════════════════════════
     let ry = 68
@@ -381,7 +406,7 @@ export class LoadoutScene extends Phaser.Scene {
     const bg = this.add.rectangle(x + w / 2, y + 19, w, 38, selected ? 0x0c2030 : 0x080c14)
     bg.setStrokeStyle(1, selected ? color : 0x1e2a38, selected ? 0.8 : 0.4)
     bg.setAlpha(alpha)
-    this.container.add(bg)
+    this._tgt.add(bg)
 
     if (!disabled) {
       bg.setInteractive({ useHandCursor: true })
@@ -394,24 +419,24 @@ export class LoadoutScene extends Phaser.Scene {
     const checkBg = this.add.rectangle(x + 14, y + 19, 16, 16, selected ? 0x1a5030 : 0x0a1020)
     checkBg.setStrokeStyle(1, selected ? 0x4ce09c : 0x2a3848, 0.9)
     checkBg.setAlpha(alpha)
-    this.container.add(checkBg)
+    this._tgt.add(checkBg)
     const checkMark = this.make.text({
       x: x + 14, y: y + 19,
       text: selected ? '✓' : '',
       style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#4ce09c' },
       add: false,
     }).setOrigin(0.5).setAlpha(alpha)
-    this.container.add(checkMark)
+    this._tgt.add(checkMark)
 
     // 标签
     const colorHex = `#${color.toString(16).padStart(6, '0')}`
-    this.container.add(this.make.text({
+    this._tgt.add(this.make.text({
       x: x + 28, y: y + 5,
       text: label,
       style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: selected ? colorHex : '#3a5060' },
       add: false,
     }).setAlpha(alpha))
-    this.container.add(this.make.text({
+    this._tgt.add(this.make.text({
       x: x + 28, y: y + 20,
       text: sublabel,
       style: { fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: selected ? '#4a6080' : '#1e2838' },

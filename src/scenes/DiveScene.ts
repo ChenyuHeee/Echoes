@@ -1395,10 +1395,14 @@ export class DiveScene extends Phaser.Scene {
 
       const baseSpeed = Number(enemy.getData('speed') || 70)
       const slowed = this.slowUntil.get(enemy) ? Date.now() < this.slowUntil.get(enemy)! : false
-      const speed = slowed ? baseSpeed * 0.35 : baseSpeed
       const aiMode = String(enemy.getData('aiMode') || 'chase')
       const isBoss = enemy.getData('isBoss') === true
       const enemyType = String(enemy.getData('enemyType') || 'time_construct_basic')
+      // 近战敌人狂暴：基础+10%，血量越低越快，最高180%
+      const isMelee = aiMode === 'chase' || aiMode === 'flank' || aiMode === 'hunter'
+      const hpPct = isMelee ? Math.max(0, enemy.hp / enemy.maxHp) : 1
+      const berserkMult = isMelee ? (1.1 + (1 - hpPct) * 0.7) : 1
+      const speed = slowed ? baseSpeed * berserkMult * 0.35 : baseSpeed * berserkMult
 
       const dx = this.player.x - enemy.x
       const dy = this.player.y - enemy.y
