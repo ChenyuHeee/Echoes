@@ -821,12 +821,14 @@ export class SanctuaryScene extends Phaser.Scene {
 
     const rebuild = () => {
       clearAll()
+      // ── rebuild 时重新读取最新状态 ────────────────────
+      const currentRt = getRuntimeState()
+      const currentUnlocked: CharacterId[] = currentRt.player.unlockedCharacters ?? ['echo_ranger']
 
-      // ── 左侧角色卡片列表 ─────────────────────────────
       let ly = 34
       for (const def of CHARACTER_LIST) {
         const id = def.id
-        const isUnlocked = unlocked.includes(id)
+        const isUnlocked = currentUnlocked.includes(id)
         const isSel = selected === id
 
         // 卡片背景
@@ -873,7 +875,7 @@ export class SanctuaryScene extends Phaser.Scene {
       // ── 右侧详情区 ───────────────────────────────────
       const def = CHARACTER_DEFINITIONS[selected]
       if (!def) return
-      const isUnlocked = unlocked.includes(selected)
+      const isUnlocked = currentUnlocked.includes(selected)
 
       let dy = 34
 
@@ -901,16 +903,16 @@ export class SanctuaryScene extends Phaser.Scene {
         // 计算实时进度文字
         let progressText = ''
         if (selected === 'void_breaker') {
-          const cur = rt.player.totalExtractions ?? 0
+          const cur = currentRt.player.totalExtractions ?? 0
           progressText = cur >= 5 ? '条件已达成（重新打开页面生效）' : `撤离 ${cur}/5 次`
         } else if (selected === 'chrono_sentinel') {
-          const cur = rt.player.crystalsFound.length
+          const cur = currentRt.player.crystalsFound.length
           progressText = cur >= 3 ? '条件已达成' : `回响水晶 ${cur}/3 枚`
         } else if (selected === 'echo_phantom') {
-          const cur = rt.player.totalKills
+          const cur = currentRt.player.totalKills
           progressText = cur >= 100 ? '条件已达成' : `击杀 ${cur}/100`
         } else if (selected === 'iron_warden') {
-          const cur = rt.player.totalDives
+          const cur = currentRt.player.totalDives
           progressText = cur >= 10 ? '条件已达成' : `深潜 ${cur}/10 次`
         }
         makeText(DETAIL_X + 82, dy + 60, `🔒 ${def.unlockRequirement}`,
@@ -972,7 +974,7 @@ export class SanctuaryScene extends Phaser.Scene {
 
       // 选择按钮
       if (isUnlocked) {
-        const isCurrent = selected === rt.player.selectedCharacter
+        const isCurrent = selected === currentRt.player.selectedCharacter
         const btnX = DETAIL_X + 100
         const btnBg = this.add.rectangle(btnX, dy, 200, 32,
           isCurrent ? 0x1a4060 : 0x0c1a2a)
