@@ -255,20 +255,20 @@ export class PuzzleScene extends Phaser.Scene {
     this.add.rectangle(480, 20, 960, 40, 0x040810, 0.96).setScrollFactor(0).setDepth(30)
     this.add.rectangle(480, 40, 960, 1, 0x304860, 0.5).setScrollFactor(0).setDepth(30)
 
-    this.roomTitle    = this.add.text(480, 8,  '', { fontFamily: '"DotGothic16", monospace', fontSize: '15px', color: '#50e8a0' }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(31)
-    this.levelCounter = this.add.text(480, 27, '', { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#304860' }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(31)
+    this.roomTitle    = this.add.text(480, 8,  '', { fontFamily: '"Noto Sans SC", monospace', fontSize: '15px', color: '#50e8a0' }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(31)
+    this.levelCounter = this.add.text(480, 27, '', { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#304860' }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(31)
 
-    const back = this.add.text(14, 8, '<- 返回', { fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: '#304050' }).setOrigin(0, 0).setScrollFactor(0).setDepth(31)
+    const back = this.add.text(14, 8, '<- 返回', { fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: '#304050' }).setOrigin(0, 0).setScrollFactor(0).setDepth(31)
     back.setInteractive({ useHandCursor: true })
     back.on('pointerover', () => back.setColor('#608090'))
     back.on('pointerout',  () => back.setColor('#304050'))
     back.on('pointerdown', () => { audioManager.playClick(); this.scene.start('ModeSelectScene') })
 
-    this.echoText = this.add.text(700, 8, 'P1回响：空', { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#384850' }).setOrigin(0, 0).setScrollFactor(0).setDepth(31)
-    this.hintText = this.add.text(480, 510, '', { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#3a5868', wordWrap: { width: 920 }, align: 'center' }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(31)
-    this.statusText = this.add.text(480, 290, '', { fontFamily: '"DotGothic16", monospace', fontSize: '17px', color: '#ffffff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0).setDepth(40).setAlpha(0)
-    this.keyDisplay  = this.add.text(860, 8, '', { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#f0c060' }).setOrigin(1, 0).setScrollFactor(0).setDepth(31)
-    this.portalHint  = this.add.text(480, 527, this.isCommunityMode ? 'Q键: 发射传送门  ·  WASD: 移动' : '', { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#304050' }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(31)
+    this.echoText = this.add.text(700, 8, 'P1回响：空', { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#384850' }).setOrigin(0, 0).setScrollFactor(0).setDepth(31)
+    this.hintText = this.add.text(480, 510, '', { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#3a5868', wordWrap: { width: 920 }, align: 'center' }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(31)
+    this.statusText = this.add.text(480, 290, '', { fontFamily: '"Noto Sans SC", monospace', fontSize: '17px', color: '#ffffff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0).setDepth(40).setAlpha(0)
+    this.keyDisplay  = this.add.text(860, 8, '', { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#f0c060' }).setOrigin(1, 0).setScrollFactor(0).setDepth(31)
+    this.portalHint  = this.add.text(480, 527, this.isCommunityMode ? 'Q键: 发射传送门  ·  WASD: 移动' : '', { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#304050' }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(31)
 
     this.exitGfx          = this.add.graphics().setDepth(12)
     this.communityExitGfx = this.add.graphics().setDepth(12)
@@ -348,7 +348,7 @@ export class PuzzleScene extends Phaser.Scene {
       const col = Phaser.Display.Color.HexStringToColor(p.color).color
       const sprite = this.add.rectangle(p.x, p.y, 52, 52, col, 0.18).setDepth(5)
       sprite.setStrokeStyle(2, col, 0.65)
-      const label = this.add.text(p.x, p.y, p.id, { fontFamily: '"DotGothic16", monospace', fontSize: '22px', color: p.color }).setOrigin(0.5).setDepth(6)
+      const label = this.add.text(p.x, p.y, p.id, { fontFamily: '"Noto Sans SC", monospace', fontSize: '22px', color: p.color }).setOrigin(0.5).setDepth(6)
       this.pads.push({ id: p.id, sprite, label, onPad: false, activationTimes: [], color: col, isTrap: false })
     })
 
@@ -357,7 +357,7 @@ export class PuzzleScene extends Phaser.Scene {
       sprite.setStrokeStyle(2, 0xa060ff, 0.9)
       const unique  = [...new Set(d.requiredPads)]
       const reqStr  = unique.map(id => { const cnt = d.requiredPads.filter(r => r === id).length; return cnt > 1 ? `${id}x${cnt}` : id }).join('+')
-      const label   = this.add.text(d.x, d.y + d.h / 2 + 10, `${reqStr}\n${d.windowMs}ms`, { fontFamily: '"DotGothic16", monospace', fontSize: '9px', color: '#8850d0', align: 'center' }).setOrigin(0.5, 0).setDepth(9)
+      const label   = this.add.text(d.x, d.y + d.h / 2 + 10, `${reqStr}\n${d.windowMs}ms`, { fontFamily: '"Noto Sans SC", monospace', fontSize: '9px', color: '#8850d0', align: 'center' }).setOrigin(0.5, 0).setDepth(9)
       this.doors.push({ sprite, label, open: false, requiredPads: d.requiredPads, windowMs: d.windowMs })
     })
 
@@ -383,7 +383,7 @@ export class PuzzleScene extends Phaser.Scene {
       left:  kb.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT),
       right: kb.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT),
     }
-    this.echo2Text = this.add.text(700, 25, 'P2回响：空', { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#7a6020' }).setOrigin(0, 0).setScrollFactor(0).setDepth(31)
+    this.echo2Text = this.add.text(700, 25, 'P2回响：空', { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#7a6020' }).setOrigin(0, 0).setScrollFactor(0).setDepth(31)
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -427,7 +427,7 @@ export class PuzzleScene extends Phaser.Scene {
         case 'key_item':       this.addKeyItem(el.id, el.x, el.y, el.color ?? '#f0c840'); break
         case 'key_door':       this.addKeyDoor(el); break
         case 'portal_surface': this.addPortalSurface(el.id, el.x, el.y, el.w, el.h); break
-        case 'label':          this.add.text(el.x, el.y, el.text, { fontFamily: '"DotGothic16", monospace', fontSize: `${el.fontSize ?? 11}px`, color: el.color ?? '#607080', wordWrap: { width: 280 } }).setOrigin(0.5).setDepth(7); break
+        case 'label':          this.add.text(el.x, el.y, el.text, { fontFamily: '"Noto Sans SC", monospace', fontSize: `${el.fontSize ?? 11}px`, color: el.color ?? '#607080', wordWrap: { width: 280 } }).setOrigin(0.5).setDepth(7); break
       }
     }
 
@@ -475,8 +475,8 @@ export class PuzzleScene extends Phaser.Scene {
     const col = Phaser.Display.Color.HexStringToColor(color).color
     const sprite = this.add.rectangle(x, y, 50, 50, col, 0.18).setDepth(5)
     sprite.setStrokeStyle(2, col, isTrap ? 1 : 0.65)
-    const label = this.add.text(x, y, id, { fontFamily: '"DotGothic16", monospace', fontSize: '20px', color }).setOrigin(0.5).setDepth(6)
-    if (isTrap) this.add.text(x, y + 28, '⚠', { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#c05050' }).setOrigin(0.5).setDepth(6)
+    const label = this.add.text(x, y, id, { fontFamily: '"Noto Sans SC", monospace', fontSize: '20px', color }).setOrigin(0.5).setDepth(6)
+    if (isTrap) this.add.text(x, y + 28, '⚠', { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#c05050' }).setOrigin(0.5).setDepth(6)
     this.pads.push({ id, sprite, label, onPad: false, activationTimes: [], color: col, isTrap })
   }
 
@@ -484,7 +484,7 @@ export class PuzzleScene extends Phaser.Scene {
     const sprite  = this.add.rectangle(el.x, el.y, el.w, el.h, 0x6820c0, 0.88).setDepth(8)
     sprite.setStrokeStyle(2, 0xa060ff, 0.9)
     const reqStr  = el.requires.length ? el.requires.join('+') : '(联动)'
-    const label   = this.add.text(el.x, el.y, reqStr, { fontFamily: '"DotGothic16", monospace', fontSize: '9px', color: '#8850d0', align: 'center' }).setOrigin(0.5).setDepth(9)
+    const label   = this.add.text(el.x, el.y, reqStr, { fontFamily: '"Noto Sans SC", monospace', fontSize: '9px', color: '#8850d0', align: 'center' }).setOrigin(0.5).setDepth(9)
     const doorObj: DoorObj = { id: el.id, sprite, label, open: false, requiredPads: el.requires, windowMs: el.windowMs }
     this.doors.push(doorObj)
     if (el.id) {
@@ -515,7 +515,7 @@ export class PuzzleScene extends Phaser.Scene {
     visual.setDepth(8)
     const zone = this.add.zone(x, y, 40, 40)
     this.physics.add.existing(zone, true)
-    this.add.text(x, y + 28, '⇆', { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color }).setOrigin(0.5).setDepth(7)
+    this.add.text(x, y + 28, '⇆', { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color }).setOrigin(0.5).setDepth(7)
     this.teleporterObjs.push({ id, pos: { x, y }, targetId, zone, cooldownUntil: 0, cooldownMs: cooldown, onZone: false, color: col, visual })
   }
 
@@ -532,7 +532,7 @@ export class PuzzleScene extends Phaser.Scene {
     const col    = el.color ? Phaser.Display.Color.HexStringToColor(el.color).color : 0xff9040
     const hexCol = '#' + col.toString(16).padStart(6, '0')
     const visual = this.add.rectangle(el.x, el.y, 46, 10, col, 0.5).setDepth(5).setStrokeStyle(1, col, 0.9)
-    const label  = this.add.text(el.x, el.y - 14, '▬', { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: hexCol }).setOrigin(0.5).setDepth(6)
+    const label  = this.add.text(el.x, el.y - 14, '▬', { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: hexCol }).setOrigin(0.5).setDepth(6)
     const zone   = this.add.zone(el.x, el.y, 46, 14)
     this.physics.add.existing(zone, true)
     this.pressurePlateObjs.push({ id: el.id, zone, visual, linksTo: el.linksTo, requireAll: el.requireAll ?? false, active: false, label })
@@ -542,7 +542,7 @@ export class PuzzleScene extends Phaser.Scene {
     const col    = Phaser.Display.Color.HexStringToColor(color).color
     const hexCol = '#' + col.toString(16).padStart(6, '0')
     const visual = this.add.rectangle(x, y, 38, 18, col, 0.35).setDepth(5).setStrokeStyle(2, col, 0.9)
-    const label  = this.add.text(x, y - 18, '⚡', { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: hexCol }).setOrigin(0.5).setDepth(6)
+    const label  = this.add.text(x, y - 18, '⚡', { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: hexCol }).setOrigin(0.5).setDepth(6)
     const zone   = this.add.zone(x, y, 38, 20)
     this.physics.add.existing(zone, true)
     this.switchObjs.push({ zone, visual, linksTo, mode, triggered: false, onPad: false, label })
@@ -583,7 +583,7 @@ export class PuzzleScene extends Phaser.Scene {
   private addTimedDoor(el: { id?: string; x: number; y: number; w: number; h: number; openMs: number; closeMs: number; initialState?: string; phaseOffset?: number }) {
     const startOpen = el.initialState === 'open'
     const visual    = this.add.rectangle(el.x, el.y, el.w, el.h, 0xc05020, startOpen ? 0.12 : 0.85).setDepth(8).setStrokeStyle(2, 0xf08040, 0.9)
-    const label     = this.add.text(el.x, el.y, startOpen ? '○' : '●', { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#f08040' }).setOrigin(0.5).setDepth(9)
+    const label     = this.add.text(el.x, el.y, startOpen ? '○' : '●', { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#f08040' }).setOrigin(0.5).setDepth(9)
     const obj: TimedDoorObj = { id: el.id, visual, label, openMs: el.openMs, closeMs: el.closeMs, open: startOpen, elapsed: el.phaseOffset ?? 0, w: el.w, h: el.h }
     this.timedDoorObjs.push(obj)
     if (el.id) {
@@ -602,7 +602,7 @@ export class PuzzleScene extends Phaser.Scene {
     const col    = Phaser.Display.Color.HexStringToColor(color).color
     this.add.rectangle(x, y, w, h, col, 0.7).setStrokeStyle(1, 0x304050, 0.4).setDepth(5)
     const arrow = vx > 0 ? '→→→' : vx < 0 ? '←←←' : vy > 0 ? '↓↓↓' : '↑↑↑'
-    this.add.text(x, y, arrow, { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#506070' }).setOrigin(0.5).setDepth(6)
+    this.add.text(x, y, arrow, { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#506070' }).setOrigin(0.5).setDepth(6)
     const zone = this.add.zone(x, y, w, h)
     this.physics.add.existing(zone, true)
     this.conveyorObjs.push({ zone, vx, vy })
@@ -625,13 +625,13 @@ export class PuzzleScene extends Phaser.Scene {
     const col    = el.color ? Phaser.Display.Color.HexStringToColor(el.color).color : 0xd0a020
     const hexCol = '#' + col.toString(16).padStart(6, '0')
     const visual = this.add.rectangle(el.x, el.y, el.w, el.h, col, 0.85).setDepth(8).setStrokeStyle(2, col, 0.9)
-    const label  = this.add.text(el.x, el.y, '🔒', { fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: hexCol }).setOrigin(0.5).setDepth(9)
+    const label  = this.add.text(el.x, el.y, '🔒', { fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: hexCol }).setOrigin(0.5).setDepth(9)
     this.keyDoorObjs.push({ id: el.id, visual, label, keyId: el.keyId, open: false, w: el.w, h: el.h })
   }
 
   private addPortalSurface(id: string, x: number, y: number, w: number, h: number) {
     const visual = this.add.rectangle(x, y, w, h, 0x2040a0, 0.3).setStrokeStyle(1, 0x4060d0, 0.5).setDepth(5)
-    this.add.text(x, y, '▨', { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#2050a0' }).setOrigin(0.5).setDepth(6)
+    this.add.text(x, y, '▨', { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#2050a0' }).setOrigin(0.5).setDepth(6)
     this.portalSurfaces.push({ id, rect: { x, y, w, h }, visual })
   }
 
@@ -650,7 +650,7 @@ export class PuzzleScene extends Phaser.Scene {
       this.communityExitGfx.strokeCircle(x, y, r)
     }
     this.communityExitGfx.fillStyle(0xffd060, 0.15); this.communityExitGfx.fillCircle(x, y, 22)
-    this.exitTxt = this.add.text(x, y - 38, '出口', { fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: '#ffd060' }).setOrigin(0.5, 1).setDepth(13)
+    this.exitTxt = this.add.text(x, y - 38, '出口', { fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: '#ffd060' }).setOrigin(0.5, 1).setDepth(13)
     this.tweens.add({ targets: this.exitTxt, y: this.exitTxt.y - 6, duration: 800, yoyo: true, repeat: -1 })
   }
 
@@ -982,7 +982,7 @@ export class PuzzleScene extends Phaser.Scene {
     }
     this.exitGfx.fillStyle(0xffd060, 0.15); this.exitGfx.fillCircle(exitX, exitY, 24)
     this.exitGfx.lineStyle(2, 0xffd060, 0.9); this.exitGfx.strokeCircle(exitX, exitY, 26)
-    this.exitTxt = this.add.text(exitX, exitY - 36, '出口', { fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: '#ffd060' }).setOrigin(0.5, 1).setDepth(13)
+    this.exitTxt = this.add.text(exitX, exitY - 36, '出口', { fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: '#ffd060' }).setOrigin(0.5, 1).setDepth(13)
     this.tweens.add({ targets: this.exitTxt, y: this.exitTxt.y - 6, duration: 800, yoyo: true, repeat: -1 })
     this.showStatus('✦ 出口已开启 — 走入金色传送门', '#ffd060')
   }
@@ -1110,18 +1110,18 @@ export class PuzzleScene extends Phaser.Scene {
   private showVictory() {
     const W = 960, H = 540, isCom = this.isCommunityMode
     this.add.rectangle(W / 2, H / 2, 560, 270, 0x040810, 0.97).setScrollFactor(0).setDepth(120).setStrokeStyle(2, 0x50e8a0)
-    this.add.text(W / 2, H / 2 - 90, isCom ? '✦ 社区地图全部通关 ✦' : '✦ 时序密室全部破解 ✦', { fontFamily: '"DotGothic16", monospace', fontSize: '22px', color: '#50e8a0' }).setOrigin(0.5).setScrollFactor(0).setDepth(121)
+    this.add.text(W / 2, H / 2 - 90, isCom ? '✦ 社区地图全部通关 ✦' : '✦ 时序密室全部破解 ✦', { fontFamily: '"Noto Sans SC", monospace', fontSize: '22px', color: '#50e8a0' }).setOrigin(0.5).setScrollFactor(0).setDepth(121)
     const total = isCom ? COMMUNITY_MAPS.length : (this.isCoop ? 5 : 30)
-    this.add.text(W / 2, H / 2 - 52, `通关 ${total} 个关卡`, { fontFamily: '"DotGothic16", monospace', fontSize: '14px', color: '#507090' }).setOrigin(0.5).setScrollFactor(0).setDepth(121)
-    this.add.text(W / 2, H / 2 - 20, `获得时砂  ${this.totalSand}`, { fontFamily: '"DotGothic16", monospace', fontSize: '18px', color: '#c8e060' }).setOrigin(0.5).setScrollFactor(0).setDepth(121)
-    this.add.text(W / 2, H / 2 + 14, '回响不止于战斗——它是时间本身的语言', { fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: '#384850' }).setOrigin(0.5).setScrollFactor(0).setDepth(121)
+    this.add.text(W / 2, H / 2 - 52, `通关 ${total} 个关卡`, { fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color: '#507090' }).setOrigin(0.5).setScrollFactor(0).setDepth(121)
+    this.add.text(W / 2, H / 2 - 20, `获得时砂  ${this.totalSand}`, { fontFamily: '"Noto Sans SC", monospace', fontSize: '18px', color: '#c8e060' }).setOrigin(0.5).setScrollFactor(0).setDepth(121)
+    this.add.text(W / 2, H / 2 + 14, '回响不止于战斗——它是时间本身的语言', { fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: '#384850' }).setOrigin(0.5).setScrollFactor(0).setDepth(121)
     const mkBtn = (cx: number, label: string, color: number, fn: () => void) => {
       const bg = this.add.rectangle(cx, H / 2 + 76, 160, 32, 0x040810).setScrollFactor(0).setDepth(121).setStrokeStyle(1, color, 0.9)
       bg.setInteractive({ useHandCursor: true })
       bg.on('pointerover', () => bg.setFillStyle(color, 0.12))
       bg.on('pointerout',  () => bg.setFillStyle(0x040810))
       bg.on('pointerdown', () => { audioManager.playClick(); fn() })
-      this.add.text(cx, H / 2 + 76, label, { fontFamily: '"DotGothic16", monospace', fontSize: '14px', color: '#' + color.toString(16).padStart(6, '0') }).setOrigin(0.5).setScrollFactor(0).setDepth(122)
+      this.add.text(cx, H / 2 + 76, label, { fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color: '#' + color.toString(16).padStart(6, '0') }).setOrigin(0.5).setScrollFactor(0).setDepth(122)
     }
     mkBtn(W / 2 - 100, '再次挑战', 0x50e8a0, () => this.scene.restart())
     mkBtn(W / 2 + 100, '返回大厅', 0x607080, () => this.scene.start('ModeSelectScene'))

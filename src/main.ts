@@ -40,9 +40,9 @@ const config: Phaser.Types.Core.GameConfig = {
   height: 540,
   parent: 'game-container',
   backgroundColor: '#0a0a14',
-  pixelArt: true,
-  antialias: false,
-  roundPixels: true,
+  pixelArt: false,
+  antialias: true,
+  roundPixels: false,
   scene: [
     BootScene,
     MenuScene,
@@ -71,7 +71,7 @@ const config: Phaser.Types.Core.GameConfig = {
     autoCenter: Phaser.Scale.CENTER_BOTH,
     zoom: 1,
   },
-  render: { antialias: false, antialiasGL: false },
+  render: { antialias: true, antialiasGL: true },
 }
 
 const game = new Phaser.Game(config)

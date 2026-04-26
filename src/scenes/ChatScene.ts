@@ -118,7 +118,7 @@ export class ChatScene extends Phaser.Scene {
       PANEL_X + 10,
       BOTTOM_Y - PANEL_H_EXP + 5,
       '聊 天',
-      { fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: '#50a0d0' },
+      { fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: '#50a0d0' },
     ).setScrollFactor(0).setDepth(depth + 2).setVisible(false)
 
     // 连接状态圆点
@@ -133,7 +133,7 @@ export class ChatScene extends Phaser.Scene {
       PANEL_X + PANEL_W - 26,
       BOTTOM_Y - PANEL_H_EXP + 4,
       '×',
-      { fontFamily: '"DotGothic16", monospace', fontSize: '14px', color: '#304050' },
+      { fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color: '#304050' },
     ).setScrollFactor(0).setDepth(depth + 2).setVisible(false)
       .setInteractive({ useHandCursor: true })
     closeBtn.on('pointerover',  () => closeBtn.setColor('#c06060'))
@@ -149,7 +149,7 @@ export class ChatScene extends Phaser.Scene {
       const t = this.add.text(
         PANEL_X + 8, y, '',
         {
-          fontFamily: '"DotGothic16", monospace',
+          fontFamily: '"Noto Sans SC", monospace',
           fontSize: '10px',
           color: '#507090',
           wordWrap: { width: PANEL_W - 18 },
@@ -173,13 +173,13 @@ export class ChatScene extends Phaser.Scene {
     this.pillText = this.add.text(
       PANEL_X + 10, BOTTOM_Y - PANEL_H_COLL / 2,
       '[T] 聊天',
-      { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#253545' },
+      { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#253545' },
     ).setOrigin(0, 0.5).setScrollFactor(0).setDepth(depth + 2).setVisible(false)
 
     this.unreadBadge = this.add.text(
       PANEL_X + 88, BOTTOM_Y - PANEL_H_COLL / 2,
       '',
-      { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#c06030' },
+      { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#c06030' },
     ).setOrigin(0, 0.5).setScrollFactor(0).setDepth(depth + 2).setVisible(false)
   }
 
@@ -330,7 +330,7 @@ export class ChatScene extends Phaser.Scene {
       border: none;
       outline: none;
       color: #90d0f0;
-      font-family: "DotGothic16", monospace;
+      font-family: "Noto Sans SC", monospace;
       font-size: ${fsize}px;
       caret-color: #50e8a0;
       z-index: 9999;

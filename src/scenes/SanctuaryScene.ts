@@ -58,11 +58,11 @@ export class SanctuaryScene extends Phaser.Scene {
     this.add.rectangle(width / 2, 28, width, 56, 0x060810, 0.95).setDepth(5)
     this.add.rectangle(width / 2, 56, width, 1, 0x406080, 0.3).setDepth(5)
     this.add.text(width / 2, 18, '✦  回响庇护所', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '22px', color: '#7ce0bc',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '22px', color: '#7ce0bc',
     }).setOrigin(0.5, 0).setDepth(6)
     const faction = FACTION_DEFINITIONS[rt.player.faction]
     this.add.text(width / 2, 40, `${faction?.name || ''}  ·  Lv.${rt.player.level}  ·  ${rt.player.username}`, {
-      fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: faction?.color || '#7090b0',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: faction?.color || '#7090b0',
     }).setOrigin(0.5, 0).setDepth(6)
 
     // 标签页按钮
@@ -82,7 +82,7 @@ export class SanctuaryScene extends Phaser.Scene {
         .setDepth(6)
       bg.setStrokeStyle(1, 0x304050, 0.6)
       const txt = this.add.text(tx, 82, tab.label, {
-        fontFamily: '"DotGothic16", monospace', fontSize: '13px', color: '#6080a0',
+        fontFamily: '"Noto Sans SC", monospace', fontSize: '13px', color: '#6080a0',
       }).setOrigin(0.5).setDepth(7)
 
       bg.setInteractive({ useHandCursor: true })
@@ -100,7 +100,7 @@ export class SanctuaryScene extends Phaser.Scene {
 
     // 底部提示
     this.tipText = this.add.text(width / 2, height - 14, '', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: '#f0d48a',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: '#f0d48a',
     }).setOrigin(0.5, 1).setDepth(8)
 
     this.switchTab('overview')
@@ -145,7 +145,7 @@ export class SanctuaryScene extends Phaser.Scene {
       x: width / 2, y,
       text: `${line.speaker}：${line.text}`,
       style: {
-        fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: '#7090a8',
+        fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: '#7090a8',
         wordWrap: { width: cw }, align: 'center',
       },
       add: false,
@@ -167,13 +167,13 @@ export class SanctuaryScene extends Phaser.Scene {
     this.contentLayer.add(this.make.text({
       x: leftX, y: y + 6,
       text: `Lv.${level}`,
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '20px', color: '#c8d8ff' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '20px', color: '#c8d8ff' },
       add: false,
     }))
     this.contentLayer.add(this.make.text({
       x: leftX + 70, y: y + 10,
       text: `${exp} / ${expNeeded} XP`,
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#6080a0' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#6080a0' },
       add: false,
     }))
     // 经验条轨道
@@ -183,7 +183,7 @@ export class SanctuaryScene extends Phaser.Scene {
     this.contentLayer.add(this.make.text({
       x: width / 2, y: y + 38,
       text: `${Math.round(expFrac * 100)}%`,
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#90b8e0' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#90b8e0' },
       add: false,
     }).setOrigin(0.5))
     y += 76
@@ -201,7 +201,7 @@ export class SanctuaryScene extends Phaser.Scene {
     this.contentLayer.add(this.make.text({
       x: leftX, y,
       text: '每日任务',
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '13px', color: '#c8a850' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '13px', color: '#c8a850' },
       add: false,
     }))
     y += 18
@@ -217,14 +217,14 @@ export class SanctuaryScene extends Phaser.Scene {
       this.contentLayer.add(this.make.text({
         x: leftX + 10, y: y + 12,
         text: q.label,
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: q.rewarded ? '#3a6030' : '#8090a8' },
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: q.rewarded ? '#3a6030' : '#8090a8' },
         add: false,
       }))
       // 进度
       this.contentLayer.add(this.make.text({
         x: leftX + 10, y: y + 24,
         text: `${Math.min(q.progress, q.goal)} / ${q.goal}`,
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: done ? '#a0c840' : '#405060' },
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: done ? '#a0c840' : '#405060' },
         add: false,
       }))
 
@@ -233,7 +233,7 @@ export class SanctuaryScene extends Phaser.Scene {
         this.contentLayer.add(this.make.text({
           x: width / 2 + cw / 2 - 80, y: y + cardH / 2,
           text: '✦ 已领取',
-          style: { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#3a6030' },
+          style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#3a6030' },
           add: false,
         }).setOrigin(0.5))
       } else if (done) {
@@ -244,7 +244,7 @@ export class SanctuaryScene extends Phaser.Scene {
         this.contentLayer.add(this.make.text({
           x: width / 2 + cw / 2 - 80, y: y + cardH / 2,
           text: `领取 +${q.reward}时砂`,
-          style: { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#90d040' },
+          style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#90d040' },
           add: false,
         }).setOrigin(0.5))
         claimBg.on('pointerdown', () => {
@@ -281,7 +281,7 @@ export class SanctuaryScene extends Phaser.Scene {
     this.contentLayer.add(this.make.text({
       x: width / 2 - 180, y: y + 19,
       text: '收取温室时砂  +20',
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: '#70a0c0' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: '#70a0c0' },
       add: false,
     }).setOrigin(0.5))
     harvestBg.on('pointerover', () => harvestBg.setFillStyle(0x0c1828, 1))
@@ -308,7 +308,7 @@ export class SanctuaryScene extends Phaser.Scene {
     this.contentLayer.add(this.make.text({
       x: width / 2, y: y + 19,
       text: `⌛ ${rt.player.timeSand} 时砂`,
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '14px', color: '#e8d080' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color: '#e8d080' },
       add: false,
     }).setOrigin(0.5))
 
@@ -346,7 +346,7 @@ export class SanctuaryScene extends Phaser.Scene {
     this.contentLayer.add(this.make.text({
       x: width / 2, y: 8,
       text: '点击已解锁技能可装备到 [1][2][3] 槽 · 橙色 = 已装备',
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#506070' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#506070' },
       add: false,
     }).setOrigin(0.5))
 
@@ -375,7 +375,7 @@ export class SanctuaryScene extends Phaser.Scene {
         x: cx, y: cy - 24,
         text: skill.name,
         style: {
-          fontFamily: '"DotGothic16", monospace', fontSize: '13px',
+          fontFamily: '"Noto Sans SC", monospace', fontSize: '13px',
           color: isEquipped ? '#f0c060' : isUnlocked ? '#dce9ff' : '#384858',
         },
         add: false,
@@ -385,7 +385,7 @@ export class SanctuaryScene extends Phaser.Scene {
       this.contentLayer.add(this.make.text({
         x: cx, y: cy - 10,
         text: `${skill.element}  CD:${(skill.cooldown / 1000).toFixed(1)}s  ${isUnlocked ? (isEquipped ? '✦已装备' : '已解锁') : `${skill.unlockCost}时砂`}`,
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '9px', color: isUnlocked ? skill.elementColor : '#384858' },
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '9px', color: isUnlocked ? skill.elementColor : '#384858' },
         add: false,
       }).setOrigin(0.5))
 
@@ -394,7 +394,7 @@ export class SanctuaryScene extends Phaser.Scene {
         x: cx, y: cy + 2,
         text: skill.description,
         style: {
-          fontFamily: '"DotGothic16", monospace', fontSize: '9px',
+          fontFamily: '"Noto Sans SC", monospace', fontSize: '9px',
           color: isUnlocked ? '#8090a8' : '#2a3038',
           wordWrap: { width: CARD_W - 16 }, align: 'center',
         },
@@ -409,7 +409,7 @@ export class SanctuaryScene extends Phaser.Scene {
         this.contentLayer.add(btnBg)
         this.contentLayer.add(this.make.text({
           x: cx, y: btnY, text: `解锁 (${skill.unlockCost}时砂)`,
-          style: { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#5090b0' },
+          style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#5090b0' },
           add: false,
         }).setOrigin(0.5))
         btnBg.setInteractive({ useHandCursor: true })
@@ -432,7 +432,7 @@ export class SanctuaryScene extends Phaser.Scene {
         this.contentLayer.add(btnBg)
         this.contentLayer.add(this.make.text({
           x: cx, y: btnY, text: '装备',
-          style: { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: skill.elementColor },
+          style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: skill.elementColor },
           add: false,
         }).setOrigin(0.5))
         btnBg.setInteractive({ useHandCursor: true })
@@ -453,7 +453,7 @@ export class SanctuaryScene extends Phaser.Scene {
         this.contentLayer.add(btnBg)
         this.contentLayer.add(this.make.text({
           x: cx, y: btnY, text: '卸下',
-          style: { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#c07030' },
+          style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#c07030' },
           add: false,
         }).setOrigin(0.5))
         btnBg.setInteractive({ useHandCursor: true })
@@ -488,7 +488,7 @@ export class SanctuaryScene extends Phaser.Scene {
     this.contentLayer.add(this.make.text({
       x: cx, y,
       text: '消耗时砂强化基础属性，永久生效并作用于所有深潜',
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#506070' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#506070' },
       add: false,
     }).setOrigin(0.5, 0))
     y += 22
@@ -529,14 +529,14 @@ export class SanctuaryScene extends Phaser.Scene {
       this.contentLayer.add(this.make.text({
         x: cx - CARD_W / 2 + 16, y: y + 8,
         text: attr.name,
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '15px', color: maxed ? '#706040' : attr.color },
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '15px', color: maxed ? '#706040' : attr.color },
         add: false,
       }))
       // 描述
       this.contentLayer.add(this.make.text({
         x: cx - CARD_W / 2 + 16, y: y + 28,
         text: attr.desc + '  ' + attr.perLevelText(UPGRADE_MAX_LEVEL),
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#405060' },
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#405060' },
         add: false,
       }))
 
@@ -556,7 +556,7 @@ export class SanctuaryScene extends Phaser.Scene {
         this.contentLayer.add(this.make.text({
           x: btnX, y: btnY,
           text: '★ MAX',
-          style: { fontFamily: '"DotGothic16", monospace', fontSize: '13px', color: '#806030' },
+          style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '13px', color: '#806030' },
           add: false,
         }).setOrigin(0.5))
       } else {
@@ -566,13 +566,13 @@ export class SanctuaryScene extends Phaser.Scene {
         this.contentLayer.add(this.make.text({
           x: btnX, y: btnY - 8,
           text: `Lv.${curLv} → Lv.${curLv + 1}`,
-          style: { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: canAfford ? attr.color : '#2a3840' },
+          style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: canAfford ? attr.color : '#2a3840' },
           add: false,
         }).setOrigin(0.5))
         this.contentLayer.add(this.make.text({
           x: btnX, y: btnY + 6,
           text: `${cost} 时砂`,
-          style: { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: canAfford ? '#e8d060' : '#2a3038' },
+          style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: canAfford ? '#e8d060' : '#2a3038' },
           add: false,
         }).setOrigin(0.5))
         if (canAfford) {
@@ -593,7 +593,7 @@ export class SanctuaryScene extends Phaser.Scene {
           this.contentLayer.add(this.make.text({
             x: btnX, y: btnY + 20,
             text: `差 ${cost - rt.player.timeSand} 时砂`,
-            style: { fontFamily: '"DotGothic16", monospace', fontSize: '9px', color: '#3a4858' },
+            style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '9px', color: '#3a4858' },
             add: false,
           }).setOrigin(0.5))
         }
@@ -606,7 +606,7 @@ export class SanctuaryScene extends Phaser.Scene {
     this.contentLayer.add(this.make.text({
       x: cx, y: y + 8,
       text: `当前时砂：${rt.player.timeSand}`,
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '13px', color: '#e8d080' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '13px', color: '#e8d080' },
       add: false,
     }).setOrigin(0.5))
 
@@ -615,7 +615,7 @@ export class SanctuaryScene extends Phaser.Scene {
     this.contentLayer.add(this.make.text({
       x: cx, y: y + 34,
       text: `当前角色：${charDef?.name ?? '时间游侠'}  [${charDef?.role ?? '均衡'}]  — 点击「仓库」查看携带装备`,
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#4a7090' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#4a7090' },
       add: false,
     }).setOrigin(0.5))
   }
@@ -631,7 +631,7 @@ export class SanctuaryScene extends Phaser.Scene {
     this.contentLayer.add(this.make.text({
       x: width / 2, y,
       text: '仓库  ─  无限容量，撤离后自动追加，战前准备时选取携带',
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: '#506070' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: '#506070' },
       add: false,
     }).setOrigin(0.5, 0))
     y += 24
@@ -655,7 +655,7 @@ export class SanctuaryScene extends Phaser.Scene {
     this.contentLayer.add(this.make.text({
       x: leftX, y,
       text: `总估值：${totalValue} ⌛  |  武器 ${weapDefs.length}  配件 ${attDefs.length}  物品 ${itemDefs.length}`,
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '13px', color: '#e8d060' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '13px', color: '#e8d060' },
       add: false,
     }))
     y += 22
@@ -670,13 +670,13 @@ export class SanctuaryScene extends Phaser.Scene {
       this.contentLayer.add(this.make.text({
         x: leftX + 8, y: y + 6,
         text: label,
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: colorHex },
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: colorHex },
         add: false,
       }))
       this.contentLayer.add(this.make.text({
         x: leftX + 8, y: y + 24,
         text: sub,
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#5080a0' },
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#5080a0' },
         add: false,
       }))
       const btn = this.add.rectangle(leftX + W - 40, y + 22, 60, 28, 0x180808)
@@ -685,7 +685,7 @@ export class SanctuaryScene extends Phaser.Scene {
       this.contentLayer.add(btn)
       this.contentLayer.add(this.make.text({
         x: leftX + W - 40, y: y + 22,
-        text: '丢弃', style: { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#804040' },
+        text: '丢弃', style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#804040' },
         add: false,
       }).setOrigin(0.5))
       y += 50
@@ -695,7 +695,7 @@ export class SanctuaryScene extends Phaser.Scene {
       this.contentLayer.add(this.make.text({
         x: leftX + 8, y: y + 4,
         text: msg,
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#2a3848' },
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#2a3848' },
         add: false,
       }))
       y += 24
@@ -705,7 +705,7 @@ export class SanctuaryScene extends Phaser.Scene {
       this.contentLayer.add(this.make.text({
         x: leftX, y,
         text: txt,
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#446688' },
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#446688' },
         add: false,
       }))
       y += 18
@@ -781,7 +781,7 @@ export class SanctuaryScene extends Phaser.Scene {
     this.contentLayer.add(
       this.make.text({ x: width / 2, y: 8,
         text: '选择角色', add: false,
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '14px', color: '#5090b0' },
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color: '#5090b0' },
       }).setOrigin(0.5)
     )
 
@@ -844,17 +844,17 @@ export class SanctuaryScene extends Phaser.Scene {
 
         // 角色名
         makeText(LIST_LEFT + 48, ly + 8, def.name,
-          { fontFamily: '"DotGothic16", monospace', fontSize: '12px',
+          { fontFamily: '"Noto Sans SC", monospace', fontSize: '12px',
             color: isUnlocked ? (isSel ? '#c8e8ff' : '#a0b8c8') : '#384858' })
 
         // 定位标签
         makeText(LIST_LEFT + 48, ly + 26, isUnlocked ? `[${def.role}]` : `🔒 ${def.role}`,
-          { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: isSel ? '#6090d0' : '#4a6070' })
+          { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: isSel ? '#6090d0' : '#4a6070' })
 
         // 当前选中徽标
         if (isSel) {
           makeText(LIST_LEFT + CARD_W - 10, ly + CARD_H / 2 - 7, '◀',
-            { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#5090d0' }, 1, 0)
+            { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#5090d0' }, 1, 0)
         }
 
         // 点击切换
@@ -886,16 +886,16 @@ export class SanctuaryScene extends Phaser.Scene {
 
       // 名字
       makeText(DETAIL_X + 82, dy + 6, def.name,
-        { fontFamily: '"DotGothic16", monospace', fontSize: '17px',
+        { fontFamily: '"Noto Sans SC", monospace', fontSize: '17px',
           color: isUnlocked ? '#e8d8a0' : '#405060' })
 
       // 定位标签
       makeText(DETAIL_X + 82, dy + 28, `[${def.role}]  ${def.nameEn}`,
-        { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#6090b0' })
+        { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#6090b0' })
 
       // lore 一句话
       makeText(DETAIL_X + 82, dy + 44, def.lore,
-        { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#506070',
+        { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#506070',
           wordWrap: { width: DETAIL_W - 90 } })
 
       // 未解锁提示 + 实时进度
@@ -916,11 +916,11 @@ export class SanctuaryScene extends Phaser.Scene {
           progressText = cur >= 10 ? '条件已达成' : `深潜 ${cur}/10 次`
         }
         makeText(DETAIL_X + 82, dy + 60, `🔒 ${def.unlockRequirement}`,
-          { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#806050',
+          { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#806050',
             wordWrap: { width: DETAIL_W - 90 } })
         if (progressText) {
           makeText(DETAIL_X + 82, dy + 74, `▸ ${progressText}`,
-            { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#a07840' })
+            { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#a07840' })
         }
       }
 
@@ -935,18 +935,18 @@ export class SanctuaryScene extends Phaser.Scene {
       const BAR_W = Math.min(200, DETAIL_W - 80)
       for (const [label, pct, val] of ATTRS) {
         makeText(DETAIL_X, dy, label,
-          { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#607080' })
+          { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#607080' })
         makeRect(DETAIL_X + 44 + BAR_W / 2, dy + 6, BAR_W, 8, 0x1a2a30)
         const fillW = Math.max(4, Math.round(pct / 100 * BAR_W))
         makeRect(DETAIL_X + 44 + fillW / 2, dy + 6, fillW, 8, isUnlocked ? 0x3a8aaa : 0x3a4a50)
         makeText(DETAIL_X + 44 + BAR_W + 6, dy, val,
-          { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#a0c0d0' })
+          { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#a0c0d0' })
         dy += 20
       }
 
       // 初始武器
       makeText(DETAIL_X, dy + 4, `初始武器：${def.startWeapon.replace(/_/g, ' ')}`,
-        { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#90a868' })
+        { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#90a868' })
       dy += 24
 
       // 分隔线
@@ -955,20 +955,20 @@ export class SanctuaryScene extends Phaser.Scene {
 
       // 被动
       makeText(DETAIL_X, dy, `被动  ${def.passiveName}`,
-        { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#c8a060' })
+        { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#c8a060' })
       dy += 16
       makeText(DETAIL_X, dy, def.passiveDesc,
-        { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#708090',
+        { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#708090',
           wordWrap: { width: DETAIL_W } })
       dy += 28
 
       // Q 技能
       const sk = def.uniqueSkill
       makeText(DETAIL_X, dy, `Q  ${sk.name}   CD ${sk.cooldownMs / 1000}s`,
-        { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#80c0e0' })
+        { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#80c0e0' })
       dy += 16
       makeText(DETAIL_X, dy, sk.desc,
-        { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#708090',
+        { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#708090',
           wordWrap: { width: DETAIL_W } })
       dy += 32
 
@@ -984,7 +984,7 @@ export class SanctuaryScene extends Phaser.Scene {
         const btnTxt = this.make.text({
           x: btnX, y: dy,
           text: isCurrent ? '✓ 当前角色' : '选择此角色',
-          style: { fontFamily: '"DotGothic16", monospace', fontSize: '13px',
+          style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '13px',
             color: isCurrent ? '#80e0ff' : '#a0c8e8' },
           add: false,
         }).setOrigin(0.5)
@@ -1002,7 +1002,7 @@ export class SanctuaryScene extends Phaser.Scene {
         }
       } else if (def.unlockRequirement) {
         makeText(DETAIL_X + 100, dy, `🔒 ${def.unlockRequirement}`,
-          { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#806050',
+          { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#806050',
             wordWrap: { width: DETAIL_W } }, 0.5, 0)
       }
     }
@@ -1021,7 +1021,7 @@ export class SanctuaryScene extends Phaser.Scene {
       this.contentLayer.add(this.make.text({
         x: cx, y: 80,
         text: '尚无残响记录。在深潜中拾取发光碎片以收集。',
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '14px', color: '#304050' },
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color: '#304050' },
         add: false,
       }).setOrigin(0.5))
       return
@@ -1042,17 +1042,17 @@ export class SanctuaryScene extends Phaser.Scene {
       this.contentLayer.add(this.make.text({
         x: cx - 328, y: y + 10,
         text: entry.title,
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '13px', color: '#c8a96e' }, add: false,
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '13px', color: '#c8a96e' }, add: false,
       }))
       this.contentLayer.add(this.make.text({
         x: cx - 328, y: y + 28,
         text: `— ${entry.source}`,
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#405060' }, add: false,
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#405060' }, add: false,
       }))
       this.contentLayer.add(this.make.text({
         x: cx - 328, y: y + 44,
         text: entry.content,
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#8090a8', wordWrap: { width: 660 } },
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#8090a8', wordWrap: { width: 660 } },
         add: false,
       }))
 
@@ -1067,7 +1067,7 @@ export class SanctuaryScene extends Phaser.Scene {
 
     const txt = this.make.text({
       x, y, text: label,
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '13px', color: '#90b8d8' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '13px', color: '#90b8d8' },
       add: false,
     }).setOrigin(0.5)
 

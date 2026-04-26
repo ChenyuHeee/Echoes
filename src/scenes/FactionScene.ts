@@ -34,13 +34,13 @@ export class FactionScene extends Phaser.Scene {
 
     // 标题
     this.add.text(width / 2, height * 0.1, '选择你的阵营', {
-      fontFamily: '"DotGothic16", monospace',
+      fontFamily: '"Noto Sans SC", monospace',
       fontSize: '32px',
       color: '#c8a96e',
     }).setOrigin(0.5)
 
     this.add.text(width / 2, height * 0.17, '这将决定你的起始技能与世界观立场 · 之后可在庇护所修改世界观但不影响技能', {
-      fontFamily: '"DotGothic16", monospace',
+      fontFamily: '"Noto Sans SC", monospace',
       fontSize: '12px',
       color: '#6070a0',
     }).setOrigin(0.5)
@@ -60,7 +60,7 @@ export class FactionScene extends Phaser.Scene {
 
     // 底部提示
     this.add.text(width / 2, height * 0.93, '每个阵营都可以学习全部技能 — 阵营只影响起点与被动特性', {
-      fontFamily: '"DotGothic16", monospace',
+      fontFamily: '"Noto Sans SC", monospace',
       fontSize: '12px',
       color: '#607080',
     }).setOrigin(0.5)
@@ -90,25 +90,25 @@ export class FactionScene extends Phaser.Scene {
     }
 
     this.add.text(cx, cy - h / 2 + 36, sigils[faction.id] || '✦', {
-      fontFamily: '"DotGothic16", monospace',
+      fontFamily: '"Noto Sans SC", monospace',
       fontSize: '28px',
       color: faction.color,
     }).setOrigin(0.5)
 
     this.add.text(cx, cy - h / 2 + 68, faction.name, {
-      fontFamily: '"DotGothic16", monospace',
+      fontFamily: '"Noto Sans SC", monospace',
       fontSize: '18px',
       color: faction.accentColor,
     }).setOrigin(0.5)
 
     this.add.text(cx, cy - h / 2 + 86, faction.nameEn, {
-      fontFamily: '"DotGothic16", monospace',
+      fontFamily: '"Noto Sans SC", monospace',
       fontSize: '10px',
       color: faction.color,
     }).setOrigin(0.5).setAlpha(0.9)
 
     this.add.text(cx, cy - h / 2 + 118, faction.description, {
-      fontFamily: '"DotGothic16", monospace',
+      fontFamily: '"Noto Sans SC", monospace',
       fontSize: '12px',
       color: '#b0c8e0',
       wordWrap: { width: w - 32, useAdvancedWrap: true },
@@ -118,7 +118,7 @@ export class FactionScene extends Phaser.Scene {
 
     // 哲学语录
     this.add.text(cx, cy + 28, `「${faction.philosophy}」`, {
-      fontFamily: '"DotGothic16", monospace',
+      fontFamily: '"Noto Sans SC", monospace',
       fontSize: '10px',
       color: faction.color,
       wordWrap: { width: w - 32, useAdvancedWrap: true },
@@ -127,13 +127,13 @@ export class FactionScene extends Phaser.Scene {
 
     // 起始奖励
     this.add.text(cx, cy + 56, `起始技能奖励：${faction.passiveName}`, {
-      fontFamily: '"DotGothic16", monospace',
+      fontFamily: '"Noto Sans SC", monospace',
       fontSize: '10px',
       color: '#dce9ff',
     }).setOrigin(0.5)
 
     this.add.text(cx, cy + 72, faction.passiveDescription, {
-      fontFamily: '"DotGothic16", monospace',
+      fontFamily: '"Noto Sans SC", monospace',
       fontSize: '10px',
       color: '#708090',
       wordWrap: { width: w - 32, useAdvancedWrap: true },
@@ -145,7 +145,7 @@ export class FactionScene extends Phaser.Scene {
     const btnBg = this.add.rectangle(cx, btnY, w - 40, 36, 0x0e1428, 1)
     btnBg.setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(faction.color).color, 0.6)
     const btnTxt = this.add.text(cx, btnY, `选择 ${faction.name}`, {
-      fontFamily: '"DotGothic16", monospace',
+      fontFamily: '"Noto Sans SC", monospace',
       fontSize: '13px',
       color: faction.accentColor,
     }).setOrigin(0.5)

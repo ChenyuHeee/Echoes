@@ -142,7 +142,7 @@ export class BootScene extends Phaser.Scene {
       window.setTimeout(() => loadingScreen.remove(), 350)
     }
 
-    // 等待 DotGothic16 像素字体加载完毕，再启动场景
+    // 等待 Noto Sans SC 像素字体加载完毕，再启动场景
     // 否则 Phaser 会用系统 monospace 渲染文字（模糊），加载后不会自动重绘
     const startScenes = () => {
       this.time.delayedCall(200, () => {
@@ -152,7 +152,7 @@ export class BootScene extends Phaser.Scene {
     }
 
     Promise.race([
-      document.fonts.load('16px "DotGothic16"'),
+      document.fonts.load('16px "Noto Sans SC"'),
       new Promise<void>(resolve => window.setTimeout(resolve, 2500)), // 最多等 2.5s
     ]).then(startScenes).catch(startScenes)
   }

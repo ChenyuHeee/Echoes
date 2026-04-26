@@ -20,7 +20,7 @@ export class MenuScene extends Phaser.Scene {
     this.add.image(width / 2, height * 0.11, 'title_sigil').setScale(0.9).setAlpha(0.65)
 
     const title = this.add.text(width / 2, height * 0.24, '回响：破碎时间', {
-      fontFamily: '"DotGothic16", monospace',
+      fontFamily: '"Noto Sans SC", monospace',
       fontSize: '44px',
       color: '#c8a96e',
     }).setOrigin(0.5)
@@ -35,14 +35,14 @@ export class MenuScene extends Phaser.Scene {
     })
 
     this.add.text(width / 2, height * 0.34, 'ECHOES: FRACTURED TIME', {
-      fontFamily: '"DotGothic16", monospace',
+      fontFamily: '"Noto Sans SC", monospace',
       fontSize: '14px',
       color: '#6d86ac',
       letterSpacing: 3,
     }).setOrigin(0.5)
 
     this.add.text(width / 2, height * 0.45, `当前回响体: ${rt.player.username}`, {
-      fontFamily: '"DotGothic16", monospace',
+      fontFamily: '"Noto Sans SC", monospace',
       fontSize: '18px',
       color: '#dbebff',
     }).setOrigin(0.5)
@@ -74,7 +74,7 @@ export class MenuScene extends Phaser.Scene {
 
     // 右上角设置图标
     const gearTxt = this.add.text(width - 14, 14, '⚙', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '20px', color: '#304050',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '20px', color: '#304050',
     }).setOrigin(1, 0).setInteractive({ useHandCursor: true })
     gearTxt.on('pointerover', () => gearTxt.setColor('#9ab0c8'))
     gearTxt.on('pointerout', () => gearTxt.setColor('#304050'))
@@ -85,7 +85,7 @@ export class MenuScene extends Phaser.Scene {
 
     // 左下角关于按钮
     const aboutTxt = this.add.text(14, height - 10, '关于', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#2a3a4a',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#2a3a4a',
     }).setOrigin(0, 1).setInteractive({ useHandCursor: true })
     aboutTxt.on('pointerover', () => aboutTxt.setColor('#4a6a8a'))
     aboutTxt.on('pointerout', () => aboutTxt.setColor('#2a3a4a'))
@@ -95,7 +95,7 @@ export class MenuScene extends Phaser.Scene {
   private makeButton(x: number, y: number, text: string, onClick: () => void) {
     const bg = this.add.image(x, y, 'ui_button_long')
     const label = this.add.text(x, y, text, {
-      fontFamily: '"DotGothic16", monospace',
+      fontFamily: '"Noto Sans SC", monospace',
       fontSize: '16px',
       color: '#e9f3ff',
     }).setOrigin(0.5)

@@ -116,23 +116,23 @@ export class RaceScene extends Phaser.Scene {
     // HUD
     this.add.rectangle(width / 2, 18, width, 36, 0x030508, 0.94).setDepth(20)
     this.distText = this.add.text(14, 8, '距离   0 m', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: '#c060ff',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: '#c060ff',
     }).setDepth(21)
     this.sandText = this.add.text(260, 8, '时砂 +0', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: '#c8e060',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: '#c8e060',
     }).setDepth(21)
     this.add.text(width / 2, 8, '时隙穿越', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '14px', color: '#c060ff',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color: '#c060ff',
     }).setOrigin(0.5, 0).setDepth(21)
     this.skill1Txt = this.add.text(width - 190, 8, '[1] 瞬移  CD:就绪', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#507060',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#507060',
     }).setDepth(21)
     this.skill2Txt = this.add.text(width - 90, 8, '[2] 回响  就绪', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#507060',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#507060',
     }).setDepth(21)
 
     const backTxt = this.add.text(14, height - 12, '← 返回大厅', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: '#304050',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: '#304050',
     }).setOrigin(0, 1).setDepth(21)
     backTxt.setInteractive({ useHandCursor: true })
     backTxt.on('pointerover', () => backTxt.setColor('#608090'))
@@ -149,7 +149,7 @@ export class RaceScene extends Phaser.Scene {
     let idx = 0
     const next = () => {
       const t = this.add.text(width / 2, height / 2, labels[idx], {
-        fontFamily: '"DotGothic16", monospace', fontSize: '80px', color: '#ffffff',
+        fontFamily: '"Noto Sans SC", monospace', fontSize: '80px', color: '#ffffff',
       }).setOrigin(0.5).setDepth(60)
       this.tweens.add({
         targets: t, alpha: 0, scaleX: 2.2, scaleY: 2.2,
@@ -214,25 +214,25 @@ export class RaceScene extends Phaser.Scene {
     const bg = this.add.rectangle(width / 2, height / 2, 490, 240, 0x040810, 0.97).setDepth(70)
     bg.setStrokeStyle(2, 0xff4040)
     this.add.text(width / 2, height / 2 - 84, '时隙崩解', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '28px', color: '#ff5030',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '28px', color: '#ff5030',
     }).setOrigin(0.5).setDepth(71)
     this.add.text(width / 2, height / 2 - 44, `穿越距离　${Math.floor(this.distance)} m`, {
-      fontFamily: '"DotGothic16", monospace', fontSize: '18px', color: '#c060ff',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '18px', color: '#c060ff',
     }).setOrigin(0.5).setDepth(71)
     this.add.text(width / 2, height / 2 - 14, `最高速度　${Math.floor(this.speed)} px/s`, {
-      fontFamily: '"DotGothic16", monospace', fontSize: '14px', color: '#506070',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color: '#506070',
     }).setOrigin(0.5).setDepth(71)
     this.add.text(width / 2, height / 2 + 14, `收集时砂　${this.sandCount}`, {
-      fontFamily: '"DotGothic16", monospace', fontSize: '16px', color: '#c8e060',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '16px', color: '#c8e060',
     }).setOrigin(0.5).setDepth(71)
 
     const retry = this.add.text(width / 2 - 92, height / 2 + 82, '[ 再次挑战 ]', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '15px', color: '#c060ff',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '15px', color: '#c060ff',
     }).setOrigin(0.5).setDepth(71)
     retry.setInteractive({ useHandCursor: true }).on('pointerdown', () => { audioManager.playClick(); this.scene.restart() })
 
     const back = this.add.text(width / 2 + 92, height / 2 + 82, '[ 返回大厅 ]', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '15px', color: '#607080',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '15px', color: '#607080',
     }).setOrigin(0.5).setDepth(71)
     back.setInteractive({ useHandCursor: true }).on('pointerdown', () => { audioManager.playClick(); this.scene.start('ModeSelectScene') })
   }

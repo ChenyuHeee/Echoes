@@ -79,7 +79,7 @@ export function showSettingsPanel(options?: { onLogout?: () => void; onClose?: (
   overlay.style.cssText = [
     'position:fixed', 'top:0', 'left:0', 'width:100%', 'height:100%',
     'background:rgba(4,6,14,0.92)', 'display:flex', 'align-items:center',
-    'justify-content:center', 'z-index:9999', 'font-family:"DotGothic16",monospace',
+    'justify-content:center', 'z-index:9999', 'font-family:"Noto Sans SC",monospace',
   ].join(';')
 
   const panel = document.createElement('div')
@@ -188,7 +188,7 @@ export function showSettingsPanel(options?: { onLogout?: () => void; onClose?: (
     btn.textContent = KEY_LABELS[kb[item.key]] ?? kb[item.key]
     btn.style.cssText = [
       'background:#060b16', 'border:1px solid #2a4060',
-      'color:#90c8e8', 'font-family:"DotGothic16",monospace', 'font-size:12px',
+      'color:#90c8e8', 'font-family:"Noto Sans SC",monospace', 'font-size:12px',
       'padding:4px 12px', 'cursor:pointer', 'min-width:60px',
     ].join(';')
     keyBtns[item.key] = btn
@@ -257,7 +257,7 @@ export function showSettingsPanel(options?: { onLogout?: () => void; onClose?: (
     btn.textContent = label
     btn.style.cssText = [
       'background:#060810', `border:1px solid ${borderColor}`, `color:${color}`,
-      'font-family:"DotGothic16",monospace', 'font-size:12px', 'padding:6px 14px', 'cursor:pointer',
+      'font-family:"Noto Sans SC",monospace', 'font-size:12px', 'padding:6px 14px', 'cursor:pointer',
     ].join(';')
     btn.onclick = onClick
     return btn
@@ -271,7 +271,7 @@ export function showSettingsPanel(options?: { onLogout?: () => void; onClose?: (
     inp.type = 'text'
     inp.placeholder = '新用户名（2-20字符）'
     inp.maxLength = 20
-    inp.style.cssText = 'background:#060b16;border:1px solid #2a4060;color:#c8d8f0;padding:6px 10px;font-family:"DotGothic16",monospace;font-size:13px;outline:none'
+    inp.style.cssText = 'background:#060b16;border:1px solid #2a4060;color:#c8d8f0;padding:6px 10px;font-family:"Noto Sans SC",monospace;font-size:13px;outline:none'
     const msgEl = document.createElement('div')
     msgEl.style.cssText = 'font-size:11px;min-height:16px;color:#c06060'
     const row = document.createElement('div')
@@ -307,7 +307,7 @@ export function showSettingsPanel(options?: { onLogout?: () => void; onClose?: (
       const i = document.createElement('input')
       i.type = 'password'
       i.placeholder = ph
-      i.style.cssText = 'background:#060b16;border:1px solid #2a4060;color:#c8d8f0;padding:6px 10px;font-family:"DotGothic16",monospace;font-size:13px;outline:none'
+      i.style.cssText = 'background:#060b16;border:1px solid #2a4060;color:#c8d8f0;padding:6px 10px;font-family:"Noto Sans SC",monospace;font-size:13px;outline:none'
       return i
     }
     const pw1 = mkInp('新密码（至少6位）')
@@ -374,7 +374,7 @@ export function showAboutPanel(): void {
   overlay.style.cssText = [
     'position:fixed', 'top:0', 'left:0', 'width:100%', 'height:100%',
     'background:rgba(4,6,14,0.88)', 'display:flex', 'align-items:center',
-    'justify-content:center', 'z-index:9999', 'font-family:"DotGothic16",monospace',
+    'justify-content:center', 'z-index:9999', 'font-family:"Noto Sans SC",monospace',
   ].join(';')
 
   const panel = document.createElement('div')
@@ -419,7 +419,7 @@ export function showAboutPanel(): void {
   closeBtn.textContent = '关闭'
   closeBtn.style.cssText = [
     'background:#060810', 'border:1px solid #2a4060',
-    'color:#4a7a9a', 'font-family:"DotGothic16",monospace', 'font-size:13px',
+    'color:#4a7a9a', 'font-family:"Noto Sans SC",monospace', 'font-size:13px',
     'padding:8px', 'cursor:pointer', 'margin-top:4px',
   ].join(';')
   closeBtn.onclick = () => overlay.remove()

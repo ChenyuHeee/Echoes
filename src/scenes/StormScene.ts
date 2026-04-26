@@ -246,31 +246,31 @@ export class StormScene extends Phaser.Scene {
     this.stabilityBarFill = this.add.rectangle(width / 2 - 110, height - 14, 220, 10, 0x60e080)
       .setOrigin(0, 0.5).setScrollFactor(0).setDepth(81)
     this.add.text(width / 2, height - 28, '时间稳定度', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#304840',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#304840',
     }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(81)
 
     // 存活人数
     this.aliveText = this.add.text(width - 14, 10, '存活 21/21', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '14px', color: '#ff9050',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color: '#ff9050',
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(81)
 
     // 时砂计数
     this.sandText = this.add.text(14, 10, '时砂 0', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '14px', color: '#c8e060',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color: '#c8e060',
     }).setScrollFactor(0).setDepth(81)
 
     // 虚空警告
     this.voidWarningText = this.add.text(width / 2, 10, '虚空风暴', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '14px', color: '#ff7050',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color: '#ff7050',
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(81)
 
     // 操作提示
     this.add.text(14, height - 28, 'WASD 移动  ·  接触对手消耗稳定度  ·  收集时砂恢复', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#28323a',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#28323a',
     }).setScrollFactor(0).setDepth(81)
 
     const backTxt = this.add.text(width - 14, height - 12, '返回 →', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: '#304050',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: '#304050',
     }).setOrigin(1, 1).setScrollFactor(0).setDepth(81)
     backTxt.setInteractive({ useHandCursor: true })
     backTxt.on('pointerover', () => backTxt.setColor('#6090b0'))
@@ -320,30 +320,30 @@ export class StormScene extends Phaser.Scene {
     bg.setStrokeStyle(2, borderColor)
 
     this.add.text(width / 2, height / 2 - 76, win ? '✦ 最后的回响体 ✦' : '时间稳定度归零', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '22px',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '22px',
       color: win ? '#40ff80' : '#ff5030',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(101)
     this.add.text(width / 2, height / 2 - 40, `存活时间   ${elapsed}s`, {
-      fontFamily: '"DotGothic16", monospace', fontSize: '15px', color: '#9090b0',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '15px', color: '#9090b0',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(101)
     this.add.text(width / 2, height / 2 - 14, `击杀对手   ${this.kills}`, {
-      fontFamily: '"DotGothic16", monospace', fontSize: '15px', color: '#ff8050',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '15px', color: '#ff8050',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(101)
     this.add.text(width / 2, height / 2 + 12, `收集时砂   ${this.totalSand}`, {
-      fontFamily: '"DotGothic16", monospace', fontSize: '15px', color: '#c8e060',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '15px', color: '#c8e060',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(101)
     const remaining = this.aiList.filter(a => a.isAlive).length
     this.add.text(width / 2, height / 2 + 36, `残余对手   ${remaining}`, {
-      fontFamily: '"DotGothic16", monospace', fontSize: '14px', color: '#507090',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color: '#507090',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(101)
 
     const retry = this.add.text(width / 2 - 94, height / 2 + 80, '[ 再次挑战 ]', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '15px', color: '#40ff80',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '15px', color: '#40ff80',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(101)
     retry.setInteractive({ useHandCursor: true }).on('pointerdown', () => { audioManager.playClick(); this.scene.restart() })
 
     const back = this.add.text(width / 2 + 94, height / 2 + 80, '[ 返回大厅 ]', {
-      fontFamily: '"DotGothic16", monospace', fontSize: '15px', color: '#607080',
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '15px', color: '#607080',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(101)
     back.setInteractive({ useHandCursor: true }).on('pointerdown', () => { audioManager.playClick(); this.scene.start('ModeSelectScene') })
   }

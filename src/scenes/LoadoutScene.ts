@@ -85,13 +85,13 @@ export class LoadoutScene extends Phaser.Scene {
     this.container.add(this.make.text({
       x: width / 2, y: 18,
       text: '战前准备',
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '20px', color: '#c0d8f0', stroke: '#000', strokeThickness: 3 },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '20px', color: '#c0d8f0', stroke: '#000', strokeThickness: 3 },
       add: false,
     }).setOrigin(0.5, 0))
     this.container.add(this.make.text({
       x: width / 2, y: 44,
       text: '选择本次深潜携带的装备（勾选/取消），未选装备留在仓库',
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#405070' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#405070' },
       add: false,
     }).setOrigin(0.5, 0))
 
@@ -120,7 +120,7 @@ export class LoadoutScene extends Phaser.Scene {
     this.leftCol.add(this.make.text({
       x: lx, y: ly,
       text: `── 武器  (仓库 ${stash.weaponIds.length}) ──`,
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#446688' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#446688' },
       add: false,
     }))
     ly += 18
@@ -132,7 +132,7 @@ export class LoadoutScene extends Phaser.Scene {
       this.leftCol.add(this.make.text({
         x: lx + 8, y: ly,
         text: '（仓库中无武器，深潜中从地图拾取）',
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#2a3848' },
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#2a3848' },
         add: false,
       }))
       ly += 24
@@ -159,7 +159,7 @@ export class LoadoutScene extends Phaser.Scene {
     this.leftCol.add(this.make.text({
       x: lx, y: ly,
       text: `── 配件  (仓库 ${stash.attachmentIds.length}) ──`,
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#446688' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#446688' },
       add: false,
     }))
     ly += 18
@@ -172,7 +172,7 @@ export class LoadoutScene extends Phaser.Scene {
       this.leftCol.add(this.make.text({
         x: lx + 8, y: ly,
         text: '（仓库中无配件）',
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#2a3848' },
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#2a3848' },
         add: false,
       }))
       ly += 24
@@ -184,7 +184,7 @@ export class LoadoutScene extends Phaser.Scene {
         this.leftCol.add(this.make.text({
           x: lx + 4, y: ly,
           text: `[${slotNames[slot]}]`,
-          style: { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#3a5878' },
+          style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#3a5878' },
           add: false,
         }))
         ly += 14
@@ -217,7 +217,7 @@ export class LoadoutScene extends Phaser.Scene {
     this.leftCol.add(this.make.text({
       x: lx, y: ly,
       text: `── 物品  (${this.selectedItems.length}/${BAG_CAPACITY} 格) ──`,
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#446688' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#446688' },
       add: false,
     }))
     ly += 18
@@ -226,7 +226,7 @@ export class LoadoutScene extends Phaser.Scene {
       this.leftCol.add(this.make.text({
         x: lx + 8, y: ly,
         text: '（仓库中无物品）',
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: '#2a3848' },
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#2a3848' },
         add: false,
       }))
       ly += 24
@@ -265,7 +265,7 @@ export class LoadoutScene extends Phaser.Scene {
     this.container.add(this.make.text({
       x: rx, y: ry,
       text: '本次携带',
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '13px', color: '#7ce0bc' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '13px', color: '#7ce0bc' },
       add: false,
     }))
     ry += 24
@@ -278,14 +278,14 @@ export class LoadoutScene extends Phaser.Scene {
     this.container.add(this.make.text({
       x: rx + 8, y: ry + 6,
       text: this.selectedWeapon ? `🔫 ${this.selectedWeapon.name}` : '🔫 徒手',
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '12px', color: this.selectedWeapon ? '#c8e0ff' : '#2a3848' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: this.selectedWeapon ? '#c8e0ff' : '#2a3848' },
       add: false,
     }))
     if (this.selectedWeapon) {
       this.container.add(this.make.text({
         x: rx + 8, y: ry + 22,
         text: `伤害 ${this.selectedWeapon.baseDamage}  射速 ${this.selectedWeapon.fireRateMs}ms`,
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '9px', color: '#4a7090' },
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '9px', color: '#4a7090' },
         add: false,
       }))
     }
@@ -299,7 +299,7 @@ export class LoadoutScene extends Phaser.Scene {
     this.container.add(this.make.text({
       x: rx, y: ry,
       text: `配件 ${selAtts.length}/${ATTACHMENT_SLOTS.length}`,
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: selAtts.length > 0 ? '#7090b0' : '#2a3848' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: selAtts.length > 0 ? '#7090b0' : '#2a3848' },
       add: false,
     }))
     ry += 16
@@ -313,7 +313,7 @@ export class LoadoutScene extends Phaser.Scene {
       this.container.add(this.make.text({
         x: rx + 6, y: ry + 5,
         text: att ? `[${slotNamesR[slot]}] ${att.name}` : `[${slotNamesR[slot]}] 空`,
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '9px', color: att ? '#8090c0' : '#1e2838' },
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '9px', color: att ? '#8090c0' : '#1e2838' },
         add: false,
       }))
       ry += 28
@@ -324,7 +324,7 @@ export class LoadoutScene extends Phaser.Scene {
     this.container.add(this.make.text({
       x: rx, y: ry,
       text: `背包 ${this.selectedItems.length}/${BAG_CAPACITY}`,
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: this.selectedItems.length > 0 ? '#7090b0' : '#2a3848' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: this.selectedItems.length > 0 ? '#7090b0' : '#2a3848' },
       add: false,
     }))
     ry += 16
@@ -336,7 +336,7 @@ export class LoadoutScene extends Phaser.Scene {
       this.container.add(this.make.text({
         x: rx + 6, y: ry,
         text: '（空背包出发）',
-        style: { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#1e2838' },
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#1e2838' },
         add: false,
       }))
       ry += 20
@@ -349,7 +349,7 @@ export class LoadoutScene extends Phaser.Scene {
         this.container.add(this.make.text({
           x: rx + 6, y: ry + 5,
           text: item.name,
-          style: { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: `#${iColor.toString(16).padStart(6, '0')}` },
+          style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: `#${iColor.toString(16).padStart(6, '0')}` },
           add: false,
         }))
         ry += 28
@@ -372,7 +372,7 @@ export class LoadoutScene extends Phaser.Scene {
     this.container.add(this.make.text({
       x: width / 2 - 130, y: btnY,
       text: '← 返回大厅',
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '13px', color: '#506070' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '13px', color: '#506070' },
       add: false,
     }).setOrigin(0.5))
 
@@ -386,7 +386,7 @@ export class LoadoutScene extends Phaser.Scene {
     this.container.add(this.make.text({
       x: width / 2 + 80, y: btnY,
       text: '▶  确认出发',
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '14px', color: '#4ce09c', stroke: '#000', strokeThickness: 2 },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color: '#4ce09c', stroke: '#000', strokeThickness: 2 },
       add: false,
     }).setOrigin(0.5))
   }
@@ -423,7 +423,7 @@ export class LoadoutScene extends Phaser.Scene {
     const checkMark = this.make.text({
       x: x + 14, y: y + 19,
       text: selected ? '✓' : '',
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '10px', color: '#4ce09c' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#4ce09c' },
       add: false,
     }).setOrigin(0.5).setAlpha(alpha)
     this._tgt.add(checkMark)
@@ -433,13 +433,13 @@ export class LoadoutScene extends Phaser.Scene {
     this._tgt.add(this.make.text({
       x: x + 28, y: y + 5,
       text: label,
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '11px', color: selected ? colorHex : '#3a5060' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: selected ? colorHex : '#3a5060' },
       add: false,
     }).setAlpha(alpha))
     this._tgt.add(this.make.text({
       x: x + 28, y: y + 20,
       text: sublabel,
-      style: { fontFamily: '"DotGothic16", monospace', fontSize: '9px', color: selected ? '#4a6080' : '#1e2838' },
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '9px', color: selected ? '#4a6080' : '#1e2838' },
       add: false,
     }).setAlpha(alpha))
   }
