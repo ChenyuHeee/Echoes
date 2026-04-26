@@ -21,6 +21,7 @@ import {
   getSpeedMultiplier,
   saveStash,
   mergeIntoStash,
+  setRoom,
   type Stash,
 } from '../state/gameState'
 import { LORE_ENTRIES } from '../config/lore'
@@ -2829,9 +2830,10 @@ export class DiveScene extends Phaser.Scene {
               const e = child as EnemyBody
               if (!e.active) return true
               if ((e.getData('enemyId') as number) === state.id) {
-                // 直接设置位置，不插值（AI 已禁用，不会有抖动）
-                e.x = state.x
-                e.y = state.y
+                // 必须通过 body.reset() 更新 ArcadePhysics body 位置，
+                // 直接设置 e.x/e.y 会在下一帧被 physics preUpdate 覆写。
+                const body = e.body as Phaser.Physics.Arcade.Body
+                body.reset(state.x, state.y)
                 e.hp = state.hp
                 e.maxHp = state.maxHp
               }
@@ -3028,6 +3030,8 @@ export class DiveScene extends Phaser.Scene {
         window.removeEventListener('beforeunload', this._unloadHandler)
         this._unloadHandler = null
       }
+      // 清除本地房间状态，防止返回大厅时读到旧数据
+      setRoom(null)
     }
 
     const user = await getCurrentUser()
