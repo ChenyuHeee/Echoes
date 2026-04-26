@@ -1122,6 +1122,8 @@ export class SanctuaryScene extends Phaser.Scene {
         cardBg.on('pointerdown', () => {
           audioManager.playClick()
           selected = capturedId
+          // 点击卡片即立即保存，无需再点「选择此角色」按钮
+          if (isUnlocked) setSelectedCharacter(capturedId)
           rebuildList()
           rebuildDetail()
         })
