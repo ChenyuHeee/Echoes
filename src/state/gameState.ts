@@ -63,7 +63,10 @@ export interface RuntimePlayer {
   gachaPityCounter: number         // 距离上次传说该走了多少发（保底计数）
   gachaHistory: string[]           // 抽卡历史（最多保留最近 50 抽，格式：'<charId>:<ts>'）
   // 双货币体系
-  echoShards: number               // 回响碎片（出售仓库装备获得）
+  echoShards: number               // 回响碎片（出售仓库装备获得，可用于召唤）
+  // 装备碎片：抽卡掉落，N 片可兑换为该物品 1 件
+  // key 格式：'weapon:<id>' / 'attachment:<id>' / 'item:<id>'
+  itemFragments: Record<string, number>
 }
 
 export interface RuntimeRoom {
@@ -121,6 +124,7 @@ function createDefaultState(): RuntimeState {
       gachaPityCounter: 0,
       gachaHistory: [],
       echoShards: 0,
+      itemFragments: {},
     },
     room: null,
     diveStartAt: null,
@@ -311,6 +315,21 @@ export function discardFromStash(type: 'weapon' | 'attachment' | 'item', id: str
   persistState()
 }
 
+// 向仓库追加单件装备（碎片兑换、奖励等使用）
+export function addToStash(type: 'weapon' | 'attachment' | 'item', id: string) {
+  const s = runtimeState.player.stash
+  const updated: Stash = {
+    weaponIds:     type === 'weapon'     ? [...s.weaponIds, id]     : s.weaponIds,
+    attachmentIds: type === 'attachment' ? [...s.attachmentIds, id] : s.attachmentIds,
+    itemIds:       type === 'item'       ? [...s.itemIds, id]       : s.itemIds,
+  }
+  runtimeState = {
+    ...runtimeState,
+    player: { ...runtimeState.player, stash: updated },
+  }
+  persistState()
+}
+
 export function setSelectedFragment(selectedFragment: FragmentId) {
   runtimeState = { ...runtimeState, selectedFragment }
   persistState()
@@ -355,10 +374,10 @@ export function recordGachaPull(charId: CharacterId, isLegendary: boolean) {
   persistState()
 }
 
-// 非角色掉落（碎片）— 仍计入总抽数与保底
-export function recordGachaShardPull(amount: number) {
+// 装备碎片掉落— 仍计入总抽数与保底
+export function recordGachaFragmentPull(key: string, count: number) {
   const p = runtimeState.player
-  const history = [`__shards_${amount}:${Date.now()}`, ...p.gachaHistory].slice(0, 50)
+  const history = [`__frag_${key}_${count}:${Date.now()}`, ...p.gachaHistory].slice(0, 50)
   runtimeState = {
     ...runtimeState,
     player: {
@@ -369,6 +388,31 @@ export function recordGachaShardPull(amount: number) {
     },
   }
   persistState()
+}
+
+// 增加某件装备的碎片数
+export function addItemFragment(key: string, count: number) {
+  const cur = runtimeState.player.itemFragments ?? {}
+  const next = { ...cur, [key]: (cur[key] ?? 0) + count }
+  runtimeState = {
+    ...runtimeState,
+    player: { ...runtimeState.player, itemFragments: next },
+  }
+  persistState()
+}
+
+// 扣除碎片（兑换使用）— 调用者负责将装备加入仓库
+export function spendItemFragments(key: string, count: number): boolean {
+  const cur = runtimeState.player.itemFragments ?? {}
+  const have = cur[key] ?? 0
+  if (have < count) return false
+  const next = { ...cur, [key]: have - count }
+  runtimeState = {
+    ...runtimeState,
+    player: { ...runtimeState.player, itemFragments: next },
+  }
+  persistState()
+  return true
 }
 
 export function addTimeSand(amount: number) {

@@ -7,11 +7,16 @@ import {
   type CharacterId,
 } from '../config/characters'
 import {
+  WEAPON_DEFINITIONS, ATTACHMENT_DEFINITIONS, ITEM_DEFINITIONS,
+  type WeaponId, type AttachmentId, type ItemId, type ItemRarity,
+} from '../config/items'
+import {
   getRuntimeState,
   spendTimeSand,
   unlockCharacter,
   recordGachaPull,
-  recordGachaShardPull,
+  recordGachaFragmentPull,
+  addItemFragment,
   addTimeSand,
   spendEchoShards,
   addEchoShards,
@@ -22,12 +27,11 @@ import {
  *
  * 规则（重制）：
  * - 单抽 100⌛ / 十连 900⌛  ·  单抽 1500◆ / 十连 13500◆
- * - 每抽 75% 概率掉落「回响碎片」(50/200/800◆)，25% 概率获得限定角色
- *   - R  shard_oracle      17%
- *   - SR temporal_exile    6.5%
- *   - SSR echo_singularity 1.5%
- * - 保底：累计 60 抽未出 SSR 则下次必出
- * - 重复角色：时砂路径退 60⌛，碎片路径退 600◆
+ * - 25% 概率获得限定角色，75% 概率获得「装备碎片」
+ *   - R/SR/SSR 角色总出货 25%
+ *   - 碎片三档：T0 60%×common · T1 12%×uncommon/rare · T2 3%×rare/legendary
+ * - 碎片可在圣所仓库页面兑换为完整装备（common 5 · uncommon 10 · rare 15 · legendary 25）
+ * - SSR 保底：60 抽  ·  重复角色退 60⌛ / 600◆
  */
 
 const COST_SINGLE = 100
@@ -43,19 +47,26 @@ const CHAR_RATE = {
   temporal_exile:   0.065,
   echo_singularity: 0.015,
 } as const
-// 碎片档位（合计 75%）
-const SHARD_TIERS = [
-  { p: 0.600, amount: 50,  color: 0x8090a0, label: '回响残屑'  },
-  { p: 0.120, amount: 200, color: 0x60c0ff, label: '回响晶簇'  },
-  { p: 0.030, amount: 800, color: 0xffaa40, label: '完整回响晶' },
-] as const
 
-type PullResult =
-  | { kind: 'char';   id: CharacterId; isLegendary: boolean }
-  | { kind: 'shards'; amount: number;  tier: 0 | 1 | 2 }
-type PullDisplay =
-  | { kind: 'char';   id: CharacterId; isLegendary: boolean; isDuplicate: boolean }
-  | { kind: 'shards'; amount: number;  tier: 0 | 1 | 2 }
+// 碎片档位
+const FRAG_TIER_COMMON   = { p: 0.60, count: 3, rarities: ['common'] as ItemRarity[],            tier: 0 as 0|1|2 }
+const FRAG_TIER_UNCOMMON = { p: 0.12, count: 2, rarities: ['uncommon', 'rare'] as ItemRarity[],  tier: 1 as 0|1|2 }
+const FRAG_TIER_RARE     = { p: 0.03, count: 2, rarities: ['rare', 'legendary'] as ItemRarity[], tier: 2 as 0|1|2 }
+
+const TIER_COLOR  = [0x8090a0, 0x60c0ff, 0xffaa40] as const
+const TIER_LABEL  = ['普通碎片', '稀有碎片', '传奇碎片'] as const
+
+// 兑换所需碎片数量
+export const FRAG_COST: Record<ItemRarity, number> = {
+  common: 5, uncommon: 10, rare: 15, legendary: 25,
+}
+
+type FragKind = 'weapon' | 'attachment' | 'item'
+type FragRoll = { kind: 'frag'; fragKind: FragKind; id: string; name: string; rarity: ItemRarity; count: number; tier: 0 | 1 | 2 }
+type CharRoll = { kind: 'char'; id: CharacterId; isLegendary: boolean }
+
+type PullResult = CharRoll | FragRoll
+type PullDisplay = (CharRoll & { isDuplicate: boolean }) | FragRoll
 
 const RARITY_LABEL: Record<CharacterId, string> = {
   echo_ranger: '', void_breaker: '', chrono_sentinel: '', echo_phantom: '', iron_warden: '',
@@ -207,6 +218,29 @@ export class GachaScene extends Phaser.Scene {
   }
 
   // ── 抽卡逻辑 ───────────────────────────────────────────
+  private rollFragment(tier: typeof FRAG_TIER_COMMON): FragRoll {
+    // 从所有 weapons + attachments + items 中筛选符合稀有度的，按 weight 加权抽取
+    type Cand = { fragKind: FragKind; id: string; name: string; rarity: ItemRarity; weight: number }
+    const pool: Cand[] = []
+    for (const w of Object.values(WEAPON_DEFINITIONS)) {
+      if (tier.rarities.includes(w.rarity)) pool.push({ fragKind: 'weapon', id: w.id, name: w.name, rarity: w.rarity, weight: w.weight })
+    }
+    for (const a of Object.values(ATTACHMENT_DEFINITIONS)) {
+      if (tier.rarities.includes(a.rarity)) pool.push({ fragKind: 'attachment', id: a.id, name: a.name, rarity: a.rarity, weight: a.weight })
+    }
+    for (const it of Object.values(ITEM_DEFINITIONS)) {
+      if (tier.rarities.includes(it.rarity)) pool.push({ fragKind: 'item', id: it.id, name: it.name, rarity: it.rarity, weight: it.weight })
+    }
+    const total = pool.reduce((s, c) => s + c.weight, 0)
+    let r = Math.random() * total
+    for (const c of pool) {
+      r -= c.weight
+      if (r <= 0) return { kind: 'frag', fragKind: c.fragKind, id: c.id, name: c.name, rarity: c.rarity, count: tier.count, tier: tier.tier }
+    }
+    const c = pool[pool.length - 1]
+    return { kind: 'frag', fragKind: c.fragKind, id: c.id, name: c.name, rarity: c.rarity, count: tier.count, tier: tier.tier }
+  }
+
   private rollOne(): PullResult {
     const p = getRuntimeState().player
     // 保底：累计 PITY_THRESHOLD-1 后下一抽必出 SSR
@@ -222,12 +256,12 @@ export class GachaScene extends Phaser.Scene {
     if (r < acc) return { kind: 'char', id: 'temporal_exile', isLegendary: false }
     acc += CHAR_RATE.shard_oracle
     if (r < acc) return { kind: 'char', id: 'shard_oracle', isLegendary: false }
-    // 碎片（75%）— 大→小遍历，落空则给最小档
-    acc += SHARD_TIERS[2].p
-    if (r < acc) return { kind: 'shards', amount: SHARD_TIERS[2].amount, tier: 2 }
-    acc += SHARD_TIERS[1].p
-    if (r < acc) return { kind: 'shards', amount: SHARD_TIERS[1].amount, tier: 1 }
-    return { kind: 'shards', amount: SHARD_TIERS[0].amount, tier: 0 }
+    // 装备碎片（75%）— 大→小遍历
+    acc += FRAG_TIER_RARE.p
+    if (r < acc) return this.rollFragment(FRAG_TIER_RARE)
+    acc += FRAG_TIER_UNCOMMON.p
+    if (r < acc) return this.rollFragment(FRAG_TIER_UNCOMMON)
+    return this.rollFragment(FRAG_TIER_COMMON)
   }
 
   private pullCards(count: number, currency: 'sand' | 'shards' = 'sand') {
@@ -260,9 +294,10 @@ export class GachaScene extends Phaser.Scene {
         recordGachaPull(r.id, r.isLegendary)
         results.push({ kind: 'char', id: r.id, isLegendary: r.isLegendary, isDuplicate })
       } else {
-        addEchoShards(r.amount)
-        recordGachaShardPull(r.amount)
-        results.push({ kind: 'shards', amount: r.amount, tier: r.tier })
+        const fragKey = `${r.fragKind}:${r.id}`
+        addItemFragment(fragKey, r.count)
+        recordGachaFragmentPull(fragKey, r.count)
+        results.push(r)
       }
     }
 
@@ -299,33 +334,49 @@ export class GachaScene extends Phaser.Scene {
       const cx = startX + (i % cols) * (cardW + gx)
       const cy = startY + Math.floor(i / cols) * (cardH + gy)
 
-      if (r.kind === 'shards') {
-        // 碎片掉落卡
-        const tier = SHARD_TIERS[r.tier]
-        const colorN = tier.color
+      if (r.kind === 'frag') {
+        // 装备碎片掉落卡
+        const colorN = TIER_COLOR[r.tier]
+        const colorHex = `#${colorN.toString(16).padStart(6, '0')}`
         const bg = this.add.rectangle(cx, cy, cardW, cardH, 0x081020, 1).setStrokeStyle(2, colorN, 0.85)
         this.overlayLayer.add(bg)
-        const icon = this.add.text(cx, cy - 30, '◆', {
-          fontFamily: '"Noto Sans SC", monospace', fontSize: '48px',
-          color: `#${colorN.toString(16).padStart(6, '0')}`,
-        }).setOrigin(0.5)
+        // 尝试用对应 sprite，没找到就用 ◆
+        const spriteKey =
+          r.fragKind === 'weapon' ? WEAPON_DEFINITIONS[r.id as WeaponId]?.spriteKey
+          : r.fragKind === 'attachment' ? ATTACHMENT_DEFINITIONS[r.id as AttachmentId]?.spriteKey
+          : ITEM_DEFINITIONS[r.id as ItemId]?.spriteKey
+        let icon: Phaser.GameObjects.GameObject
+        if (spriteKey && this.textures.exists(spriteKey)) {
+          const img = this.add.image(cx, cy - 36, spriteKey).setScale(1.6)
+          icon = img
+        } else {
+          icon = this.add.text(cx, cy - 36, '◆', {
+            fontFamily: '"Noto Sans SC", monospace', fontSize: '40px', color: colorHex,
+          }).setOrigin(0.5)
+        }
         this.overlayLayer.add(icon)
-        const tierTxt = this.add.text(cx, cy + 22, tier.label, {
-          fontFamily: '"Noto Sans SC", monospace', fontSize: '12px',
-          color: `#${colorN.toString(16).padStart(6, '0')}`,
+        const tierTxt = this.add.text(cx, cy + 8, TIER_LABEL[r.tier], {
+          fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: colorHex,
         }).setOrigin(0.5)
         this.overlayLayer.add(tierTxt)
-        const amtTxt = this.add.text(cx, cy + 44, `+${r.amount}◆`, {
-          fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color: '#a0d0ff',
+        const nameTxt = this.add.text(cx, cy + 28, r.name, {
+          fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: colorHex,
+          wordWrap: { width: cardW - 14 },
         }).setOrigin(0.5)
-        this.overlayLayer.add(amtTxt)
-        const tag = this.add.text(cx, cy + 62, '回响碎片', {
-          fontFamily: '"Noto Sans SC", monospace', fontSize: '9px', color: '#506070',
+        this.overlayLayer.add(nameTxt)
+        const cntTxt = this.add.text(cx, cy + 52, `+${r.count} 碎片`, {
+          fontFamily: '"Noto Sans SC", monospace', fontSize: '13px', color: '#ffd070',
         }).setOrigin(0.5)
-        this.overlayLayer.add(tag)
-        bg.setAlpha(0); icon.setAlpha(0); icon.setScale(0.4)
-        this.tweens.add({ targets: [bg, tierTxt, amtTxt, tag], alpha: 1, duration: 300, delay: i * 80 })
-        this.tweens.add({ targets: icon, alpha: 1, scale: 1, duration: 400, delay: i * 80, ease: 'Back.easeOut' })
+        this.overlayLayer.add(cntTxt)
+        const need = FRAG_COST[r.rarity]
+        const have = (getRuntimeState().player.itemFragments?.[`${r.fragKind}:${r.id}`]) ?? 0
+        const progTxt = this.add.text(cx, cy + 70, `${have}/${need} 可兑换`, {
+          fontFamily: '"Noto Sans SC", monospace', fontSize: '9px', color: have >= need ? '#80ff80' : '#506070',
+        }).setOrigin(0.5)
+        this.overlayLayer.add(progTxt)
+        bg.setAlpha(0)
+        if ('setAlpha' in icon) (icon as Phaser.GameObjects.Image).setAlpha(0)
+        this.tweens.add({ targets: [bg, tierTxt, nameTxt, cntTxt, progTxt, icon], alpha: 1, duration: 300, delay: i * 80 })
         return
       }
 
@@ -409,14 +460,36 @@ export class GachaScene extends Phaser.Scene {
       const [cidStr, _ts] = entry.split(':')
       void _ts
       const cy = baseY + 8 + i * 26
-      // 碎片掉落条目
-      if (cidStr.startsWith('__shards_')) {
-        const amount = parseInt(cidStr.replace('__shards_', ''), 10) || 0
-        const colorN = amount >= 800 ? 0xffaa40 : amount >= 200 ? 0x60c0ff : 0x8090a0
+      // 装备碎片掉落条目  __frag_<kind>:<id>_<count>
+      if (cidStr.startsWith('__frag_')) {
+        const body = cidStr.slice('__frag_'.length)
+        const lastUnderscore = body.lastIndexOf('_')
+        const fragKey = body.slice(0, lastUnderscore)         // e.g. weapon:pulse_pistol
+        const fragCount = parseInt(body.slice(lastUnderscore + 1), 10) || 0
+        const [fk, fid] = fragKey.split(':')
+        const def =
+          fk === 'weapon' ? WEAPON_DEFINITIONS[fid as WeaponId]
+          : fk === 'attachment' ? ATTACHMENT_DEFINITIONS[fid as AttachmentId]
+          : ITEM_DEFINITIONS[fid as ItemId]
+        const colorN =
+          def?.rarity === 'legendary' ? 0xffaa40
+          : def?.rarity === 'rare' ? 0x60c0ff
+          : def?.rarity === 'uncommon' ? 0x80ff80
+          : 0x8090a0
         const bg = this.add.rectangle(baseX, cy, 200, 22, 0x081420, 0.9).setOrigin(0, 0).setStrokeStyle(1, colorN, 0.5)
-        const tag = this.add.text(baseX + 8, cy + 11, `◆ 碎片掉落  +${amount}◆`, {
+        const tag = this.add.text(baseX + 8, cy + 11, `◇ ${def?.name ?? fragKey} ×${fragCount}`, {
           fontFamily: '"Noto Sans SC", monospace', fontSize: '10px',
           color: `#${colorN.toString(16).padStart(6, '0')}`,
+        }).setOrigin(0, 0.5)
+        this.historyContainer.add([bg, tag])
+        return
+      }
+      // 旧版纯回响碎片（兼容）
+      if (cidStr.startsWith('__shards_')) {
+        const amount = parseInt(cidStr.replace('__shards_', ''), 10) || 0
+        const bg = this.add.rectangle(baseX, cy, 200, 22, 0x081420, 0.9).setOrigin(0, 0).setStrokeStyle(1, 0x60c0ff, 0.5)
+        const tag = this.add.text(baseX + 8, cy + 11, `◆ 旧·回响碎片 +${amount}◆`, {
+          fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#60c0ff',
         }).setOrigin(0, 0.5)
         this.historyContainer.add([bg, tag])
         return

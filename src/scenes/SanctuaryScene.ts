@@ -11,6 +11,8 @@ import {
   setSelectedCharacter,
   discardFromStash,
   sellFromStash,
+  addToStash,
+  spendItemFragments,
   UPGRADE_MAX_LEVEL,
   UPGRADE_COST_PER_LEVEL,
   tickLoginStreak,
@@ -28,10 +30,16 @@ import type { SkillType } from '../types/game.types'
 import {
   ITEM_DEFINITIONS, WEAPON_DEFINITIONS, ATTACHMENT_DEFINITIONS, ATTACHMENT_SLOTS,
   RARITY_COLORS, RARITY_NAMES,
+  type ItemRarity,
 } from '../config/items'
 import type { PlayerUpgrades } from '../state/gameState'
 
-type TabId = 'overview' | 'workshop' | 'upgrade' | 'character' | 'lore' | 'stash' | 'achieve'
+type TabId = 'overview' | 'workshop' | 'upgrade' | 'character' | 'lore' | 'stash' | 'forge' | 'achieve'
+
+// 碎片兑换价格（需与 GachaScene FRAG_COST 一致）
+const FRAG_COST: Record<ItemRarity, number> = {
+  common: 5, uncommon: 10, rare: 15, legendary: 25,
+}
 
 export class SanctuaryScene extends Phaser.Scene {
   private tipText!: Phaser.GameObjects.Text
@@ -146,6 +154,7 @@ export class SanctuaryScene extends Phaser.Scene {
       case 'workshop': this.buildWorkshop(); break
       case 'upgrade': this.buildUpgrade(); break
       case 'stash': this.buildStash(); break
+      case 'forge': this.buildForge(); break
       case 'achieve': this.buildAchievements(); break
       case 'character': this.buildCharacter(); break
       case 'lore': this.buildLore(); break
@@ -1122,6 +1131,115 @@ export class SanctuaryScene extends Phaser.Scene {
     }
 
     rebuild()
+  }
+
+  // ─────────────────── TAB: 碎片兑换 ──────────────────
+  private buildForge() {
+    const { width } = this.scale
+    const rt = getRuntimeState()
+    const fragments = rt.player.itemFragments ?? {}
+    const W = 720, leftX = width / 2 - W / 2
+    let y = 8
+
+    this.contentLayer.add(this.make.text({
+      x: width / 2, y,
+      text: '碎片兑换  ─  集齐装备碎片，可兑换为完整装备入库',
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: '#506070' },
+      add: false,
+    }).setOrigin(0.5, 0))
+    y += 22
+
+    this.contentLayer.add(this.make.text({
+      x: leftX, y,
+      text: `兑换价：常规 ${FRAG_COST.common} 片  ·  非凡 ${FRAG_COST.uncommon} 片  ·  稀有 ${FRAG_COST.rare} 片  ·  传说 ${FRAG_COST.legendary} 片`,
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#80a0c0' },
+      add: false,
+    }))
+    y += 24
+
+    type Entry = { key: string; type: 'weapon' | 'attachment' | 'item'; id: string; name: string; rarity: ItemRarity; have: number; need: number }
+    const entries: Entry[] = []
+    for (const [key, have] of Object.entries(fragments)) {
+      if (!have || have <= 0) continue
+      const [t, id] = key.split(':') as [Entry['type'], string]
+      const def =
+        t === 'weapon' ? WEAPON_DEFINITIONS[id as keyof typeof WEAPON_DEFINITIONS]
+        : t === 'attachment' ? ATTACHMENT_DEFINITIONS[id as keyof typeof ATTACHMENT_DEFINITIONS]
+        : ITEM_DEFINITIONS[id as keyof typeof ITEM_DEFINITIONS]
+      if (!def) continue
+      entries.push({ key, type: t, id, name: def.name, rarity: def.rarity as ItemRarity, have, need: FRAG_COST[def.rarity as ItemRarity] })
+    }
+    // 排序：可兑换在前，按稀有度 → 类型 → 名字
+    const RARITY_ORDER: Record<ItemRarity, number> = { legendary: 0, rare: 1, uncommon: 2, common: 3 }
+    entries.sort((a, b) => {
+      const ar = a.have >= a.need ? 0 : 1, br = b.have >= b.need ? 0 : 1
+      if (ar !== br) return ar - br
+      if (RARITY_ORDER[a.rarity] !== RARITY_ORDER[b.rarity]) return RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity]
+      return a.name.localeCompare(b.name)
+    })
+
+    if (entries.length === 0) {
+      this.contentLayer.add(this.make.text({
+        x: width / 2, y: y + 30,
+        text: '（暂无装备碎片，前往「召唤所」抽卡获得）',
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#404858' },
+        add: false,
+      }).setOrigin(0.5, 0))
+      this.scrollMax = 0
+      return
+    }
+
+    const TYPE_LABEL: Record<Entry['type'], string> = { weapon: '武器', attachment: '配件', item: '物品' }
+
+    entries.forEach(e => {
+      const colorN = RARITY_COLORS[e.rarity]
+      const colorHex = `#${colorN.toString(16).padStart(6, '0')}`
+      const ready = e.have >= e.need
+      const bg = this.add.rectangle(width / 2, y + 22, W, 44, ready ? 0x0a2018 : 0x0a1828)
+      bg.setStrokeStyle(1, ready ? 0x60a040 : colorN, 0.7)
+      this.contentLayer.add(bg)
+
+      this.contentLayer.add(this.make.text({
+        x: leftX + 8, y: y + 6,
+        text: `[${RARITY_NAMES[e.rarity]}] [${TYPE_LABEL[e.type]}] ${e.name}`,
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: colorHex },
+        add: false,
+      }))
+      this.contentLayer.add(this.make.text({
+        x: leftX + 8, y: y + 24,
+        text: `碎片：${e.have} / ${e.need}${ready ? '   ✦ 可兑换' : ''}`,
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: ready ? '#80ff80' : '#5080a0' },
+        add: false,
+      }))
+
+      // 兑换按钮
+      const btnColor = ready ? 0x60a040 : 0x303848
+      const btnFill = ready ? 0x10241a : 0x0a0e18
+      const btnTxtColor = ready ? '#a0ff80' : '#404858'
+      const btn = this.add.rectangle(leftX + W - 60, y + 22, 100, 28, btnFill)
+      btn.setStrokeStyle(1, btnColor, ready ? 0.9 : 0.4)
+      if (ready) btn.setInteractive({ useHandCursor: true })
+      this.contentLayer.add(btn)
+      this.contentLayer.add(this.make.text({
+        x: leftX + W - 60, y: y + 22,
+        text: ready ? `[ 兑换 -${e.need} ]` : `差 ${e.need - e.have} 片`,
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: btnTxtColor },
+        add: false,
+      }).setOrigin(0.5))
+      if (ready) {
+        btn.on('pointerdown', () => {
+          if (spendItemFragments(e.key, e.need)) {
+            addToStash(e.type, e.id)
+            audioManager.playClick()
+            this.tipText.setText(`✦ 兑换成功：${e.name}  已加入仓库`)
+            this.buildForge()
+          }
+        })
+      }
+      y += 50
+    })
+
+    this.scrollMax = Math.max(0, y - (this.scale.height - 160))
   }
 
   // ─────────────────── TAB: 成就 ──────────────────
