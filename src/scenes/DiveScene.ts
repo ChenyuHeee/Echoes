@@ -2291,22 +2291,22 @@ export class DiveScene extends Phaser.Scene {
       cardBg.setStrokeStyle(2, rarityColor, 0.85)
 
       // 顶部色条
-      this.add.rectangle(cx, cy - cardH / 2 + 3, cardW, 5, rarityColor, 0.9)
+      const topBar = this.add.rectangle(cx, cy - cardH / 2 + 3, cardW, 5, rarityColor, 0.9)
         .setScrollFactor(0).setDepth(152)
 
       // 图标
-      this.add.text(cx, cy - 24, opt.icon, {
+      const iconTxt = this.add.text(cx, cy - 24, opt.icon, {
         fontFamily: '"Silkscreen", monospace', fontSize: '22px', color: `#${rarityColor.toString(16).padStart(6, '0')}`,
       }).setOrigin(0.5).setScrollFactor(0).setDepth(152)
 
       // 名称
-      this.add.text(cx, cy + 8, opt.name, {
+      const nameTxt = this.add.text(cx, cy + 8, opt.name, {
         fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#dce9ff',
         wordWrap: { width: cardW - 12 }, align: 'center',
       }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(152)
 
       // 描述
-      this.add.text(cx, cy + 30, opt.desc, {
+      const descTxt = this.add.text(cx, cy + 30, opt.desc, {
         fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#6080a0',
         wordWrap: { width: cardW - 12 }, align: 'center',
       }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(152)
@@ -2337,7 +2337,7 @@ export class DiveScene extends Phaser.Scene {
         this.time.delayedCall(2500, () => this.startNextWave())
       })
 
-      this.shrineObjects.push(cardBg, btn, btnTxt)
+      this.shrineObjects.push(cardBg, topBar, iconTxt, nameTxt, descTxt, btn, btnTxt)
     })
 
     // 跳过按钮
