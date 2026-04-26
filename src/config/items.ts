@@ -181,16 +181,24 @@ export function rollItemDrop(isBoss: boolean, isElite: boolean): ItemDef | null 
 }
 
 // ─── 武器系统 ──────────────────────────────────────────────────────
-export type WeaponId = 'pulse_pistol' | 'void_smg' | 'chrono_shotgun' | 'echo_sniper'
+export type WeaponId =
+  | 'pulse_pistol' | 'void_smg' | 'chrono_shotgun' | 'echo_sniper'
+  | 'arc_rifle'      // 弧光步枪 — 全自动步枪
+  | 'plasma_cutter'  // 等离子切割器 — 超高射速
+  | 'gravity_cannon' // 重力炮 — 超慢射速极高伤害
+  | 'void_launcher'  // 虚空发射器 — 终极武器
+  | 'temporal_burst' // 时阵连发枪 — 三连弹片
 export type AttachmentId =
   | 'carbon_barrel' | 'plasma_barrel' | 'void_suppressor' | 'plasma_accelerator'
   | 'reflex_scope'  | 'hawk_scope'    | 'echo_sight'      | 'quantum_scope'
   | 'rapid_mag'     | 'drum_mag'      | 'extended_mag'    | 'void_magazine'
   | 'stabilizer'    | 'precision_stock' | 'combat_grip'   | 'resonance_stock'
-export type AttachmentSlot = 'barrel' | 'scope' | 'magazine' | 'stock'
+  | 'laser_sight' | 'grenade_launcher' | 'pulse_emitter'   // underbarrel
+  | 'void_core'   | 'echo_amplifier'   | 'chrono_catalyst' // enhancement
+export type AttachmentSlot = 'barrel' | 'scope' | 'magazine' | 'stock' | 'underbarrel' | 'enhancement'
 
-/** 每个槽位只能装 1 个配件，所有武器均可装 4 种槽位各一 */
-export const ATTACHMENT_SLOTS: AttachmentSlot[] = ['barrel', 'scope', 'magazine', 'stock']
+/** 每个槽位只能装 1 个配件，现共 6 个槽位 */
+export const ATTACHMENT_SLOTS: AttachmentSlot[] = ['barrel', 'scope', 'magazine', 'stock', 'underbarrel', 'enhancement']
 
 export interface WeaponDef {
   id: WeaponId
@@ -249,6 +257,38 @@ export const WEAPON_DEFINITIONS: Record<WeaponId, WeaponDef> = {
     baseDamage: 80, fireRateMs: 900, baseCritChance: 0.45,
     sandValue: 160, weight: 3,
   },
+  arc_rifle: {
+    id: 'arc_rifle', name: '弧光步枪', rarity: 'uncommon',
+    desc: '全自动步枪，射速稳定，综合能力强', spriteKey: 'weapon_smg',
+    baseDamage: 16, fireRateMs: 110, baseCritChance: 0.10,
+    sandValue: 55, weight: 12,
+  },
+  plasma_cutter: {
+    id: 'plasma_cutter', name: '等离子切割器', rarity: 'common',
+    desc: '超高射速，靠连射积累伤害', spriteKey: 'weapon_pistol',
+    baseDamage: 6, fireRateMs: 45, baseCritChance: 0.05,
+    sandValue: 22, weight: 20,
+  },
+  gravity_cannon: {
+    id: 'gravity_cannon', name: '重力炮', rarity: 'rare',
+    desc: '超慢射速，每发引爆重力波，4弹片扇形覆盖', spriteKey: 'weapon_shotgun',
+    baseDamage: 60, fireRateMs: 800, baseCritChance: 0.18,
+    pellets: 4, spreadAngle: 0.30,
+    sandValue: 100, weight: 5,
+  },
+  void_launcher: {
+    id: 'void_launcher', name: '虚空发射器', rarity: 'legendary',
+    desc: '终极武器，单发虚空能量球，伤害极高', spriteKey: 'weapon_sniper',
+    baseDamage: 140, fireRateMs: 1500, baseCritChance: 0.35,
+    sandValue: 190, weight: 2,
+  },
+  temporal_burst: {
+    id: 'temporal_burst', name: '时阵连发枪', rarity: 'uncommon',
+    desc: '每次射击释放3枚时空弹片，近距离爆发强', spriteKey: 'weapon_pistol',
+    baseDamage: 14, fireRateMs: 290, baseCritChance: 0.12,
+    pellets: 3, spreadAngle: 0.18,
+    sandValue: 58, weight: 10,
+  },
 }
 
 export const ATTACHMENT_DEFINITIONS: Record<AttachmentId, AttachmentDef> = {
@@ -275,14 +315,24 @@ export const ATTACHMENT_DEFINITIONS: Record<AttachmentId, AttachmentDef> = {
   stabilizer:      { id: 'stabilizer',      name: '稳定器',     rarity: 'uncommon',  slotType: 'stock',    spriteKey: 'att_stock',    desc: '暴击 +6%，伤害 +8%',  critBonus: 0.06, damageMult: 1.08, sandValue: 32, weight: 20 },
   precision_stock: { id: 'precision_stock', name: '精准枪托',   rarity: 'rare',      slotType: 'stock',    spriteKey: 'att_stock',    desc: '暴击 +10%，伤害 +15%', critBonus: 0.10, damageMult: 1.15, sandValue: 65, weight: 10 },
   resonance_stock: { id: 'resonance_stock', name: '共鸣枪托',   rarity: 'legendary', slotType: 'stock',    spriteKey: 'att_stock',    desc: '伤害 +22%，暴击 +15%', damageMult: 1.22, critBonus: 0.15, sandValue: 130, weight: 3 },
+
+  // ── 下挂（underbarrel）────────────────────────────
+  laser_sight:      { id: 'laser_sight',      name: '激光瞄准仪', rarity: 'common',    slotType: 'underbarrel', spriteKey: 'att_barrel',  desc: '暴击 +8%，伤害 +5%',          critBonus: 0.08, damageMult: 1.05, sandValue: 20, weight: 22 },
+  grenade_launcher: { id: 'grenade_launcher', name: '榴弹发射器', rarity: 'rare',      slotType: 'underbarrel', spriteKey: 'att_barrel',  desc: '伤害 +28%',                   damageMult: 1.28, sandValue: 80, weight: 8 },
+  pulse_emitter:    { id: 'pulse_emitter',    name: '脉冲发射器', rarity: 'legendary', slotType: 'underbarrel', spriteKey: 'att_barrel',  desc: '伤害 +20%，射速 +20%',        damageMult: 1.20, fireRateMult: 0.80, sandValue: 145, weight: 3 },
+
+  // ── 强化核（enhancement）──────────────────────────
+  void_core:       { id: 'void_core',       name: '虚空核心',   rarity: 'rare',      slotType: 'enhancement', spriteKey: 'att_magazine', desc: '伤害 +22%，暴击 +8%',         damageMult: 1.22, critBonus: 0.08, sandValue: 82, weight: 7 },
+  echo_amplifier:  { id: 'echo_amplifier',  name: '回响放大器', rarity: 'legendary', slotType: 'enhancement', spriteKey: 'att_magazine', desc: '伤害 +28%，暴击 +12%',        damageMult: 1.28, critBonus: 0.12, sandValue: 150, weight: 3 },
+  chrono_catalyst: { id: 'chrono_catalyst', name: '时相催化剂', rarity: 'rare',      slotType: 'enhancement', spriteKey: 'att_magazine', desc: '射速 +22%，伤害 +12%',        fireRateMult: 0.78, damageMult: 1.12, sandValue: 75, weight: 7 },
 }
 
 // ─── 武器掉落 ────────────────────────────────────────────
 const WEAPON_LIST = Object.values(WEAPON_DEFINITIONS)
-const W_COMMON    = WEAPON_LIST.filter(w => w.rarity === 'common')
-const W_UNCOMMON  = WEAPON_LIST.filter(w => w.rarity === 'uncommon')
-const W_RARE      = WEAPON_LIST.filter(w => w.rarity === 'rare')
-const W_LEGENDARY = WEAPON_LIST.filter(w => w.rarity === 'legendary')
+const W_COMMON    = WEAPON_LIST.filter(w => w.rarity === 'common')    // pulse_pistol, plasma_cutter
+const W_UNCOMMON  = WEAPON_LIST.filter(w => w.rarity === 'uncommon')  // void_smg, arc_rifle, temporal_burst
+const W_RARE      = WEAPON_LIST.filter(w => w.rarity === 'rare')      // chrono_shotgun, gravity_cannon
+const W_LEGENDARY = WEAPON_LIST.filter(w => w.rarity === 'legendary') // echo_sniper, void_launcher
 
 function wPickWeapon(pool: WeaponDef[]): WeaponDef {
   const total = pool.reduce((s, w) => s + w.weight, 0)
@@ -312,10 +362,10 @@ export function rollWeaponDrop(isBoss: boolean, isElite: boolean): WeaponDef | n
 }
 
 // ─── 配件掉落 ────────────────────────────────────────────
-const ATT_LIST     = Object.values(ATTACHMENT_DEFINITIONS)
-const ATT_COMMON   = ATT_LIST.filter(a => a.rarity === 'common')
-const ATT_UNCOMMON = ATT_LIST.filter(a => a.rarity === 'uncommon')
-const ATT_RARE     = ATT_LIST.filter(a => a.rarity === 'rare')
+const ATT_LIST      = Object.values(ATTACHMENT_DEFINITIONS)
+const ATT_COMMON    = ATT_LIST.filter(a => a.rarity === 'common')
+const ATT_UNCOMMON  = ATT_LIST.filter(a => a.rarity === 'uncommon')
+const ATT_RARE      = ATT_LIST.filter(a => a.rarity === 'rare')
 const ATT_LEGENDARY = ATT_LIST.filter(a => a.rarity === 'legendary')
 
 function wPickAtt(pool: AttachmentDef[]): AttachmentDef {

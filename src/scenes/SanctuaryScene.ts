@@ -624,192 +624,143 @@ export class SanctuaryScene extends Phaser.Scene {
   private buildStash() {
     const { width } = this.scale
     const rt = getRuntimeState()
-    const stash = rt.player.stash ?? { weaponId: null, attachmentIds: [], itemIds: [] }
+    const stash = rt.player.stash ?? { weaponIds: [], attachmentIds: [], itemIds: [] }
     const W = 700, leftX = width / 2 - W / 2
     let y = 8
 
     this.contentLayer.add(this.make.text({
       x: width / 2, y,
-      text: '仓库  ─  撤离后装备存入此处，下次深潜自动携带',
+      text: '仓库  ─  无限容量，撤离后自动追加，战前准备时选取携带',
       style: { fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#506070' },
       add: false,
     }).setOrigin(0.5, 0))
     y += 24
 
-    // 计算总价值
-    const weapDef = stash.weaponId
-      ? (WEAPON_DEFINITIONS as Record<string, import('../config/items').WeaponDef | undefined>)[stash.weaponId]
-      : null
+    // 所有配件 def 列表
     const attDefs = stash.attachmentIds
       .map(id => (ATTACHMENT_DEFINITIONS as Record<string, import('../config/items').AttachmentDef | undefined>)[id])
       .filter(Boolean) as import('../config/items').AttachmentDef[]
     const itemDefs = stash.itemIds
       .map(id => (ITEM_DEFINITIONS as Record<string, import('../config/items').ItemDef | undefined>)[id])
       .filter(Boolean) as import('../config/items').ItemDef[]
+    const weapDefs = stash.weaponIds
+      .map(id => (WEAPON_DEFINITIONS as Record<string, import('../config/items').WeaponDef | undefined>)[id])
+      .filter(Boolean) as import('../config/items').WeaponDef[]
 
-    const totalValue = (weapDef?.sandValue ?? 0)
+    // 计算总价值
+    const totalValue = weapDefs.reduce((s, w) => s + w.sandValue, 0)
       + attDefs.reduce((s, a) => s + a.sandValue, 0)
       + itemDefs.reduce((s, i) => s + i.sandValue, 0)
 
     this.contentLayer.add(this.make.text({
       x: leftX, y,
-      text: `总估值：${totalValue} ⌛`,
+      text: `总估值：${totalValue} ⌛  |  武器 ${weapDefs.length}  配件 ${attDefs.length}  物品 ${itemDefs.length}`,
       style: { fontFamily: '"Silkscreen", monospace', fontSize: '13px', color: '#e8d060' },
       add: false,
     }))
     y += 22
 
-    // ── 武器 ─────────────────────────────────────────────
-    this.contentLayer.add(this.make.text({
-      x: leftX, y,
-      text: '── 武器 ──',
-      style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#446688' },
-      add: false,
-    }))
-    y += 18
-
-    if (weapDef) {
-      const wColor = RARITY_COLORS[weapDef.rarity]
-      const wColorHex = `#${wColor.toString(16).padStart(6, '0')}`
-      const wBg = this.add.rectangle(width / 2, y + 22, W, 44, 0x0a1828)
-      wBg.setStrokeStyle(1, wColor, 0.7)
-      this.contentLayer.add(wBg)
+    const addRow = (
+      label: string, sub: string, color: number, onDiscard: () => void,
+    ) => {
+      const colorHex = `#${color.toString(16).padStart(6, '0')}`
+      const bg = this.add.rectangle(width / 2, y + 22, W, 44, 0x0a1828)
+      bg.setStrokeStyle(1, color, 0.7)
+      this.contentLayer.add(bg)
       this.contentLayer.add(this.make.text({
-        x: leftX + 8, y: y + 8,
-        text: `[${RARITY_NAMES[weapDef.rarity]}] ${weapDef.name}  —  ${weapDef.desc}`,
-        style: { fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: wColorHex },
+        x: leftX + 8, y: y + 6,
+        text: label,
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: colorHex },
         add: false,
       }))
       this.contentLayer.add(this.make.text({
         x: leftX + 8, y: y + 24,
-        text: `伤害 ${weapDef.baseDamage}${weapDef.pellets ? ` ×${weapDef.pellets}弹` : ''}  射速 ${weapDef.fireRateMs}ms  暴击 ${Math.round(weapDef.baseCritChance * 100)}%  估值 ${weapDef.sandValue}⌛`,
-        style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#6090b0' },
+        text: sub,
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#5080a0' },
         add: false,
       }))
-      // 丢弃按钮
-      const discardW = this.add.rectangle(leftX + W - 40, y + 22, 60, 28, 0x180808)
-      discardW.setStrokeStyle(1, 0x603030, 0.7).setInteractive({ useHandCursor: true })
-      discardW.on('pointerdown', () => {
-        discardFromStash('weapon', weapDef.id)
-        audioManager.playClick()
-        this.buildStash()
-        this.tipText.setText(`已丢弃：${weapDef.name}`)
-      })
-      this.contentLayer.add(discardW)
+      const btn = this.add.rectangle(leftX + W - 40, y + 22, 60, 28, 0x180808)
+      btn.setStrokeStyle(1, 0x603030, 0.7).setInteractive({ useHandCursor: true })
+      btn.on('pointerdown', onDiscard)
+      this.contentLayer.add(btn)
       this.contentLayer.add(this.make.text({
         x: leftX + W - 40, y: y + 22,
         text: '丢弃', style: { fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#804040' },
         add: false,
       }).setOrigin(0.5))
-    } else {
+      y += 50
+    }
+
+    const addEmpty = (msg: string) => {
       this.contentLayer.add(this.make.text({
         x: leftX + 8, y: y + 4,
-        text: '（空  —  深潜结束后自动存入武器）',
+        text: msg,
         style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#2a3848' },
         add: false,
       }))
+      y += 24
     }
-    y += 52
+
+    const sectionTitle = (txt: string) => {
+      this.contentLayer.add(this.make.text({
+        x: leftX, y,
+        text: txt,
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#446688' },
+        add: false,
+      }))
+      y += 18
+    }
+
+    // ── 武器 ─────────────────────────────────────────────
+    sectionTitle(`── 武器  (${weapDefs.length}) ──`)
+    if (weapDefs.length === 0) {
+      addEmpty('（空  —  深潜撤离后自动存入）')
+    } else {
+      weapDefs.forEach(wd => {
+        const wRef = wd
+        addRow(
+          `[${RARITY_NAMES[wd.rarity]}] ${wd.name}  —  ${wd.desc}`,
+          `伤害 ${wd.baseDamage}${wd.pellets ? ` ×${wd.pellets}弹` : ''}  射速 ${wd.fireRateMs}ms  暴击 ${Math.round(wd.baseCritChance * 100)}%  估值 ${wd.sandValue}⌛`,
+          RARITY_COLORS[wd.rarity],
+          () => { discardFromStash('weapon', wRef.id); audioManager.playClick(); this.buildStash(); this.tipText.setText(`已丢弃：${wRef.name}`) },
+        )
+      })
+    }
+    y += 4
 
     // ── 配件 ─────────────────────────────────────────────
-    this.contentLayer.add(this.make.text({
-      x: leftX, y,
-      text: `── 配件  (${attDefs.length}/4) ──`,
-      style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#446688' },
-      add: false,
-    }))
-    y += 18
-
-    const slotNames: Record<string, string> = { barrel: '枪管', scope: '瞄准镜', magazine: '弹匣', stock: '枪托' }
-    ATTACHMENT_SLOTS.forEach(slot => {
-      const att = attDefs.find(a => a.slotType === slot)
-      const aColor = att ? RARITY_COLORS[att.rarity] : 0x1e3050
-      const aColorHex = `#${aColor.toString(16).padStart(6, '0')}`
-      const aBg = this.add.rectangle(width / 2, y + 17, W, 34, att ? 0x0a1520 : 0x080c14)
-      aBg.setStrokeStyle(1, aColor, att ? 0.7 : 0.3)
-      this.contentLayer.add(aBg)
-      this.contentLayer.add(this.make.text({
-        x: leftX + 8, y: y + 10,
-        text: att
-          ? `[${slotNames[slot]}] ${att.name}  —  ${att.desc}  (${att.sandValue}⌛)`
-          : `[${slotNames[slot]}]  空`,
-        style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: att ? aColorHex : '#2a3848' },
-        add: false,
-      }))
-      if (att) {
-        const discardA = this.add.rectangle(leftX + W - 40, y + 17, 60, 24, 0x180808)
-        discardA.setStrokeStyle(1, 0x603030, 0.7).setInteractive({ useHandCursor: true })
-        const attRef = att
-        discardA.on('pointerdown', () => {
-          discardFromStash('attachment', attRef.id)
-          audioManager.playClick()
-          this.buildStash()
-          this.tipText.setText(`已丢弃：${attRef.name}`)
-        })
-        this.contentLayer.add(discardA)
-        this.contentLayer.add(this.make.text({
-          x: leftX + W - 40, y: y + 17,
-          text: '丢弃', style: { fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#804040' },
-          add: false,
-        }).setOrigin(0.5))
-      }
-      y += 38
-    })
+    const slotNames: Record<string, string> = { barrel: '枪管', scope: '瞄准镜', magazine: '弹匣', stock: '枪托', underbarrel: '下挂', enhancement: '强化核' }
+    sectionTitle(`── 配件  (${attDefs.length}) ──`)
+    if (attDefs.length === 0) {
+      addEmpty('（空  —  深潜结束后自动存入配件）')
+    } else {
+      attDefs.forEach(att => {
+        const aRef = att
+        addRow(
+          `[${slotNames[att.slotType]}] [${RARITY_NAMES[att.rarity]}] ${att.name}  —  ${att.desc}`,
+          `估值 ${att.sandValue}⌛`,
+          RARITY_COLORS[att.rarity],
+          () => { discardFromStash('attachment', aRef.id); audioManager.playClick(); this.buildStash(); this.tipText.setText(`已丢弃：${aRef.name}`) },
+        )
+      })
+    }
+    y += 4
 
     // ── 物品 ─────────────────────────────────────────────
-    y += 4
-    this.contentLayer.add(this.make.text({
-      x: leftX, y,
-      text: `── 物品  (${itemDefs.length}/9) ──`,
-      style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#446688' },
-      add: false,
-    }))
-    y += 18
-
+    sectionTitle(`── 物品  (${itemDefs.length}) ──`)
     if (itemDefs.length === 0) {
-      this.contentLayer.add(this.make.text({
-        x: leftX + 8, y,
-        text: '（空  —  深潜中拾取并成功撤离后存入）',
-        style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#2a3848' },
-        add: false,
-      }))
-    }
-
-    itemDefs.forEach(item => {
-      const iColor = RARITY_COLORS[item.rarity]
-      const iColorHex = `#${iColor.toString(16).padStart(6, '0')}`
-      const iBg = this.add.rectangle(width / 2, y + 17, W, 34, 0x0a1020)
-      iBg.setStrokeStyle(1, iColor, 0.6)
-      this.contentLayer.add(iBg)
-      this.contentLayer.add(this.make.text({
-        x: leftX + 8, y: y + 5,
-        text: `[${RARITY_NAMES[item.rarity]}] ${item.name}`,
-        style: { fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: iColorHex },
-        add: false,
-      }))
-      this.contentLayer.add(this.make.text({
-        x: leftX + 8, y: y + 20,
-        text: `${item.desc}  (${item.sandValue}⌛)`,
-        style: { fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#4a6080' },
-        add: false,
-      }))
-      const discardI = this.add.rectangle(leftX + W - 40, y + 17, 60, 24, 0x180808)
-      discardI.setStrokeStyle(1, 0x603030, 0.7).setInteractive({ useHandCursor: true })
-      const itemRef = item
-      discardI.on('pointerdown', () => {
-        discardFromStash('item', itemRef.id)
-        audioManager.playClick()
-        this.buildStash()
-        this.tipText.setText(`已丢弃：${itemRef.name}`)
+      addEmpty('（空  —  深潜中拾取并成功撤离后存入）')
+    } else {
+      itemDefs.forEach(item => {
+        const iRef = item
+        addRow(
+          `[${RARITY_NAMES[item.rarity]}] ${item.name}  —  ${item.desc}`,
+          `估值 ${item.sandValue}⌛`,
+          RARITY_COLORS[item.rarity],
+          () => { discardFromStash('item', iRef.id); audioManager.playClick(); this.buildStash(); this.tipText.setText(`已丢弃：${iRef.name}`) },
+        )
       })
-      this.contentLayer.add(discardI)
-      this.contentLayer.add(this.make.text({
-        x: leftX + W - 40, y: y + 17,
-        text: '丢弃', style: { fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#804040' },
-        add: false,
-      }).setOrigin(0.5))
-      y += 38
-    })
+    }
   }
 
   // ─────────────────── TAB: 角色档案 ──────────────────

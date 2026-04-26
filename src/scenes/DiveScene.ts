@@ -20,6 +20,7 @@ import {
   getDamageMultiplier,
   getSpeedMultiplier,
   saveStash,
+  mergeIntoStash,
   type Stash,
 } from '../state/gameState'
 import { LORE_ENTRIES } from '../config/lore'
@@ -220,8 +221,8 @@ export class DiveScene extends Phaser.Scene {
     this.isHost = !this.offline && (runtime.player.id === (runtime.room?.hostId || ''))
 
     // 从战前准备选择的装备（或仓库全部）加载
-    const stash = runtime.player.stash ?? { weaponId: null, attachmentIds: [], itemIds: [] }
-    const loadout = data.loadout ?? stash
+    const stash = runtime.player.stash ?? { weaponIds: [], attachmentIds: [], itemIds: [] }
+    const loadout = data.loadout ?? { weaponId: stash.weaponIds[0] ?? null, attachmentIds: stash.attachmentIds, itemIds: stash.itemIds }
     if (loadout.weaponId) {
       const w = (WEAPON_DEFINITIONS as Record<string, WeaponDef | undefined>)[loadout.weaponId]
       if (w) this.equippedWeapon = w
@@ -2503,7 +2504,7 @@ export class DiveScene extends Phaser.Scene {
 
     // 成功撤离时持久化背包物品到仓库
     if (result === 'success') {
-      saveStash({
+      mergeIntoStash({
         weaponId: this.equippedWeapon.id,
         attachmentIds: this.weaponAttachments.map(a => a.id),
         itemIds: this.diveInventory.map(i => i.id),
@@ -2995,7 +2996,7 @@ export class DiveScene extends Phaser.Scene {
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(303))
 
     // ── 4 槽位配件（每槽一格：枪管/瞄准镜/弹匣/枪托）────────────
-    const slotNames: Record<AttachmentSlot, string> = { barrel: '枪管', scope: '镜', magazine: '弹匣', stock: '枪托' }
+    const slotNames: Record<AttachmentSlot, string> = { barrel: '枪管', scope: '镜', magazine: '弹匣', stock: '枪托', underbarrel: '下挂', enhancement: '强化' }
     const attSlotW = 56, attSlotH = 64, attSlotGap = 6
     const attStartX = panelX + 35
     ATTACHMENT_SLOTS.forEach((slotType, ai) => {
@@ -3097,7 +3098,7 @@ export class DiveScene extends Phaser.Scene {
       + (this.equippedWeapon?.sandValue ?? 0)
       + this.weaponAttachments.reduce((s, a) => s + (a.sandValue ?? 0), 0)
     objs.push(this.add.text(panelX, panelY + 158,
-      `${this.diveInventory.length}/${BAG_CAPACITY} 格物品  ·  配件 ${this.weaponAttachments.length}/4  ·  总估值 ${totalValue} ⌛  —  撤离后存入仓库`, {
+      `${this.diveInventory.length}/${BAG_CAPACITY} 格物品  ·  配件 ${this.weaponAttachments.length}/${ATTACHMENT_SLOTS.length}  ·  总估值 ${totalValue} ⌛  —  撤离后存入仓库`, {
       fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#304050',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(302))
 
@@ -3313,7 +3314,7 @@ export class DiveScene extends Phaser.Scene {
   private tryPickupAttachment(att: AttachmentDef, x: number, y: number): boolean {
     // 每种槽位只能装一个配件，拾取同槽位新配件时自动替换
     const existingIdx = this.weaponAttachments.findIndex(a => a.slotType === att.slotType)
-    const slotNames: Record<AttachmentSlot, string> = { barrel: '枪管', scope: '瞄准镜', magazine: '弹匣', stock: '枪托' }
+    const slotNames: Record<AttachmentSlot, string> = { barrel: '枪管', scope: '瞄准镜', magazine: '弹匣', stock: '枪托', underbarrel: '下挂', enhancement: '强化核' }
 
     if (existingIdx >= 0) {
       const old = this.weaponAttachments[existingIdx]

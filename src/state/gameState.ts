@@ -4,11 +4,11 @@ import type { SkillType } from '../types/game.types'
 import type { CharacterId } from '../config/characters'
 import { DEFAULT_CHARACTER } from '../config/characters'
 
-/** 玩家仓库 — 跨局持久化 */
+/** 玩家仓库 — 无限量跨局持久化 */
 export interface Stash {
-  weaponId: string | null        // 武器 ID (WeaponId)
-  attachmentIds: string[]        // 配件 ID 列表（最多 4 个，每槽位 1 个）
-  itemIds: string[]              // 物品 ID 列表（最多 BAG_CAPACITY 个）
+  weaponIds: string[]            // 武器 ID 列表（多把，不限量）
+  attachmentIds: string[]        // 配件 ID 列表（不限数量，按槽位各一带入）
+  itemIds: string[]              // 物品 ID 列表（不限数量）
 }
 
 export interface DailyProgress {
@@ -100,7 +100,7 @@ function createDefaultState(): RuntimeState {
       dailyProgress: { date: '', kills: 0, dives: 0, extractions: 0, killsRewarded: false, divesRewarded: false, extractionsRewarded: false },
       selectedCharacter: DEFAULT_CHARACTER,
       unlockedCharacters: [DEFAULT_CHARACTER],
-      stash: { weaponId: null, attachmentIds: [], itemIds: [] },
+      stash: { weaponIds: [], attachmentIds: [], itemIds: [] },
     },
     room: null,
     diveStartAt: null,
@@ -120,8 +120,17 @@ function loadState(): RuntimeState {
     }
     // 迁移：旧存档用 persistentItems(string[])，新版用 stash
     const legacy = (mergedPlayer as Record<string, unknown>)['persistentItems'] as string[] | undefined
-    if (legacy && legacy.length > 0 && !mergedPlayer.stash?.weaponId && mergedPlayer.stash?.itemIds?.length === 0) {
-      mergedPlayer.stash = { weaponId: null, attachmentIds: [], itemIds: legacy }
+    if (legacy && legacy.length > 0 && !mergedPlayer.stash?.weaponIds?.length && mergedPlayer.stash?.itemIds?.length === 0) {
+      mergedPlayer.stash = { weaponIds: [], attachmentIds: [], itemIds: legacy }
+    }
+    // 迁移：旧存档 stash.weaponId（单武器）→ weaponIds 数组
+    const oldWeaponId = ((mergedPlayer.stash as unknown) as Record<string, unknown>)['weaponId'] as string | null | undefined
+    if (oldWeaponId !== undefined) {
+      mergedPlayer.stash = {
+        weaponIds: oldWeaponId ? [oldWeaponId] : (mergedPlayer.stash.weaponIds ?? []),
+        attachmentIds: mergedPlayer.stash.attachmentIds ?? [],
+        itemIds: mergedPlayer.stash.itemIds ?? [],
+      }
     }
     return { ...fallback, ...parsed, player: mergedPlayer }
   } catch {
@@ -214,12 +223,32 @@ export function saveStash(stash: Stash) {
   persistState()
 }
 
+/** 深潜撤离后：将本次带出的装备合并入仓库（不覆盖，追加） */
+export function mergeIntoStash(extracted: { weaponId: string | null; attachmentIds: string[]; itemIds: string[] }) {
+  const s = runtimeState.player.stash
+  const weaponIds = extracted.weaponId && !s.weaponIds.includes(extracted.weaponId)
+    ? [...s.weaponIds, extracted.weaponId]
+    : s.weaponIds
+  runtimeState = {
+    ...runtimeState,
+    player: {
+      ...runtimeState.player,
+      stash: {
+        weaponIds,
+        attachmentIds: [...s.attachmentIds, ...extracted.attachmentIds],
+        itemIds: [...s.itemIds, ...extracted.itemIds],
+      },
+    },
+  }
+  persistState()
+}
+
 export function discardFromStash(type: 'weapon' | 'attachment' | 'item', id: string) {
   const s = runtimeState.player.stash
   const updated: Stash = {
-    weaponId:      type === 'weapon'     ? null                             : s.weaponId,
-    attachmentIds: type === 'attachment' ? s.attachmentIds.filter(x => x !== id) : s.attachmentIds,
-    itemIds:       type === 'item'       ? s.itemIds.filter(x => x !== id)       : s.itemIds,
+    weaponIds:     type === 'weapon'     ? s.weaponIds.filter(x => x !== id)       : s.weaponIds,
+    attachmentIds: type === 'attachment' ? s.attachmentIds.filter(x => x !== id)   : s.attachmentIds,
+    itemIds:       type === 'item'       ? s.itemIds.filter(x => x !== id)         : s.itemIds,
   }
   runtimeState = {
     ...runtimeState,
