@@ -128,6 +128,7 @@ export class DiveScene extends Phaser.Scene {
   private bagKey!: Phaser.Input.Keyboard.Key
   private shieldBlockedUntil = 0   // 回响盾：下次可格挡时间
   private lastRegenAt = 0           // 纳米胶布：上次回血时间
+  private autoFireCooldownUntil = 0 // 持续按住左键时的射击冷却
 
   // 连击系统
   private comboCount = 0
@@ -165,6 +166,7 @@ export class DiveScene extends Phaser.Scene {
     this.bagObjects = []
     this.shieldBlockedUntil = 0
     this.lastRegenAt = 0
+    this.autoFireCooldownUntil = 0
     const runtime = getRuntimeState()
     this.currentFragmentId = data.mapFragment || runtime.room?.mapFragment || runtime.selectedFragment
     this.currentTheme = FRAGMENT_THEMES[this.currentFragmentId]
@@ -279,6 +281,20 @@ export class DiveScene extends Phaser.Scene {
     // B 键开/关背包
     if (Phaser.Input.Keyboard.JustDown(this.bagKey)) {
       this.toggleBag()
+    }
+
+    // ── 持续按住左键自动射击（普通弹 120ms/发；装载技能时单发触发） ──
+    if (
+      !this.tutorialActive &&
+      !this.bagOpen &&
+      !this.diveFinished &&
+      this.input.activePointer.leftButtonDown() &&
+      time >= this.autoFireCooldownUntil
+    ) {
+      const p = this.input.activePointer
+      this.fireGun(p.worldX, p.worldY)
+      // 装载了技能时单发即释放，普通弹保持 120ms 射速
+      this.autoFireCooldownUntil = time + (this.loadedSkill ? 400 : 120)
     }
 
     // 被动回血（纳米胶布）
@@ -817,12 +833,7 @@ export class DiveScene extends Phaser.Scene {
     }
     this.bagKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.B)
 
-    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      if (this.tutorialActive) return
-      if (this.bagOpen) return       // 背包打开时不射击
-      if (p.rightButtonDown()) return
-      this.fireGun(p.worldX, p.worldY)
-    })
+    // 射击统一由 update() 的 leftButtonDown 轮询处理，无需 pointerdown 事件
   }
 
   private spawnEnvironmentProps() {
