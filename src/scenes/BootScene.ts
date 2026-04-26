@@ -144,6 +144,17 @@ export class BootScene extends Phaser.Scene {
     this.load.svg('char_shard_oracle',     'assets/sprites/characters/char_shard_oracle.svg',     portrait)
     this.load.svg('char_temporal_exile',   'assets/sprites/characters/char_temporal_exile.svg',   portrait)
     this.load.svg('char_echo_singularity', 'assets/sprites/characters/char_echo_singularity.svg', portrait)
+
+    // ─── 角色游戏内精灵（64×64，用于 DiveScene 玩家显示） ──
+    const sp = { width: 64, height: 64 }
+    this.load.svg('char_echo_ranger_sp',     'assets/sprites/characters/char_echo_ranger.svg',     sp)
+    this.load.svg('char_void_breaker_sp',    'assets/sprites/characters/char_void_breaker.svg',    sp)
+    this.load.svg('char_chrono_sentinel_sp', 'assets/sprites/characters/char_chrono_sentinel.svg', sp)
+    this.load.svg('char_echo_phantom_sp',    'assets/sprites/characters/char_echo_phantom.svg',    sp)
+    this.load.svg('char_iron_warden_sp',     'assets/sprites/characters/char_iron_warden.svg',     sp)
+    this.load.svg('char_shard_oracle_sp',     'assets/sprites/characters/char_shard_oracle.svg',     sp)
+    this.load.svg('char_temporal_exile_sp',   'assets/sprites/characters/char_temporal_exile.svg',   sp)
+    this.load.svg('char_echo_singularity_sp', 'assets/sprites/characters/char_echo_singularity.svg', sp)
   }
 
   create() {

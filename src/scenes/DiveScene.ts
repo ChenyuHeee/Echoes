@@ -182,6 +182,7 @@ export class DiveScene extends Phaser.Scene {
 
   // ✦ 角色系统
   private charDef!: CharacterDef
+  private charSpriteKey = 'player_idle'   // 当前角色对应的游戏精灵 key
   private charSkillCooldownUntil = 0
   private charSkillActive = false   // 技能激活中（部分技能有持续时间）
   private charSkillExpire = 0       // 技能持续结束时间
@@ -256,6 +257,8 @@ export class DiveScene extends Phaser.Scene {
     }
     const charId = getRuntimeState().player.selectedCharacter ?? DEFAULT_CHARACTER
     this.charDef = CHARACTER_DEFINITIONS[charId] ?? CHARACTER_DEFINITIONS[DEFAULT_CHARACTER]
+    // 使用角色专属 64px 游戏精灵；若未加载（理论上不会）则退回通用精灵
+    this.charSpriteKey = `char_${charId}_sp`
     this.equippedWeapon = WEAPON_DEFINITIONS[this.charDef.startWeapon] ?? WEAPON_DEFINITIONS.pulse_pistol
     this.weaponAttachments = []
     this.charSkillCooldownUntil = 0
@@ -535,16 +538,11 @@ export class DiveScene extends Phaser.Scene {
   }
 
   private spawnPlayer() {
-    this.player = this.physics.add.sprite(240, 220, 'player_idle')
-    this.player.setScale(2)
+    this.player = this.physics.add.sprite(240, 220, this.charSpriteKey)
+    this.player.setScale(1)   // 64px 角色 SVG 不需要放大
     this.player.setCollideWorldBounds(true)
     this.player.setDrag(1000, 1000)
     this.player.setMaxVelocity(220, 220)
-    // 按角色主题色着色，让玩家能直观感知当前角色
-    if (this.charDef?.accentColor) {
-      const tint = Phaser.Display.Color.HexStringToColor(this.charDef.accentColor).color
-      this.player.setTint(tint)
-    }
   }
 
   private spawnEnemies() {
@@ -1349,13 +1347,8 @@ export class DiveScene extends Phaser.Scene {
 
   private updateVisuals(time: number) {
     const speed = this.player.body ? this.player.body.velocity.length() : 0
-    if (Date.now() < this.dashVisualUntil) {
-      this.player.setTexture('player_dash')
-    } else if (speed > 10) {
-      this.player.setTexture(Math.floor(time / 140) % 2 === 0 ? 'player_walk_1' : 'player_walk_2')
-    } else {
-      this.player.setTexture('player_idle')
-    }
+    // 始终使用角色 SVG，不再切换 player_idle/walk/dash
+    this.player.setTexture(this.charSpriteKey)
 
     this.extractionHint.setAlpha(Math.floor(time / 400) % 2 === 0 ? 1 : 0.6)
 
@@ -1945,8 +1938,8 @@ export class DiveScene extends Phaser.Scene {
         const fromX = this.player.x, fromY = this.player.y
 
         // 出发点：残影
-        const shadow = this.add.image(fromX, fromY, 'player_dash')
-          .setAlpha(0.55).setScale(2).setTint(0x8060ff)
+        const shadow = this.add.image(fromX, fromY, this.charSpriteKey)
+          .setAlpha(0.55).setScale(1).setTint(0x8060ff)
         this.tweens.add({ targets: shadow, alpha: 0, scaleX: 1.4, scaleY: 1.4, duration: 380, onComplete: () => shadow.destroy() })
 
         // 运动轨迹虚线
@@ -1978,8 +1971,8 @@ export class DiveScene extends Phaser.Scene {
         break
       }
       case 'shadow_clone': {
-        const clone = this.add.image(this.player.x, this.player.y, 'player_idle')
-          .setTint(0x7a84ff).setAlpha(0.65).setScale(2)
+        const clone = this.add.image(this.player.x, this.player.y, this.charSpriteKey)
+          .setTint(0x7a84ff).setAlpha(0.65).setScale(1)
         // 分身缓慢漂移吸引敌人
         const driftAngle = Math.random() * Math.PI * 2
         this.tweens.add({
@@ -3840,7 +3833,7 @@ export class DiveScene extends Phaser.Scene {
       // 幻影步：急速冲刺 + 留下残影
       const ghostX = this.player.x
       const ghostY = this.player.y
-      const ghost = this.add.image(ghostX, ghostY, 'player_idle')
+      const ghost = this.add.image(ghostX, ghostY, this.charSpriteKey)
         .setAlpha(0.5).setTint(0xf0e040).setDepth(2)
       this.tweens.add({ targets: ghost, alpha: 0, duration: 700, onComplete: () => ghost.destroy() })
       this.charSpeedBoostUntil = now + 2200
