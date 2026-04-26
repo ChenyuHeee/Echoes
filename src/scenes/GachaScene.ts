@@ -12,6 +12,8 @@ import {
   unlockCharacter,
   recordGachaPull,
   addTimeSand,
+  spendEchoShards,
+  addEchoShards,
 } from '../state/gameState'
 
 /**
@@ -27,6 +29,8 @@ import {
 
 const COST_SINGLE = 100
 const COST_TEN = 900
+const COST_SINGLE_SHARDS = 1500       // 碎片单抽价格
+const COST_TEN_SHARDS = 13500         // 碎片十连
 const PITY_THRESHOLD = 30          // 30 抽内必出传说
 const DUPLICATE_REFUND = 60        // 重复返还时砂
 
@@ -46,6 +50,7 @@ const RARITY_COLOR: Record<CharacterId, number> = {
 
 export class GachaScene extends Phaser.Scene {
   private sandText!: Phaser.GameObjects.Text
+  private shardText!: Phaser.GameObjects.Text
   private pityText!: Phaser.GameObjects.Text
   private historyContainer!: Phaser.GameObjects.Container
   private overlayLayer!: Phaser.GameObjects.Container
@@ -83,10 +88,14 @@ export class GachaScene extends Phaser.Scene {
     this.sandText = this.add.text(width - 14, 60, '', {
       fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color: '#f0d870',
     }).setOrigin(1, 0)
+    // 回响碎片余额
+    this.shardText = this.add.text(width - 14, 80, '', {
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '13px', color: '#80c0ff',
+    }).setOrigin(1, 0)
     this.refreshSand()
 
     // 保底进度
-    this.pityText = this.add.text(width - 14, 84, '', {
+    this.pityText = this.add.text(width - 14, 100, '', {
       fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#a08070',
     }).setOrigin(1, 0)
     this.refreshPity()
@@ -100,14 +109,6 @@ export class GachaScene extends Phaser.Scene {
     // 历史抽卡列表（右侧）
     this.historyContainer = this.add.container(0, 0)
     this.refreshHistory()
-
-    // Debug：补充时砂（开发期便利）
-    const dbg = this.add.text(14, 60, '[ +500时砂 ]', {
-      fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#304050',
-    }).setOrigin(0, 0).setInteractive({ useHandCursor: true })
-    dbg.on('pointerover', () => dbg.setColor('#7090a0'))
-    dbg.on('pointerout', () => dbg.setColor('#304050'))
-    dbg.on('pointerdown', () => { addTimeSand(500); this.refreshSand() })
   }
 
   // ── 卡池预览 ───────────────────────────────────────────
@@ -198,10 +199,17 @@ export class GachaScene extends Phaser.Scene {
     return { id: 'shard_oracle', isLegendary: false }
   }
 
-  private pullCards(count: number) {
-    const cost = count === 10 ? COST_TEN : COST_SINGLE * count
-    if (!spendTimeSand(cost)) {
-      this.showToast('时砂不足！', '#ff6060')
+  private pullCards(count: number, currency: 'sand' | 'shards' = 'sand') {
+    let paid = false
+    if (currency === 'sand') {
+      const cost = count === 10 ? COST_TEN : COST_SINGLE * count
+      paid = spendTimeSand(cost)
+    } else {
+      const cost = count === 10 ? COST_TEN_SHARDS : COST_SINGLE_SHARDS * count
+      paid = spendEchoShards(cost)
+    }
+    if (!paid) {
+      this.showToast(currency === 'sand' ? '时砂不足！' : '回响碎片不足！', '#ff6060')
       return
     }
     audioManager.playClick()
@@ -212,7 +220,9 @@ export class GachaScene extends Phaser.Scene {
       const wasUnlocked = getRuntimeState().player.unlockedCharacters.includes(r.id)
       const isDuplicate = wasUnlocked
       if (isDuplicate) {
-        addTimeSand(DUPLICATE_REFUND)
+        // 重复返还：时砂路径返还时砂，碎片路径返还碎片
+        if (currency === 'sand') addTimeSand(DUPLICATE_REFUND)
+        else addEchoShards(DUPLICATE_REFUND * 10)
       } else {
         unlockCharacter(r.id)
       }
@@ -347,8 +357,9 @@ export class GachaScene extends Phaser.Scene {
 
   // ── 工具 ──────────────────────────────────────────────
   private refreshSand() {
-    const sand = getRuntimeState().player.timeSand
-    this.sandText.setText(`时砂  ${sand} ⌛`)
+    const p = getRuntimeState().player
+    this.sandText.setText(`时砂  ${p.timeSand} ⌛`)
+    this.shardText.setText(`回响碎片  ${p.echoShards ?? 0} ◆`)
   }
 
   private refreshPity() {

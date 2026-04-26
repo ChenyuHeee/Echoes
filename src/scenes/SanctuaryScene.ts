@@ -10,6 +10,7 @@ import {
   claimDailyQuest,
   setSelectedCharacter,
   discardFromStash,
+  sellFromStash,
   UPGRADE_MAX_LEVEL,
   UPGRADE_COST_PER_LEVEL,
   tickLoginStreak,
@@ -731,14 +732,36 @@ export class SanctuaryScene extends Phaser.Scene {
 
     this.contentLayer.add(this.make.text({
       x: leftX, y,
-      text: `总估值：${totalValue} ⌛  |  武器 ${weapDefs.length}  配件 ${attDefs.length}  物品 ${itemDefs.length}`,
-      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '13px', color: '#e8d060' },
+      text: `总估值：${totalValue} 碎片  |  武器 ${weapDefs.length}  配件 ${attDefs.length}  物品 ${itemDefs.length}  ·  当前碎片 ${rt.player.echoShards ?? 0}◆  时砂 ${rt.player.timeSand}⌛`,
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: '#e8d060' },
       add: false,
     }))
     y += 22
 
+    // 一键出售全部按钮
+    if (totalValue > 0) {
+      const sellAllBg = this.add.rectangle(leftX + W - 60, y - 8, 110, 22, 0x1a2810).setStrokeStyle(1, 0x60a040, 0.8).setInteractive({ useHandCursor: true })
+      const sellAllTxt = this.make.text({
+        x: leftX + W - 60, y: y - 8,
+        text: `[ 一键出售全部 +${totalValue} ]`,
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#80c060' },
+        add: false,
+      }).setOrigin(0.5)
+      this.contentLayer.add(sellAllBg)
+      this.contentLayer.add(sellAllTxt)
+      sellAllBg.on('pointerdown', () => {
+        weapDefs.forEach(w => sellFromStash('weapon', w.id, w.sandValue))
+        attDefs.forEach(a => sellFromStash('attachment', a.id, a.sandValue))
+        itemDefs.forEach(i => sellFromStash('item', i.id, i.sandValue))
+        audioManager.playClick()
+        this.tipText.setText(`出售完成，+${totalValue} 回响碎片`)
+        this.buildStash()
+      })
+    }
+
     const addRow = (
-      label: string, sub: string, color: number, onDiscard: () => void,
+      label: string, sub: string, color: number,
+      onSell: () => void, onDiscard: () => void,
     ) => {
       const colorHex = `#${color.toString(16).padStart(6, '0')}`
       const bg = this.add.rectangle(width / 2, y + 22, W, 44, 0x0a1828)
@@ -756,12 +779,23 @@ export class SanctuaryScene extends Phaser.Scene {
         style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#5080a0' },
         add: false,
       }))
-      const btn = this.add.rectangle(leftX + W - 40, y + 22, 60, 28, 0x180808)
+      // 出售按钮
+      const sellBtn = this.add.rectangle(leftX + W - 100, y + 22, 60, 28, 0x10241a)
+      sellBtn.setStrokeStyle(1, 0x60a040, 0.7).setInteractive({ useHandCursor: true })
+      sellBtn.on('pointerdown', onSell)
+      this.contentLayer.add(sellBtn)
+      this.contentLayer.add(this.make.text({
+        x: leftX + W - 100, y: y + 22,
+        text: '出售', style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#80c060' },
+        add: false,
+      }).setOrigin(0.5))
+      // 丢弃按钮
+      const btn = this.add.rectangle(leftX + W - 36, y + 22, 60, 28, 0x180808)
       btn.setStrokeStyle(1, 0x603030, 0.7).setInteractive({ useHandCursor: true })
       btn.on('pointerdown', onDiscard)
       this.contentLayer.add(btn)
       this.contentLayer.add(this.make.text({
-        x: leftX + W - 40, y: y + 22,
+        x: leftX + W - 36, y: y + 22,
         text: '丢弃', style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#804040' },
         add: false,
       }).setOrigin(0.5))
@@ -797,8 +831,9 @@ export class SanctuaryScene extends Phaser.Scene {
         const wRef = wd
         addRow(
           `[${RARITY_NAMES[wd.rarity]}] ${wd.name}  —  ${wd.desc}`,
-          `伤害 ${wd.baseDamage}${wd.pellets ? ` ×${wd.pellets}弹` : ''}  射速 ${wd.fireRateMs}ms  暴击 ${Math.round(wd.baseCritChance * 100)}%  估值 ${wd.sandValue}⌛`,
+          `伤害 ${wd.baseDamage}${wd.pellets ? ` ×${wd.pellets}弹` : ''}  射速 ${wd.fireRateMs}ms  暴击 ${Math.round(wd.baseCritChance * 100)}%  估值 ${wd.sandValue}◆`,
           RARITY_COLORS[wd.rarity],
+          () => { sellFromStash('weapon', wRef.id, wRef.sandValue); audioManager.playClick(); this.buildStash(); this.tipText.setText(`出售：${wRef.name}  +${wRef.sandValue}碎片`) },
           () => { discardFromStash('weapon', wRef.id); audioManager.playClick(); this.buildStash(); this.tipText.setText(`已丢弃：${wRef.name}`) },
         )
       })
@@ -815,8 +850,9 @@ export class SanctuaryScene extends Phaser.Scene {
         const aRef = att
         addRow(
           `[${slotNames[att.slotType]}] [${RARITY_NAMES[att.rarity]}] ${att.name}  —  ${att.desc}`,
-          `估值 ${att.sandValue}⌛`,
+          `估值 ${att.sandValue}◆`,
           RARITY_COLORS[att.rarity],
+          () => { sellFromStash('attachment', aRef.id, aRef.sandValue); audioManager.playClick(); this.buildStash(); this.tipText.setText(`出售：${aRef.name}  +${aRef.sandValue}碎片`) },
           () => { discardFromStash('attachment', aRef.id); audioManager.playClick(); this.buildStash(); this.tipText.setText(`已丢弃：${aRef.name}`) },
         )
       })
@@ -832,8 +868,9 @@ export class SanctuaryScene extends Phaser.Scene {
         const iRef = item
         addRow(
           `[${RARITY_NAMES[item.rarity]}] ${item.name}  —  ${item.desc}`,
-          `估值 ${item.sandValue}⌛`,
+          `估值 ${item.sandValue}◆`,
           RARITY_COLORS[item.rarity],
+          () => { sellFromStash('item', iRef.id, iRef.sandValue); audioManager.playClick(); this.buildStash(); this.tipText.setText(`出售：${iRef.name}  +${iRef.sandValue}碎片`) },
           () => { discardFromStash('item', iRef.id); audioManager.playClick(); this.buildStash(); this.tipText.setText(`已丢弃：${iRef.name}`) },
         )
       })

@@ -62,6 +62,8 @@ export interface RuntimePlayer {
   gachaPullsTotal: number          // 总抽取次数
   gachaPityCounter: number         // 距离上次传说该走了多少发（保底计数）
   gachaHistory: string[]           // 抽卡历史（最多保留最近 50 抽，格式：'<charId>:<ts>'）
+  // 双货币体系
+  echoShards: number               // 回响碎片（出售仓库装备获得）
 }
 
 export interface RuntimeRoom {
@@ -118,6 +120,7 @@ function createDefaultState(): RuntimeState {
       gachaPullsTotal: 0,
       gachaPityCounter: 0,
       gachaHistory: [],
+      echoShards: 0,
     },
     room: null,
     diveStartAt: null,
@@ -361,6 +364,58 @@ export function addTimeSand(amount: number) {
     },
   }
   persistState()
+}
+
+export function addEchoShards(amount: number) {
+  runtimeState = {
+    ...runtimeState,
+    player: {
+      ...runtimeState.player,
+      echoShards: Math.max(0, (runtimeState.player.echoShards ?? 0) + amount),
+    },
+  }
+  persistState()
+}
+
+export function spendEchoShards(amount: number): boolean {
+  const cur = runtimeState.player.echoShards ?? 0
+  if (cur < amount) return false
+  runtimeState = {
+    ...runtimeState,
+    player: { ...runtimeState.player, echoShards: cur - amount },
+  }
+  persistState()
+  return true
+}
+
+/**
+ * 从仓库出售一件装备获得回响碎片。
+ * 碎片量 = 装备 sandValue（1:1）。
+ */
+export function sellFromStash(type: 'weapon' | 'attachment' | 'item', id: string, shards: number) {
+  const s = runtimeState.player.stash
+  const updated: Stash = {
+    weaponIds:     type === 'weapon'     ? removeOne(s.weaponIds, id)     : s.weaponIds,
+    attachmentIds: type === 'attachment' ? removeOne(s.attachmentIds, id) : s.attachmentIds,
+    itemIds:       type === 'item'       ? removeOne(s.itemIds, id)       : s.itemIds,
+  }
+  runtimeState = {
+    ...runtimeState,
+    player: {
+      ...runtimeState.player,
+      stash: updated,
+      echoShards: (runtimeState.player.echoShards ?? 0) + shards,
+    },
+  }
+  persistState()
+}
+
+function removeOne(arr: string[], id: string): string[] {
+  const i = arr.indexOf(id)
+  if (i < 0) return arr
+  const out = [...arr]
+  out.splice(i, 1)
+  return out
 }
 
 export function resetDiveVitals() {
