@@ -93,37 +93,40 @@ export class BootScene extends Phaser.Scene {
     this.load.svg('ui_hud_box', 'assets/ui/hud-box.svg')
 
     // ─── 深潜装备图标 ───────────────────────────────────
-    this.load.svg('item_rusty_blade',       'assets/sprites/items/rusty_blade.svg')
-    this.load.svg('item_resonance_coil',    'assets/sprites/items/resonance_coil.svg')
-    this.load.svg('item_void_shard',        'assets/sprites/items/void_shard.svg')
-    this.load.svg('item_overclock_chip',    'assets/sprites/items/overclock_chip.svg')
-    this.load.svg('item_time_weave_vest',   'assets/sprites/items/time_weave_vest.svg')
-    this.load.svg('item_echo_shield',       'assets/sprites/items/echo_shield.svg')
-    this.load.svg('item_nanite_patch',      'assets/sprites/items/nanite_patch.svg')
-    this.load.svg('item_drift_boots',       'assets/sprites/items/drift_boots.svg')
-    this.load.svg('item_chrono_lens',       'assets/sprites/items/chrono_lens.svg')
-    this.load.svg('item_sand_magnet',       'assets/sprites/items/sand_magnet.svg')
-    this.load.svg('item_echo_crystal_core', 'assets/sprites/items/echo_crystal_core.svg')
-    this.load.svg('item_paradox_engine',    'assets/sprites/items/paradox_engine.svg')
+    // 指定 width/height 防止 Chrome 将无显式尺寸的 SVG 渲染为默认超大尺寸
+    const icon16 = { width: 16, height: 16 }
+    this.load.svg('item_rusty_blade',       'assets/sprites/items/rusty_blade.svg',       icon16)
+    this.load.svg('item_resonance_coil',    'assets/sprites/items/resonance_coil.svg',    icon16)
+    this.load.svg('item_void_shard',        'assets/sprites/items/void_shard.svg',        icon16)
+    this.load.svg('item_overclock_chip',    'assets/sprites/items/overclock_chip.svg',    icon16)
+    this.load.svg('item_time_weave_vest',   'assets/sprites/items/time_weave_vest.svg',   icon16)
+    this.load.svg('item_echo_shield',       'assets/sprites/items/echo_shield.svg',       icon16)
+    this.load.svg('item_nanite_patch',      'assets/sprites/items/nanite_patch.svg',      icon16)
+    this.load.svg('item_drift_boots',       'assets/sprites/items/drift_boots.svg',       icon16)
+    this.load.svg('item_chrono_lens',       'assets/sprites/items/chrono_lens.svg',       icon16)
+    this.load.svg('item_sand_magnet',       'assets/sprites/items/sand_magnet.svg',       icon16)
+    this.load.svg('item_echo_crystal_core', 'assets/sprites/items/echo_crystal_core.svg', icon16)
+    this.load.svg('item_paradox_engine',    'assets/sprites/items/paradox_engine.svg',    icon16)
 
     // ─── 武器图标 ───────────────────────────────────────
-    this.load.svg('weapon_pistol',   'assets/sprites/items/weapon_pistol.svg')
-    this.load.svg('weapon_smg',      'assets/sprites/items/weapon_smg.svg')
-    this.load.svg('weapon_shotgun',  'assets/sprites/items/weapon_shotgun.svg')
-    this.load.svg('weapon_sniper',   'assets/sprites/items/weapon_sniper.svg')
+    this.load.svg('weapon_pistol',   'assets/sprites/items/weapon_pistol.svg',   icon16)
+    this.load.svg('weapon_smg',      'assets/sprites/items/weapon_smg.svg',      icon16)
+    this.load.svg('weapon_shotgun',  'assets/sprites/items/weapon_shotgun.svg',  icon16)
+    this.load.svg('weapon_sniper',   'assets/sprites/items/weapon_sniper.svg',   icon16)
 
     // ─── 配件图标（按槽型共用贴图） ────────────────────
-    this.load.svg('att_barrel',   'assets/sprites/items/att_barrel.svg')
-    this.load.svg('att_scope',    'assets/sprites/items/att_scope.svg')
-    this.load.svg('att_magazine', 'assets/sprites/items/att_magazine.svg')
-    this.load.svg('att_stock',    'assets/sprites/items/att_stock.svg')
+    this.load.svg('att_barrel',   'assets/sprites/items/att_barrel.svg',   icon16)
+    this.load.svg('att_scope',    'assets/sprites/items/att_scope.svg',    icon16)
+    this.load.svg('att_magazine', 'assets/sprites/items/att_magazine.svg', icon16)
+    this.load.svg('att_stock',    'assets/sprites/items/att_stock.svg',    icon16)
 
     // ─── 角色立绘 ────────────────────────────────────────
-    this.load.svg('char_echo_ranger',     'assets/sprites/characters/char_echo_ranger.svg')
-    this.load.svg('char_void_breaker',    'assets/sprites/characters/char_void_breaker.svg')
-    this.load.svg('char_chrono_sentinel', 'assets/sprites/characters/char_chrono_sentinel.svg')
-    this.load.svg('char_echo_phantom',    'assets/sprites/characters/char_echo_phantom.svg')
-    this.load.svg('char_iron_warden',     'assets/sprites/characters/char_iron_warden.svg')
+    const portrait = { width: 48, height: 48 }
+    this.load.svg('char_echo_ranger',     'assets/sprites/characters/char_echo_ranger.svg',     portrait)
+    this.load.svg('char_void_breaker',    'assets/sprites/characters/char_void_breaker.svg',    portrait)
+    this.load.svg('char_chrono_sentinel', 'assets/sprites/characters/char_chrono_sentinel.svg', portrait)
+    this.load.svg('char_echo_phantom',    'assets/sprites/characters/char_echo_phantom.svg',    portrait)
+    this.load.svg('char_iron_warden',     'assets/sprites/characters/char_iron_warden.svg',     portrait)
   }
 
   create() {
