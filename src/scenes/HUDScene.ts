@@ -14,6 +14,7 @@ interface HudPayload {
   echoSkill?: string
   hint?: string
   skillCooldowns?: Record<string, number>   // skill -> cooldownUntil timestamp
+  waveInfo?: string    // 波次/剩余敌人信息
 }
 
 export class HUDScene extends Phaser.Scene {
@@ -23,6 +24,7 @@ export class HUDScene extends Phaser.Scene {
   private echoPanel!: Phaser.GameObjects.Rectangle
   private echoIcon!: Phaser.GameObjects.Text
   private echoElementBar!: Phaser.GameObjects.Rectangle
+  private waveInfoText!: Phaser.GameObjects.Text   // 波次/剩余敌人信息
 
   // HP / Stability 条
   private hpBar!: Phaser.GameObjects.Rectangle
@@ -89,6 +91,11 @@ export class HUDScene extends Phaser.Scene {
       fontFamily: '"Silkscreen", monospace',
       fontSize: '11px',
       color: '#4a6080',
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(10)
+
+    // ─── 右上副行：波次/剩余敌人 ───────────────────────────────
+    this.waveInfoText = this.add.text(width - 8, 20, '', {
+      fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#7ce0bc',
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(10)
 
     // ─── 底部：技能槽 ─────────────────────────────────────────
@@ -244,6 +251,11 @@ export class HUDScene extends Phaser.Scene {
       `HP ${Math.ceil(payload.hp)}/${payload.maxHp}  STB ${Math.ceil(payload.stability)}/${payload.maxStability}\n` +
       `时砂 ${Math.floor(payload.timeSand)}  |  ${room}`,
     )
+
+    // ─ 波次信息 ─
+    if (this.waveInfoText?.active && payload.waveInfo !== undefined) {
+      this.waveInfoText.setText(payload.waveInfo)
+    }
 
     // ─ 提示 ─
     if (payload.hint) {

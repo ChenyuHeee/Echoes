@@ -61,6 +61,29 @@ type EnemyBody = Phaser.Types.Physics.Arcade.SpriteWithDynamicBody & {
   maxHp: number
 }
 
+// 波次升级殿
+interface ShrineOption {
+  id: string
+  name: string
+  desc: string
+  icon: string
+  rarity: 'common' | 'uncommon' | 'rare' | 'legendary'
+  apply: () => void
+}
+interface ShrineBuffs {
+  damageMult: number
+  speedMult: number
+  critBonus: number
+  critDamageMult: number
+  cooldownReduct: number
+  echoMult: number
+  magnetMult: number
+  regenPerSec: number
+  freeShields: number
+  lifesteal: number
+  berserk: boolean
+}
+
 export class DiveScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
@@ -170,6 +193,16 @@ export class DiveScene extends Phaser.Scene {
   private comboCount = 0
   private comboResetAt = 0
 
+  // ✦ 新玩法系统
+  private enemyHpGraphics!: Phaser.GameObjects.Graphics  // 敌人血条
+  private hitVignette!: Phaser.GameObjects.Rectangle     // 受击红边
+  private hitVignetteUntil = 0                            // 红边结束时间
+  private shrineActive = false                            // 升级殿是否已激活
+  private shrineObjects: Phaser.GameObjects.GameObject[] = [] // 升级殿 UI 对象
+  private waveKillCount = 0                               // 本波击杀计数
+  private bestCombo = 0                                   // 本次深潜最高连击
+  private totalDamageDealt = 0                            // 本次深潜总伤害
+
   constructor() {
     super('DiveScene')
   }
@@ -205,6 +238,17 @@ export class DiveScene extends Phaser.Scene {
     this.shieldBlockedUntil = 0
     this.lastRegenAt = 0
     this.autoFireCooldownUntil = 0
+    this.shrineActive = false
+    this.shrineObjects = []
+    this.waveKillCount = 0
+    this.bestCombo = 0
+    this.totalDamageDealt = 0
+    this.hitVignetteUntil = 0
+    this._shrineBuffs = {
+      damageMult: 1, speedMult: 1, critBonus: 0, critDamageMult: 2,
+      cooldownReduct: 0, echoMult: 1, magnetMult: 1, regenPerSec: 0,
+      freeShields: 0, lifesteal: 0, berserk: false,
+    }
     const charId = getRuntimeState().player.selectedCharacter ?? DEFAULT_CHARACTER
     this.charDef = CHARACTER_DEFINITIONS[charId] ?? CHARACTER_DEFINITIONS[DEFAULT_CHARACTER]
     this.equippedWeapon = WEAPON_DEFINITIONS[this.charDef.startWeapon] ?? WEAPON_DEFINITIONS.pulse_pistol
@@ -273,6 +317,12 @@ export class DiveScene extends Phaser.Scene {
     this.spawnEnemies()
     this.echoAuraGraphics = this.add.graphics().setDepth(30)
     this.muzzleGraphics = this.add.graphics().setDepth(31)
+    this.enemyHpGraphics = this.add.graphics().setDepth(32)
+
+    // 受击红边遮罩（全屏，固定在摄像机）
+    const { width, height } = this.scale
+    this.hitVignette = this.add.rectangle(width / 2, height / 2, width, height, 0xff0000, 0)
+      .setScrollFactor(0).setDepth(200).setBlendMode('NORMAL')
     this.spawnPickupsAndExtraction()  // 必须在 setupCombat() 之前，确保 this.pickups 已初始化
     this.setupCombat()
     this.spawnEchoPuzzle()            // 必须在 setupCombat() 之后，因为依赖 this.bullets
@@ -399,8 +449,8 @@ export class DiveScene extends Phaser.Scene {
       this.autoFireCooldownUntil = time + (this.loadedSkill ? 400 : this.getWeaponFireRateMs())
     }
 
-    // 被动回血（纳米胶布）
-    const regenRate = this.diveInventory.reduce((s, i) => s + (i.regenPerSec ?? 0), 0)
+    // 被动回血（纳米胶布 + 方尖碑纳米修复核）
+    const regenRate = this.diveInventory.reduce((s, i) => s + (i.regenPerSec ?? 0), 0) + this._shrineBuffs.regenPerSec
     if (regenRate > 0 && time - this.lastRegenAt >= 1000) {
       this.lastRegenAt = time
       this.hp = Math.min(this.maxHp, this.hp + regenRate)
@@ -414,7 +464,12 @@ export class DiveScene extends Phaser.Scene {
     if (this.waveInProgress && this.enemies.countActive() === 0 && (this.offline || this.isHost)) {
       this.waveInProgress = false
       this.bossAlive = false
-      this.time.delayedCall(2500, () => this.startNextWave())
+      // 每完成一波，弹出升级殿（波次 >= 1 且非正在显示）
+      if (this.waveNumber >= 1 && !this.shrineActive) {
+        this.time.delayedCall(800, () => this.spawnUpgradeShrine())
+      } else {
+        this.time.delayedCall(2500, () => this.startNextWave())
+      }
     }
 
     this.emitHud(undefined)
@@ -841,7 +896,7 @@ export class DiveScene extends Phaser.Scene {
 
   /** 磁吸拾取：120px 内时砂自动向玩家飞 */
   private updatePickupMagnet() {
-    const magnetMult = this.diveInventory.reduce((s, i) => s * (i.magnetRadiusMult ?? 1), 1)
+    const magnetMult = this.diveInventory.reduce((s, i) => s * (i.magnetRadiusMult ?? 1), 1) * this._shrineBuffs.magnetMult
     const MAGNET_RADIUS = 120 * magnetMult
     const MAGNET_SPEED = 280
     this.pickups.children.each(child => {
@@ -1047,12 +1102,18 @@ export class DiveScene extends Phaser.Scene {
       const enemy = enemyObj as EnemyBody
       if (this.player.getData('invincible')) return
 
-      // 回响盾格挡
+      // 回响盾格挡（物品 + 方尖碑免疫护盾）
       const shieldCd = this.diveInventory.reduce((s, i) => s + (i.shieldCooldownMs ? 1 : 0), 0)
-      if (shieldCd > 0) {
+      const hasFreeShield = this._shrineBuffs.freeShields > 0
+      if (shieldCd > 0 || hasFreeShield) {
         const shieldItem = this.diveInventory.find(i => i.shieldCooldownMs)
-        if (shieldItem && Date.now() > this.shieldBlockedUntil) {
-          this.shieldBlockedUntil = Date.now() + shieldItem.shieldCooldownMs!
+        const canBlockItem = shieldItem && Date.now() > this.shieldBlockedUntil
+        if (canBlockItem || hasFreeShield) {
+          if (hasFreeShield) {
+            this._shrineBuffs.freeShields--
+          } else if (canBlockItem) {
+            this.shieldBlockedUntil = Date.now() + shieldItem!.shieldCooldownMs!
+          }
           // 格挡特效
           const shieldFx = this.add.graphics().setDepth(80)
           shieldFx.lineStyle(3, 0x4090e0, 0.9)
@@ -1067,6 +1128,9 @@ export class DiveScene extends Phaser.Scene {
       const wardenReduct = Date.now() < this.charDefBoostUntil ? 0.4 : 1.0
       this.hp = Math.max(0, this.hp - Math.round(rawDmg * wardenReduct))
       this.stability = Math.max(0, this.stability - Math.round(8 * wardenReduct))
+      // 受击红边反馈
+      this.hitVignetteUntil = Date.now() + 400
+      this.cameras.main.shake(60, 0.006)
       this.player.setData('invincible', true)
       this.player.setAlpha(0.5)
       this.time.delayedCall(450, () => {
@@ -1202,6 +1266,30 @@ export class DiveScene extends Phaser.Scene {
       this.muzzleGraphics.fillStyle(loadColor, 0.7)
       this.muzzleGraphics.fillCircle(this.player.x, this.player.y, 4)
     }
+
+    // ── 敌人头顶血条 ──────────────────────────────────────
+    this.enemyHpGraphics.clear()
+    this.enemies.children.each(child => {
+      const e = child as EnemyBody
+      if (!e.active || !e.body) return true
+      const pct = Math.max(0, e.hp / e.maxHp)
+      const barW = e.getData('isBoss') ? 52 : 28
+      const barH = 3
+      const bx = e.x - barW / 2
+      const by = e.y - e.displayHeight / 2 - 6
+      // 背景
+      this.enemyHpGraphics.fillStyle(0x200808, 0.8)
+      this.enemyHpGraphics.fillRect(bx, by, barW, barH)
+      // 前景
+      const col = pct > 0.6 ? 0x50cc50 : pct > 0.3 ? 0xe08020 : 0xee2020
+      this.enemyHpGraphics.fillStyle(col, 0.95)
+      this.enemyHpGraphics.fillRect(bx, by, barW * pct, barH)
+      return true
+    })
+
+    // ── 受击红边淡出 ─────────────────────────────────────
+    const vigAlpha = Math.max(0, (this.hitVignetteUntil - now) / 400) * 0.45
+    this.hitVignette.setAlpha(vigAlpha)
   }
 
   private updateEnemies(time: number) {
@@ -1346,7 +1434,8 @@ export class DiveScene extends Phaser.Scene {
       } else {
         this.emitHud(`◈ ${def.name}`)
       }
-      this.cooldownUntil[skill] = now + def.cooldown
+      const effectiveCd1 = Math.round(def.cooldown * (1 - this._shrineBuffs.cooldownReduct))
+      this.cooldownUntil[skill] = now + effectiveCd1
       audioManager.playSkill()
       return
     }
@@ -1398,7 +1487,8 @@ export class DiveScene extends Phaser.Scene {
         audioManager.playSkill()
       }
 
-      this.cooldownUntil[skill] = now + def.cooldown
+      const effectiveCd2 = Math.round(def.cooldown * (1 - this._shrineBuffs.cooldownReduct))
+      this.cooldownUntil[skill] = now + effectiveCd2
       this.loadedSkill = null
 
     } else {
@@ -2013,9 +2103,11 @@ export class DiveScene extends Phaser.Scene {
     // 暴击检测（武器暴击率 + 时相镜 + 配件加成）
     const critChance = this.getWeaponCritChance()
     const isCrit = Math.random() < critChance
-    const critMult = isCrit ? 2.0 : 1.0
+    const critDmgMult = this._shrineBuffs.critDamageMult
+    const critMult = isCrit ? critDmgMult : 1.0
     const finalAmount = Math.round(amount * getDamageMultiplier() * this.getDiveDamageBonus() * critMult)
     enemy.hp -= finalAmount
+    this.totalDamageDealt += finalAmount
     if (showNumber) {
       const color = isCrit ? '#ffee22' : '#f0e050'
       this.spawnDamageNumber(enemy.x, enemy.y - 20, finalAmount, color)
@@ -2028,8 +2120,8 @@ export class DiveScene extends Phaser.Scene {
       }
     }
 
-    // 吸血（虚空碎片）
-    const lifesteal = this.diveInventory.reduce((s, i) => s + (i.lifesteal ?? 0), 0)
+    // 吸血（虚空碎片 + 方尖碑生命汲取）
+    const lifesteal = this.diveInventory.reduce((s, i) => s + (i.lifesteal ?? 0), 0) + this._shrineBuffs.lifesteal
     if (lifesteal > 0 && finalAmount > 0) {
       this.hp = Math.min(this.maxHp, this.hp + Math.ceil(finalAmount * lifesteal))
     }
@@ -2115,6 +2207,8 @@ export class DiveScene extends Phaser.Scene {
       this.comboCount = 1
     }
     this.comboResetAt = now + 3000
+    this.waveKillCount++
+    if (this.comboCount > this.bestCombo) this.bestCombo = this.comboCount
     if (this.comboCount >= 3) {
       const bonusTxt = this.comboCount >= 6 ? `连击 ×${this.comboCount}！` : `连击 ×${this.comboCount}`
       this.emitHud(bonusTxt)
@@ -2148,6 +2242,200 @@ export class DiveScene extends Phaser.Scene {
 
     // 掉落物由 Host（或离线玩家）统一生成并广播
     this.spawnEnemyDrops(dropX, dropY, isBoss, isElite)
+  }
+
+  // ─────────────────── 时间方尖碑（波次通关升级殿）───────────────────
+  /**
+   * 每波结束后弹出升级选择界面：3 张随机卡牌，玩家选一个获得本次深潜内的增益。
+   * 选择后延迟 2.5s 开始下一波。
+   */
+  private spawnUpgradeShrine() {
+    if (this.shrineActive || this.diveFinished) return
+    this.shrineActive = true
+    this.waveKillCount = 0 // 重置本波计数
+
+    const { width, height } = this.scale
+
+    // 暗化遮罩
+    const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.5)
+      .setScrollFactor(0).setDepth(150)
+
+    // 标题
+    const title = this.add.text(width / 2, height / 2 - 115, '✦ 时间方尖碑 — 选择强化', {
+      fontFamily: '"Silkscreen", monospace', fontSize: '18px', color: '#7ce0bc',
+      stroke: '#000000', strokeThickness: 4,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(151)
+    const subtitle = this.add.text(width / 2, height / 2 - 92, `第 ${this.waveNumber} 波完成  ·  本波击杀 ${this.diveKills}  ·  选择一项强化`, {
+      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#406060',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(151)
+
+    this.shrineObjects.push(overlay, title, subtitle)
+
+    // 生成 3 张随机卡牌
+    const options = this.rollShrineOptions()
+    const cardW = 160, cardH = 110, gap = 24
+    const totalW = cardW * 3 + gap * 2
+    const startX = width / 2 - totalW / 2 + cardW / 2
+
+    options.forEach((opt, i) => {
+      const cx = startX + i * (cardW + gap)
+      const cy = height / 2
+
+      const rarityColor = opt.rarity === 'legendary' ? 0xc09020
+        : opt.rarity === 'rare' ? 0x8030c0
+        : opt.rarity === 'uncommon' ? 0x2060c0
+        : 0x405060
+
+      const cardBg = this.add.rectangle(cx, cy, cardW, cardH, 0x08101a, 0.97)
+        .setScrollFactor(0).setDepth(151)
+      cardBg.setStrokeStyle(2, rarityColor, 0.85)
+
+      // 顶部色条
+      this.add.rectangle(cx, cy - cardH / 2 + 3, cardW, 5, rarityColor, 0.9)
+        .setScrollFactor(0).setDepth(152)
+
+      // 图标
+      this.add.text(cx, cy - 24, opt.icon, {
+        fontFamily: '"Silkscreen", monospace', fontSize: '22px', color: `#${rarityColor.toString(16).padStart(6, '0')}`,
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(152)
+
+      // 名称
+      this.add.text(cx, cy + 8, opt.name, {
+        fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#dce9ff',
+        wordWrap: { width: cardW - 12 }, align: 'center',
+      }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(152)
+
+      // 描述
+      this.add.text(cx, cy + 30, opt.desc, {
+        fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#6080a0',
+        wordWrap: { width: cardW - 12 }, align: 'center',
+      }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(152)
+
+      // 选择按钮
+      const btn = this.add.rectangle(cx, cy + cardH / 2 - 14, cardW - 16, 20, rarityColor, 0.18)
+        .setScrollFactor(0).setDepth(152).setInteractive({ useHandCursor: true })
+      btn.setStrokeStyle(1, rarityColor, 0.6)
+      const btnTxt = this.add.text(cx, cy + cardH / 2 - 14, '选择', {
+        fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#c0d8f0',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(153)
+
+      btn.on('pointerover', () => {
+        cardBg.setFillStyle(0x0e1c30, 0.98)
+        btn.setFillStyle(rarityColor, 0.45)
+        this.tweens.add({ targets: [cardBg], scaleX: 1.03, scaleY: 1.03, duration: 100, ease: 'Sine.easeOut' })
+      })
+      btn.on('pointerout', () => {
+        cardBg.setFillStyle(0x08101a, 0.97)
+        btn.setFillStyle(rarityColor, 0.18)
+        this.tweens.add({ targets: [cardBg], scaleX: 1, scaleY: 1, duration: 100 })
+      })
+      btn.on('pointerdown', () => {
+        audioManager.playPickup()
+        this.applyShrineOption(opt)
+        this.closeShrineUI()
+        this.emitHud(`✦ 方尖碑：${opt.name}`)
+        this.time.delayedCall(2500, () => this.startNextWave())
+      })
+
+      this.shrineObjects.push(cardBg, btn, btnTxt)
+    })
+
+    // 跳过按钮
+    const skipBtn = this.add.text(width / 2, height / 2 + cardH / 2 + 22, '[ 跳过 — 直接进入下一波 ]', {
+      fontFamily: '"Silkscreen", monospace', fontSize: '10px', color: '#2a3a4a',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(151).setInteractive({ useHandCursor: true })
+    skipBtn.on('pointerover', () => skipBtn.setColor('#5a7a9a'))
+    skipBtn.on('pointerout', () => skipBtn.setColor('#2a3a4a'))
+    skipBtn.on('pointerdown', () => {
+      this.closeShrineUI()
+      this.time.delayedCall(2500, () => this.startNextWave())
+    })
+    this.shrineObjects.push(skipBtn)
+  }
+
+  private closeShrineUI() {
+    this.shrineObjects.forEach(o => {
+      if (o && (o as Phaser.GameObjects.GameObject).active) {
+        (o as Phaser.GameObjects.GameObject).destroy()
+      }
+    })
+    this.shrineObjects = []
+    this.shrineActive = false
+  }
+
+  // 升级殿选项定义
+  private rollShrineOptions(): ShrineOption[] {
+    const all: ShrineOption[] = [
+      // ── 伤害类 ──────────────────────────────────────────────────
+      { id: 'dmg_boost_sm', name: '战术强化', desc: '本次深潜伤害 +12%', icon: '⚔', rarity: 'common',
+        apply: () => { this._shrineBuffs.damageMult *= 1.12 } },
+      { id: 'dmg_boost_lg', name: '超频打击', desc: '本次深潜伤害 +25%', icon: '💥', rarity: 'uncommon',
+        apply: () => { this._shrineBuffs.damageMult *= 1.25 } },
+      { id: 'crit_boost', name: '精准视镜', desc: '暴击率 +15%', icon: '🎯', rarity: 'uncommon',
+        apply: () => { this._shrineBuffs.critBonus += 0.15 } },
+      { id: 'double_crit', name: '致命弱点', desc: '暴击伤害 ×2.5（原 ×2）', icon: '☠', rarity: 'rare',
+        apply: () => { this._shrineBuffs.critDamageMult = 2.5 } },
+      // ── 防御类 ──────────────────────────────────────────────────
+      { id: 'hp_restore', name: '应急修复', desc: '立即恢复 40 HP', icon: '💊', rarity: 'common',
+        apply: () => { this.hp = Math.min(this.maxHp, this.hp + 40) } },
+      { id: 'max_hp_up', name: '强化装甲', desc: '最大 HP +30', icon: '🛡', rarity: 'uncommon',
+        apply: () => { this.maxHp += 30; this.hp = Math.min(this.maxHp, this.hp + 30) } },
+      { id: 'regen', name: '纳米修复核', desc: '每秒额外回血 5 HP', icon: '🧬', rarity: 'rare',
+        apply: () => { this._shrineBuffs.regenPerSec += 5 } },
+      { id: 'shield_recharge', name: '回响护盾', desc: '获得一次免疫伤害（可叠加）', icon: '🔵', rarity: 'uncommon',
+        apply: () => { this._shrineBuffs.freeShields += 1 } },
+      // ── 速度/工具类 ─────────────────────────────────────────────
+      { id: 'speed_up', name: '时砂助推', desc: '移动速度 +18%', icon: '⚡', rarity: 'common',
+        apply: () => { this._shrineBuffs.speedMult *= 1.18 } },
+      { id: 'skill_haste', name: '量子加速', desc: '所有技能冷却缩短 25%', icon: '⏩', rarity: 'rare',
+        apply: () => { this._shrineBuffs.cooldownReduct += 0.25 } },
+      { id: 'sand_magnet', name: '磁吸波动', desc: '时砂吸取范围 ×3', icon: '🧲', rarity: 'common',
+        apply: () => { this._shrineBuffs.magnetMult *= 3 } },
+      { id: 'echo_amp', name: '回响扩幅', desc: '回响技能伤害 +40%', icon: '🔊', rarity: 'uncommon',
+        apply: () => { this._shrineBuffs.echoMult *= 1.40 } },
+      // ── 传奇类 ─────────────────────────────────────────────────
+      { id: 'berserker', name: '虚空狂怒', desc: 'HP 越低伤害越高（最高 +60%）', icon: '🌑', rarity: 'legendary',
+        apply: () => { this._shrineBuffs.berserk = true } },
+      { id: 'lifedrain', name: '生命汲取', desc: '每次伤害回血 12%', icon: '🩸', rarity: 'legendary',
+        apply: () => { this._shrineBuffs.lifesteal += 0.12 } },
+      { id: 'sand_bonus', name: '时砂涌现', desc: '立即获得 120 时砂', icon: '⏳', rarity: 'uncommon',
+        apply: () => { addTimeSand(120); this.timeSand += 120 } },
+    ]
+
+    // 按稀有度分组，weighted sample
+    const buckets = { common: all.filter(o => o.rarity === 'common'), uncommon: all.filter(o => o.rarity === 'uncommon'), rare: all.filter(o => o.rarity === 'rare'), legendary: all.filter(o => o.rarity === 'legendary') }
+    const roll = () => {
+      const r = Math.random()
+      let pool: ShrineOption[]
+      if (r < 0.05) pool = buckets.legendary
+      else if (r < 0.25) pool = buckets.rare
+      else if (r < 0.55) pool = buckets.uncommon
+      else pool = buckets.common
+      if (pool.length === 0) pool = all
+      return pool[Math.floor(Math.random() * pool.length)]
+    }
+
+    // 选 3 个不重复
+    const chosen: ShrineOption[] = []
+    const usedIds = new Set<string>()
+    let tries = 0
+    while (chosen.length < 3 && tries < 30) {
+      const opt = roll()
+      if (!usedIds.has(opt.id)) { usedIds.add(opt.id); chosen.push(opt) }
+      tries++
+    }
+    return chosen
+  }
+
+  private applyShrineOption(opt: ShrineOption) {
+    opt.apply()
+  }
+
+  /** 升级殿Buff 状态（在同一次深潜内累计） */
+  private _shrineBuffs: ShrineBuffs = {
+    damageMult: 1, speedMult: 1, critBonus: 0, critDamageMult: 2,
+    cooldownReduct: 0, echoMult: 1, magnetMult: 1, regenPerSec: 0,
+    freeShields: 0, lifesteal: 0, berserk: false,
   }
 
   /** 生成敌人掉落物（仅 Host 或离线执行，并广播给非 Host） */
@@ -2491,6 +2779,10 @@ export class DiveScene extends Phaser.Scene {
   }
 
   private emitHud(hint?: string) {
+    const enemiesLeft = this.waveInProgress ? this.enemies.countActive(true) : 0
+    const waveInfo = this.waveInProgress
+      ? `第 ${this.waveNumber} 波  ·  剩余 ${enemiesLeft} 敌`
+      : (this.waveNumber > 0 ? `第 ${this.waveNumber} 波 — 清场！` : '')
     this.game.events.emit('hud:update', {
       hp: this.hp,
       maxHp: this.maxHp,
@@ -2501,6 +2793,7 @@ export class DiveScene extends Phaser.Scene {
       echoSkill: this.echoSystem.getState().lastSkill || undefined,
       hint,
       skillCooldowns: { ...this.cooldownUntil },
+      waveInfo,
     })
   }
 
@@ -3157,7 +3450,12 @@ export class DiveScene extends Phaser.Scene {
 
   /** 计算当前背包装备的伤害倍率 */
   private getDiveDamageBonus(): number {
-    return this.diveInventory.reduce((acc, i) => acc * (i.damageMult ?? 1), 1)
+    const invBonus = this.diveInventory.reduce((acc, i) => acc * (i.damageMult ?? 1), 1)
+    // 虚空狂怒：HP 越低伤害越高
+    const berserkMult = this._shrineBuffs.berserk
+      ? 1 + (1 - Math.max(0.1, this.hp / this.maxHp)) * 0.6
+      : 1
+    return invBonus * this._shrineBuffs.damageMult * berserkMult
   }
 
   /** 计算当前背包装备的速度倍率 */
@@ -3165,12 +3463,12 @@ export class DiveScene extends Phaser.Scene {
     const itemBonus = this.diveInventory.reduce((acc, i) => acc * (i.speedMult ?? 1), 1)
     const charBonus = this.charDef?.baseSpeed ?? 1.0
     const phantomBonus = Date.now() < this.charSpeedBoostUntil ? 1.6 : 1.0
-    return itemBonus * charBonus * phantomBonus
+    return itemBonus * charBonus * phantomBonus * this._shrineBuffs.speedMult
   }
 
   /** 计算回响技能额外倍率 */
   private getDiveEchoBonus(): number {
-    return this.diveInventory.reduce((acc, i) => acc * (i.echoSkillMult ?? 1), 1)
+    return this.diveInventory.reduce((acc, i) => acc * (i.echoSkillMult ?? 1), 1) * this._shrineBuffs.echoMult
   }
 
   // ── 角色专属 Q 技能 ────────────────────────────────────────────
@@ -3262,12 +3560,12 @@ export class DiveScene extends Phaser.Scene {
     return Math.max(50, Math.round(base * attMult))
   }
 
-  /** 当前总暴击率（武器基础 + 物品加成 + 配件加成） */
+  /** 当前总暴击率（武器基础 + 物品加成 + 配件加成 + 方尖碑加成） */
   private getWeaponCritChance(): number {
     const base = this.equippedWeapon?.baseCritChance ?? 0.08
     const fromItems = this.diveInventory.reduce((s, i) => s + (i.critChance ?? 0), 0)
     const fromAtts  = this.weaponAttachments.reduce((s, a) => s + (a.critBonus ?? 0), 0)
-    return Math.min(base + fromItems + fromAtts, 0.95)
+    return Math.min(base + fromItems + fromAtts + this._shrineBuffs.critBonus, 0.95)
   }
 
   // ── 武器 / 配件掉落物 ─────────────────────────────────────────
