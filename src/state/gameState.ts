@@ -43,6 +43,7 @@ export interface RuntimePlayer {
   dailyProgress: DailyProgress
   selectedCharacter: CharacterId
   unlockedCharacters: CharacterId[]
+  persistentItems: string[]   // 上次成功撤离带回的物品 ID 列表
 }
 
 export interface RuntimeRoom {
@@ -90,6 +91,7 @@ function createDefaultState(): RuntimeState {
       dailyProgress: { date: '', kills: 0, dives: 0, extractions: 0, killsRewarded: false, divesRewarded: false, extractionsRewarded: false },
       selectedCharacter: DEFAULT_CHARACTER,
       unlockedCharacters: [DEFAULT_CHARACTER],
+      persistentItems: [],
     },
     room: null,
     diveStartAt: null,
@@ -162,6 +164,14 @@ export function unlockCharacter(characterId: CharacterId) {
       ...runtimeState.player,
       unlockedCharacters: [...existing, characterId],
     },
+  }
+  persistState()
+}
+
+export function saveExtractedItems(itemIds: string[]) {
+  runtimeState = {
+    ...runtimeState,
+    player: { ...runtimeState.player, persistentItems: itemIds },
   }
   persistState()
 }

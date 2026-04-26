@@ -19,6 +19,7 @@ import {
   addLoreEntry,
   getDamageMultiplier,
   getSpeedMultiplier,
+  saveExtractedItems,
 } from '../state/gameState'
 import { LORE_ENTRIES } from '../config/lore'
 import type { SkillType } from '../types/game.types'
@@ -204,6 +205,13 @@ export class DiveScene extends Phaser.Scene {
     this.currentFragmentId = data.mapFragment || runtime.room?.mapFragment || runtime.selectedFragment
     this.currentTheme = FRAGMENT_THEMES[this.currentFragmentId]
     this.isHost = !this.offline && (runtime.player.id === (runtime.room?.hostId || ''))
+
+    // 加载上次成功撤离的持久物品
+    const savedIds = runtime.player.persistentItems ?? []
+    this.diveInventory = savedIds
+      .map(id => (ITEM_DEFINITIONS as Record<string, ItemDef | undefined>)[id])
+      .filter((item): item is ItemDef => item !== undefined)
+      .slice(0, 6)
   }
 
   create() {
@@ -216,6 +224,15 @@ export class DiveScene extends Phaser.Scene {
     this.maxHp = rt.player.maxHp + charHpBonus
     this.stability = rt.player.maxStability
     this.maxStability = rt.player.maxStability
+
+    // 将持久物品中的 maxHpBonus 追加到初始 HP
+    for (const item of this.diveInventory) {
+      if (item.maxHpBonus) {
+        this.maxHp += item.maxHpBonus
+        this.hp += item.maxHpBonus
+      }
+    }
+
     this.timeSand = 0
     this.diveKills = 0
     this.diveStart = Date.now()
@@ -2336,6 +2353,11 @@ export class DiveScene extends Phaser.Scene {
     })
     recordDiveComplete(this.diveKills, result === 'success')
 
+    // 成功撤离时持久化背包物品
+    if (result === 'success') {
+      saveExtractedItems(this.diveInventory.map(i => i.id))
+    }
+
     // 保存引用以供后续广播结算使用
     const liveRealtime = this.roomRealtime
     this.roomRealtime?.disconnect()
@@ -2515,20 +2537,20 @@ export class DiveScene extends Phaser.Scene {
     // 本次找到的装备
     if (this.diveInventory.length > 0) {
       this.add.text(width / 2, height * 0.56,
-        isSuccess ? '本次带回装备加成：' : '背包已损失：', {
+        isSuccess ? '✦ 装备已保留，下次深潜生效：' : '✦ 背包已损失，装备清空：', {
         fontFamily: '"Silkscreen", monospace', fontSize: '11px',
         color: isSuccess ? '#7ce0bc' : '#e07c7c',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
 
       const itemNames = this.diveInventory.map(i => i.name).join('  ·  ')
-      this.add.text(width / 2, height * 0.62, itemNames, {
+      this.add.text(width / 2, height * 0.63, itemNames, {
         fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#9090c0',
         wordWrap: { width: 480 }, align: 'center',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(201)
     }
 
     let sec = 4
-    const cntText = this.add.text(width / 2, height * 0.62, `${sec} 秒后返回庇护所…`, {
+    const cntText = this.add.text(width / 2, height * 0.76, `${sec} 秒后返回庇护所…`, {
       fontFamily: '"Silkscreen", monospace',
       fontSize: '12px',
       color: '#506080',
@@ -2902,7 +2924,7 @@ export class DiveScene extends Phaser.Scene {
       wordWrap: { width: panelW - 30 }, align: 'center',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(302))
 
-    objs.push(this.add.text(panelX, panelY + 150, `${this.diveInventory.length}/${BAG_CAPACITY} 格物品  —  撤离成功才保留加成`, {
+    objs.push(this.add.text(panelX, panelY + 150, `${this.diveInventory.length}/${BAG_CAPACITY} 格物品  —  撤离后装备带回，下次深潜生效`, {
       fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#304050',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(302))
 

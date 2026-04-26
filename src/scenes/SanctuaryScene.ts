@@ -18,6 +18,7 @@ import { CHARACTER_DEFINITIONS, CHARACTER_LIST } from '../config/characters'
 import type { CharacterId } from '../config/characters'
 import { FACTION_DEFINITIONS } from '../config/factions'
 import type { SkillType } from '../types/game.types'
+import { ITEM_DEFINITIONS } from '../config/items'
 import type { PlayerUpgrades } from '../state/gameState'
 
 type TabId = 'overview' | 'workshop' | 'upgrade' | 'character' | 'lore'
@@ -611,6 +612,40 @@ export class SanctuaryScene extends Phaser.Scene {
       style: { fontFamily: '"Silkscreen", monospace', fontSize: '11px', color: '#4a7090' },
       add: false,
     }).setOrigin(0.5))
+
+    // ── 已带回装备（持久化物品） ──────────────────────────
+    const savedIds = rt.player.persistentItems ?? []
+    if (savedIds.length > 0) {
+      y += 60
+      this.contentLayer.add(this.make.text({
+        x: cx - CARD_W / 2, y,
+        text: '✦ 携带装备（上次撤离带回，下次深潜生效）',
+        style: { fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#7ce0bc' },
+        add: false,
+      }))
+      y += 18
+      const rowH = 36
+      savedIds.forEach((id, idx) => {
+        const item = (ITEM_DEFINITIONS as Record<string, import('../config/items').ItemDef | undefined>)[id]
+        if (!item) return
+        const itemBg = this.add.rectangle(cx, y + rowH / 2, CARD_W, rowH, 0x080f1e)
+        itemBg.setStrokeStyle(1, 0x2a4060, 0.6)
+        this.contentLayer.add(itemBg)
+        this.contentLayer.add(this.make.text({
+          x: cx - CARD_W / 2 + 10, y: y + 8,
+          text: `[${idx + 1}] ${item.name}`,
+          style: { fontFamily: '"Silkscreen", monospace', fontSize: '12px', color: '#c0c8e8' },
+          add: false,
+        }))
+        this.contentLayer.add(this.make.text({
+          x: cx - CARD_W / 2 + 10, y: y + 22,
+          text: item.desc,
+          style: { fontFamily: '"Silkscreen", monospace', fontSize: '9px', color: '#4a6080' },
+          add: false,
+        }))
+        y += rowH + 4
+      })
+    }
   }
 
   // ─────────────────── TAB: 角色档案 ──────────────────
