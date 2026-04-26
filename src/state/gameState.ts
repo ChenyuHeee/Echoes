@@ -52,6 +52,12 @@ export interface RuntimePlayer {
   selectedCharacter: CharacterId
   unlockedCharacters: CharacterId[]
   stash: Stash   // 仓库：跨局持久化的装备
+  // 连续登录奖励
+  lastLoginDate: string  // ISO yyyy-mm-dd
+  loginStreak: number
+  loginRewardClaimedDate: string  // 今日是否领取过
+  // 成就
+  achievements: string[]
 }
 
 export interface RuntimeRoom {
@@ -101,6 +107,10 @@ function createDefaultState(): RuntimeState {
       selectedCharacter: DEFAULT_CHARACTER,
       unlockedCharacters: [DEFAULT_CHARACTER],
       stash: { weaponIds: [], attachmentIds: [], itemIds: [] },
+      lastLoginDate: '',
+      loginStreak: 0,
+      loginRewardClaimedDate: '',
+      achievements: [],
     },
     room: null,
     diveStartAt: null,
@@ -503,4 +513,101 @@ export function getDamageMultiplier(): number {
 }
 export function getSpeedMultiplier(): number {
   return 1 + runtimeState.player.upgrades.speed * 0.05
+}
+
+// ─────────────── 连续登录奖励 ───────────────
+/** 调用时检查"昨日是否登录"，更新连续天数；不发奖。返回当前 streak。 */
+export function tickLoginStreak(): number {
+  const today = new Date().toISOString().slice(0, 10)
+  const last = runtimeState.player.lastLoginDate
+  if (last === today) return runtimeState.player.loginStreak
+  // 计算"是否昨日登录"
+  let streak = 1
+  if (last) {
+    const lastDate = new Date(last + 'T00:00:00Z').getTime()
+    const todayDate = new Date(today + 'T00:00:00Z').getTime()
+    const diff = Math.round((todayDate - lastDate) / 86400000)
+    streak = diff === 1 ? runtimeState.player.loginStreak + 1 : 1
+  }
+  runtimeState = {
+    ...runtimeState,
+    player: { ...runtimeState.player, lastLoginDate: today, loginStreak: streak },
+  }
+  persistState()
+  return streak
+}
+
+/** 当日是否还能领取登录奖励 */
+export function canClaimDailyLogin(): boolean {
+  const today = new Date().toISOString().slice(0, 10)
+  return runtimeState.player.loginRewardClaimedDate !== today
+}
+
+/** 领取今日登录奖励，按 streak 阶梯返还时砂数；不可领则返回 0。 */
+export function claimDailyLogin(): number {
+  if (!canClaimDailyLogin()) return 0
+  tickLoginStreak()
+  const streak = runtimeState.player.loginStreak
+  const base = 30
+  const bonusMul = streak >= 30 ? 2.5 : streak >= 15 ? 2.0 : streak >= 7 ? 1.5 : streak >= 3 ? 1.2 : 1
+  const reward = Math.round(base * bonusMul + Math.min(streak, 10) * 5)
+  const today = new Date().toISOString().slice(0, 10)
+  runtimeState = {
+    ...runtimeState,
+    player: {
+      ...runtimeState.player,
+      timeSand: runtimeState.player.timeSand + reward,
+      loginRewardClaimedDate: today,
+    },
+  }
+  persistState()
+  return reward
+}
+
+// ─────────────── 成就系统 ───────────────
+export interface AchievementDef {
+  id: string
+  name: string
+  desc: string
+  check: (p: RuntimePlayer) => boolean
+  reward: number  // 时砂奖励
+}
+
+export const ACHIEVEMENTS: AchievementDef[] = [
+  { id: 'first_dive',     name: '初次潜入',     desc: '完成首次时间深潜',           check: p => p.totalDives >= 1,        reward: 30 },
+  { id: 'dive_veteran',   name: '深潜老兵',     desc: '完成 10 次深潜',              check: p => p.totalDives >= 10,       reward: 80 },
+  { id: 'kill_100',       name: '百敌斩',       desc: '累计击杀 100 个敌人',         check: p => p.totalKills >= 100,      reward: 100 },
+  { id: 'kill_500',       name: '千锋淬炼',     desc: '累计击杀 500 个敌人',         check: p => p.totalKills >= 500,      reward: 250 },
+  { id: 'extract_5',      name: '稳健归来',     desc: '成功撤离 5 次',                check: p => p.totalExtractions >= 5,  reward: 60 },
+  { id: 'level_5',        name: '回响初醒',     desc: '达到等级 5',                   check: p => p.level >= 5,             reward: 80 },
+  { id: 'level_10',       name: '回响共鸣',     desc: '达到等级 10',                  check: p => p.level >= 10,            reward: 200 },
+  { id: 'streak_7',       name: '七日连勤',     desc: '连续登录 7 天',                check: p => p.loginStreak >= 7,       reward: 150 },
+  { id: 'streak_30',      name: '月之守望',     desc: '连续登录 30 天',               check: p => p.loginStreak >= 30,      reward: 600 },
+  { id: 'unlock_skills_5', name: '回响调律师',  desc: '解锁 5 个技能',                check: p => p.unlockedSkills.length >= 5, reward: 80 },
+  { id: 'sand_1000',      name: '时砂收藏家',   desc: '当前持有 1000 时砂',           check: p => p.timeSand >= 1000,       reward: 100 },
+]
+
+/** 检查并发放未领取的成就，返回新解锁的 ID 列表。 */
+export function checkAndClaimAchievements(): string[] {
+  const claimed = new Set(runtimeState.player.achievements)
+  const newly: string[] = []
+  let totalReward = 0
+  for (const a of ACHIEVEMENTS) {
+    if (!claimed.has(a.id) && a.check(runtimeState.player)) {
+      claimed.add(a.id)
+      newly.push(a.id)
+      totalReward += a.reward
+    }
+  }
+  if (newly.length === 0) return []
+  runtimeState = {
+    ...runtimeState,
+    player: {
+      ...runtimeState.player,
+      achievements: Array.from(claimed),
+      timeSand: runtimeState.player.timeSand + totalReward,
+    },
+  }
+  persistState()
+  return newly
 }

@@ -85,13 +85,13 @@ export class ModeSelectScene extends Phaser.Scene {
       },
       {
         title: '时隙穿越',
-        sub: '竞速  ·  单人',
-        desc: '驾驭超空间赛道穿越不稳定时隙\n闪避时间碎片残骸\n3000m内不被摧毁，回响技能清路',
+        sub: '竞速  ·  3 种玩法',
+        desc: '冲刺 30s · 马拉松 5km · 无限模式\n护盾 / 减速场 / 技能充能道具\n里程碑奖励 + 连避×2 时砂加成',
         color: '#c060ff',
         bg: 'bg_menu',
         tag: '可游玩',
         locked: false,
-        action: () => this.scene.start('RaceScene'),
+        action: () => this.openRaceModeMenu(),
       },
       {
         title: '时序密室',
@@ -183,5 +183,51 @@ export class ModeSelectScene extends Phaser.Scene {
         fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#2a3840',
       }).setOrigin(0.5).setDepth(3)
     }
+  }
+
+  // 时隙穿越：模式选择子菜单
+  private openRaceModeMenu() {
+    const { width, height } = this.scale
+    const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.78).setDepth(200)
+    overlay.setInteractive()
+    const panel = this.add.rectangle(width / 2, height / 2, 460, 280, 0x07101c, 0.98).setDepth(201)
+    panel.setStrokeStyle(2, 0xc060ff, 0.8)
+    const title = this.add.text(width / 2, height / 2 - 110, '时隙穿越 · 选择玩法', {
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '20px', color: '#c060ff',
+    }).setOrigin(0.5).setDepth(202)
+    const items: Array<{ mode: 'sprint' | 'marathon' | 'endless'; name: string; desc: string }> = [
+      { mode: 'sprint',   name: '冲刺  30s',     desc: '在 30 秒内拼出最远距离' },
+      { mode: 'marathon', name: '马拉松  5km',    desc: '到达 5000m 即获胜，胜利时砂×2' },
+      { mode: 'endless',  name: '无限模式',       desc: '没有终点，仅坠毁结束 — 比拼极限' },
+    ]
+    const created: Phaser.GameObjects.GameObject[] = [overlay, panel, title]
+    items.forEach((it, idx) => {
+      const cy = height / 2 - 50 + idx * 50
+      const btn = this.add.rectangle(width / 2, cy, 380, 38, 0x10202c, 1).setDepth(202)
+      btn.setStrokeStyle(1, 0xc060ff, 0.5).setInteractive({ useHandCursor: true })
+      const tname = this.add.text(width / 2 - 170, cy, it.name, {
+        fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color: '#c060ff',
+      }).setOrigin(0, 0.5).setDepth(203)
+      const tdesc = this.add.text(width / 2 + 10, cy, it.desc, {
+        fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#90a0c0',
+      }).setOrigin(0, 0.5).setDepth(203)
+      btn.on('pointerover', () => btn.setFillStyle(0x1a3040))
+      btn.on('pointerout', () => btn.setFillStyle(0x10202c))
+      btn.on('pointerdown', () => {
+        audioManager.playClick()
+        created.forEach(o => (o as Phaser.GameObjects.GameObject).destroy())
+        this.scene.start('RaceScene', { mode: it.mode })
+      })
+      created.push(btn, tname, tdesc)
+    })
+    const cancel = this.add.text(width / 2, height / 2 + 110, '[ 取消 ]', {
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: '#506070',
+    }).setOrigin(0.5).setDepth(202).setInteractive({ useHandCursor: true })
+    cancel.on('pointerdown', () => {
+      audioManager.playClick()
+      created.forEach(o => (o as Phaser.GameObjects.GameObject).destroy())
+      cancel.destroy()
+    })
+    created.push(cancel)
   }
 }

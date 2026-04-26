@@ -12,6 +12,11 @@ import {
   discardFromStash,
   UPGRADE_MAX_LEVEL,
   UPGRADE_COST_PER_LEVEL,
+  tickLoginStreak,
+  canClaimDailyLogin,
+  claimDailyLogin,
+  checkAndClaimAchievements,
+  ACHIEVEMENTS,
 } from '../state/gameState'
 import { audioManager } from '../systems/AudioManager'
 import { SKILL_DEFINITIONS } from '../config/skills'
@@ -25,7 +30,7 @@ import {
 } from '../config/items'
 import type { PlayerUpgrades } from '../state/gameState'
 
-type TabId = 'overview' | 'workshop' | 'upgrade' | 'character' | 'lore' | 'stash'
+type TabId = 'overview' | 'workshop' | 'upgrade' | 'character' | 'lore' | 'stash' | 'achieve'
 
 export class SanctuaryScene extends Phaser.Scene {
   private tipText!: Phaser.GameObjects.Text
@@ -71,10 +76,11 @@ export class SanctuaryScene extends Phaser.Scene {
       { id: 'workshop', label: '技能工坊' },
       { id: 'upgrade', label: '属性强化' },
       { id: 'stash', label: '仓库' },
+      { id: 'achieve', label: '成就' },
       { id: 'character', label: '选择角色' },
       { id: 'lore', label: '残响档案' },
     ]
-    const tabW = 130
+    const tabW = 116
     const tabStartX = width / 2 - (tabW * TABS.length) / 2 + tabW / 2
     TABS.forEach((tab, i) => {
       const tx = tabStartX + i * tabW
@@ -125,6 +131,7 @@ export class SanctuaryScene extends Phaser.Scene {
       case 'workshop': this.buildWorkshop(); break
       case 'upgrade': this.buildUpgrade(); break
       case 'stash': this.buildStash(); break
+      case 'achieve': this.buildAchievements(); break
       case 'character': this.buildCharacter(); break
       case 'lore': this.buildLore(); break
     }
@@ -151,6 +158,62 @@ export class SanctuaryScene extends Phaser.Scene {
       add: false,
     }).setOrigin(0.5, 0))
     y += 30
+
+    // ── 连续登录奖励卡片 ──────────────────────────────────
+    tickLoginStreak()  // 自动刷新连胜
+    const streak = rt.player.loginStreak
+    const canClaim = canClaimDailyLogin()
+    const STREAK_H = 50
+    const streakBg = this.add.rectangle(width / 2, y + STREAK_H / 2, cw, STREAK_H, canClaim ? 0x1a1408 : 0x0a1018)
+    streakBg.setStrokeStyle(1, canClaim ? 0xc8a850 : 0x304050, canClaim ? 0.9 : 0.4)
+    this.contentLayer.add(streakBg)
+    this.contentLayer.add(this.make.text({
+      x: leftX + 14, y: y + 8,
+      text: `✦ 连续登录 ${streak} 天`,
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color: canClaim ? '#f0d480' : '#506880' },
+      add: false,
+    }))
+    const nextMilestone = streak < 3 ? 3 : streak < 7 ? 7 : streak < 15 ? 15 : streak < 30 ? 30 : null
+    const milestoneTxt = nextMilestone ? `下一里程碑：${nextMilestone} 天 → 加成 ${(nextMilestone === 3 ? '×1.2' : nextMilestone === 7 ? '×1.5' : nextMilestone === 15 ? '×2.0' : '×2.5')}` : '已达最高加成 ×2.5'
+    this.contentLayer.add(this.make.text({
+      x: leftX + 14, y: y + 28,
+      text: milestoneTxt,
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#506880' },
+      add: false,
+    }))
+    if (canClaim) {
+      const claimBg = this.add.rectangle(width / 2 + cw / 2 - 80, y + STREAK_H / 2, 130, 30, 0x2a2010)
+      claimBg.setStrokeStyle(1, 0xc8a850, 0.85)
+      claimBg.setInteractive({ useHandCursor: true })
+      this.contentLayer.add(claimBg)
+      this.contentLayer.add(this.make.text({
+        x: width / 2 + cw / 2 - 80, y: y + STREAK_H / 2,
+        text: '领取今日登录奖励',
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#f0d480' },
+        add: false,
+      }).setOrigin(0.5))
+      claimBg.on('pointerdown', () => {
+        audioManager.playHarvest()
+        const reward = claimDailyLogin()
+        this.tipText.setText(`✦ 登录奖励 +${reward} 时砂　（连续 ${getRuntimeState().player.loginStreak} 天）`)
+        // 同时检查成就解锁
+        const newAch = checkAndClaimAchievements()
+        if (newAch.length > 0) {
+          this.tipText.setText(`✦ 登录奖励 +${reward} 时砂　·　解锁 ${newAch.length} 项成就！`)
+        }
+        this.switchTab('overview')
+      })
+      claimBg.on('pointerover', () => claimBg.setFillStyle(0x3a2c14, 1))
+      claimBg.on('pointerout', () => claimBg.setFillStyle(0x2a2010, 1))
+    } else {
+      this.contentLayer.add(this.make.text({
+        x: width / 2 + cw / 2 - 80, y: y + STREAK_H / 2,
+        text: '✦ 今日已领取',
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#3a6030' },
+        add: false,
+      }).setOrigin(0.5))
+    }
+    y += STREAK_H + 14
 
     // ── 等级 & 经验条 ─────────────────────────────────────
     const { level, exp } = rt.player
@@ -1008,6 +1071,64 @@ export class SanctuaryScene extends Phaser.Scene {
     }
 
     rebuild()
+  }
+
+  // ─────────────────── TAB: 成就 ──────────────────
+  private buildAchievements() {
+    const { width } = this.scale
+    const rt = getRuntimeState()
+    const cw = 760
+    const leftX = width / 2 - cw / 2
+    let y = 16
+
+    // 主动检查解锁
+    const newly = checkAndClaimAchievements()
+    if (newly.length > 0) this.tipText.setText(`✦ 解锁 ${newly.length} 项成就！奖励已自动发放`)
+
+    const claimed = new Set(getRuntimeState().player.achievements)
+    const unlockedCount = ACHIEVEMENTS.filter(a => claimed.has(a.id)).length
+    this.contentLayer.add(this.make.text({
+      x: width / 2, y,
+      text: `成就进度  ${unlockedCount} / ${ACHIEVEMENTS.length}`,
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '15px', color: '#c8a850' },
+      add: false,
+    }).setOrigin(0.5, 0))
+    y += 26
+    this.contentLayer.add(this.make.text({
+      x: width / 2, y,
+      text: '满足条件后切换到此页即可自动领取奖励',
+      style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#506880' },
+      add: false,
+    }).setOrigin(0.5, 0))
+    y += 22
+
+    ACHIEVEMENTS.forEach(a => {
+      const done = claimed.has(a.id)
+      const close = !done && a.check(rt.player)
+      const cardH = 40
+      const bg = this.add.rectangle(width / 2, y + cardH / 2, cw, cardH, done ? 0x0a1808 : 0x080e1a)
+      bg.setStrokeStyle(1, done ? 0x607030 : 0x1a2838, done ? 0.7 : 0.4)
+      this.contentLayer.add(bg)
+      this.contentLayer.add(this.make.text({
+        x: leftX + 12, y: y + 8,
+        text: `${done ? '✦' : '○'}  ${a.name}`,
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: done ? '#a0c840' : '#90a0c0' },
+        add: false,
+      }))
+      this.contentLayer.add(this.make.text({
+        x: leftX + 12, y: y + 24,
+        text: a.desc,
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: done ? '#608028' : '#506070' },
+        add: false,
+      }))
+      this.contentLayer.add(this.make.text({
+        x: width / 2 + cw / 2 - 14, y: y + cardH / 2,
+        text: done ? `+${a.reward} 已领取` : `奖励 +${a.reward} 时砂`,
+        style: { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: done ? '#608030' : (close ? '#c0a040' : '#506880') },
+        add: false,
+      }).setOrigin(1, 0.5))
+      y += cardH + 6
+    })
   }
 
   // ─────────────────── TAB: 残响档案 ──────────────────

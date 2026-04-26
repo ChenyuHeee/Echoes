@@ -10,7 +10,7 @@
 
 import Phaser from 'phaser'
 import { audioManager } from '../systems/AudioManager'
-import { addTimeSand, getSpeedMultiplier } from '../state/gameState'
+import { addTimeSand, getSpeedMultiplier, getRuntimeState } from '../state/gameState'
 import { PUZZLE_LEVELS } from '../config/puzzleLevels'
 import type { PuzzleLevel } from '../config/puzzleLevels'
 import { COMMUNITY_MAPS } from '../config/communityMaps'
@@ -165,6 +165,9 @@ export class PuzzleScene extends Phaser.Scene {
   private transitioning = false
   private finished = false
   private totalSand = 0
+  private hintLevel = 0          // 当前关卡提示等级 0-3
+  private hintBtn?: Phaser.GameObjects.Text
+  private skipBtn?: Phaser.GameObjects.Text
 
   private hintText!: Phaser.GameObjects.Text
   private echoText!: Phaser.GameObjects.Text
@@ -270,6 +273,22 @@ export class PuzzleScene extends Phaser.Scene {
     this.keyDisplay  = this.add.text(860, 8, '', { fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#f0c060' }).setOrigin(1, 0).setScrollFactor(0).setDepth(31)
     this.portalHint  = this.add.text(480, 527, this.isCommunityMode ? 'Q键: 发射传送门  ·  WASD: 移动' : '', { fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#304050' }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(31)
 
+    // 提示按钮（3 级递进）
+    this.hintBtn = this.add.text(820, 510, '[提示 0/3]', {
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#7090b0',
+    }).setOrigin(0, 1).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true })
+    this.hintBtn.on('pointerover', () => this.hintBtn!.setColor('#a0c0e0'))
+    this.hintBtn.on('pointerout',  () => this.hintBtn!.setColor('#7090b0'))
+    this.hintBtn.on('pointerdown', () => this.useHint())
+
+    // 跳过按钮（消耗 30 时砂，仅经典/社区单人可跳）
+    this.skipBtn = this.add.text(900, 510, '[跳过 -30]', {
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#a06060',
+    }).setOrigin(0, 1).setScrollFactor(0).setDepth(31).setInteractive({ useHandCursor: true })
+    this.skipBtn.on('pointerover', () => this.skipBtn!.setColor('#e08080'))
+    this.skipBtn.on('pointerout',  () => this.skipBtn!.setColor('#a06060'))
+    this.skipBtn.on('pointerdown', () => this.skipLevel())
+
     this.exitGfx          = this.add.graphics().setDepth(12)
     this.communityExitGfx = this.add.graphics().setDepth(12)
 
@@ -339,9 +358,12 @@ export class PuzzleScene extends Phaser.Scene {
 
     const maxIdx  = this.isCoop ? PUZZLE_LEVELS.length : 30
     const baseIdx = this.isCoop ? 30 : 0
+    const stars = this.estimateClassicDifficulty(level)
     this.roomTitle.setText(level.name)
-    this.levelCounter.setText(`${this.levelIndex - baseIdx + 1} / ${maxIdx - baseIdx}`)
+    this.levelCounter.setText(`${this.levelIndex - baseIdx + 1} / ${maxIdx - baseIdx}    难度 ${'★'.repeat(stars)}${'☆'.repeat(5 - stars)}`)
     this.hintText.setText(level.hint)
+    this.hintLevel = 0
+    if (this.hintBtn) this.hintBtn.setText('[提示 0/3]').setColor('#7090b0')
     this.updateEchoDisplay()
 
     level.pads.forEach(p => {
@@ -407,8 +429,10 @@ export class PuzzleScene extends Phaser.Scene {
     this.portals = [null, null]; this.nextPortalIdx = 0
 
     this.roomTitle.setText(map.name)
-    this.levelCounter.setText(`社区地图  ${this.currentMapIdx + 1}/${COMMUNITY_MAPS.length}  ·  ${map.author}  ·  难度 ${'★'.repeat(map.difficulty)}`)
+    this.levelCounter.setText(`社区地图  ${this.currentMapIdx + 1}/${COMMUNITY_MAPS.length}  ·  ${map.author}  ·  难度 ${'★'.repeat(map.difficulty)}${'☆'.repeat(Math.max(0, 5 - map.difficulty))}`)
     this.hintText.setText(map.hint)
+    this.hintLevel = 0
+    if (this.hintBtn) this.hintBtn.setText('[提示 0/3]').setColor('#7090b0')
     this.player.setPosition(map.spawn.x, map.spawn.y)
 
     for (const el of map.elements) {
@@ -1074,6 +1098,75 @@ export class PuzzleScene extends Phaser.Scene {
     this.tweens.killTweensOf(this.statusText)
     this.statusText.setText(msg).setColor(color).setAlpha(1)
     this.tweens.add({ targets: this.statusText, alpha: 0, delay: 2400, duration: 500 })
+  }
+
+  // ── 提示 / 跳关 / 难度评估 ──────────────────────────────────
+
+  private estimateClassicDifficulty(level: { pads: { id: string }[]; doors: { requiredPads: string[]; windowMs: number }[] }): number {
+    const padCount = level.pads.length
+    const maxSeq = Math.max(0, ...level.doors.map(d => d.requiredPads.length))
+    const tightWindow = level.doors.length ? Math.min(...level.doors.map(d => d.windowMs)) : 9999
+    let s = 1
+    if (padCount >= 3) s++
+    if (maxSeq >= 3) s++
+    if (tightWindow < 700) s++
+    if (padCount >= 5 || maxSeq >= 4 || tightWindow < 450) s++
+    return Math.min(5, Math.max(1, s))
+  }
+
+  private useHint() {
+    if (this.finished || this.transitioning) return
+    if (this.hintLevel >= 3) {
+      this.showStatus('提示已耗尽', '#806060')
+      return
+    }
+    this.hintLevel++
+    if (this.hintBtn) this.hintBtn.setText(`[提示 ${this.hintLevel}/3]`).setColor(this.hintLevel >= 3 ? '#604848' : '#7090b0')
+
+    if (this.isCommunityMode) {
+      const map = this.currentMap
+      if (!map) return
+      if (this.hintLevel === 1) {
+        const padIds = map.elements.filter((e: { type: string }) => e.type === 'pad').length
+        this.showStatus(`提示 1/3：共 ${padIds} 个踏板`, '#a0c0e0')
+      } else if (this.hintLevel === 2) {
+        const doorReqs = (map.elements as Array<{ type: string; requires?: string[] }>)
+          .filter(e => e.type === 'door')
+          .map(e => (e.requires ?? []).join('+'))
+          .filter(Boolean)
+        this.showStatus(`提示 2/3：门需要 ${doorReqs.join(' / ') || '联动触发'}`, '#90c0ff')
+      } else {
+        this.showStatus(`提示 3/3：${map.hint}`, '#ffd060')
+      }
+    } else {
+      const level = this.currentLevel
+      if (!level) return
+      if (this.hintLevel === 1) {
+        const padIds = level.pads.map((p: { id: string }) => p.id).join(', ')
+        this.showStatus(`提示 1/3：可用踏板—${padIds}`, '#a0c0e0')
+      } else if (this.hintLevel === 2) {
+        const seqs = level.doors.map((d: { requiredPads: string[]; windowMs: number }) => `${d.requiredPads.join('+')} (${d.windowMs}ms)`).join(' / ')
+        this.showStatus(`提示 2/3：门需要—${seqs}`, '#90c0ff')
+      } else {
+        this.showStatus(`提示 3/3：${level.solution}`, '#ffd060')
+      }
+    }
+  }
+
+  private skipLevel() {
+    if (this.finished || this.transitioning) return
+    const COST = 30
+    const sand = getRuntimeState().player.timeSand
+    if (sand < COST) {
+      this.showStatus(`需 ${COST} 时砂才能跳过（当前 ${sand}）`, '#e08080')
+      return
+    }
+    addTimeSand(-COST)
+    this.showStatus(`⭭ 跳过当前关卡　-${COST} 时砂`, '#ffa040')
+    this.time.delayedCall(600, () => {
+      if (this.isCommunityMode) this.onCommunityPassExit()
+      else this.onPassExit()
+    })
   }
 
   // ── 通关 ──────────────────────────────────────────────────────

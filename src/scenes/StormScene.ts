@@ -45,6 +45,21 @@ export class StormScene extends Phaser.Scene {
 
   // 地图物件
   private sandPickups!: Phaser.Physics.Arcade.Group
+  private powerUps!: Phaser.Physics.Arcade.Group
+
+  // 玩家增益（叠加倍率/计时）
+  private speedBoostUntil = 0      // 速度爆发：移动+45%
+  private damageBoostUntil = 0     // 撕裂：碰撞伤害×1.6 / 受伤×0.6
+  private shieldHits = 0           // 护盾：抵消接下来 N 次接触伤害
+  private echoBurstReady = false   // 回响爆发：一次性范围清场
+
+  // 击杀连击
+  private killStreak = 0
+  private lastKillAt = 0
+
+  // 援军波次
+  private waveCount = 0
+  private waveText!: Phaser.GameObjects.Text
 
   // 虚空
   private voidRadius = 880
@@ -85,6 +100,13 @@ export class StormScene extends Phaser.Scene {
     this.voidRadius = 880
     this.aiList = []
     this.startTime = Date.now()
+    this.speedBoostUntil = 0
+    this.damageBoostUntil = 0
+    this.shieldHits = 0
+    this.echoBurstReady = false
+    this.killStreak = 0
+    this.lastKillAt = 0
+    this.waveCount = 0
 
     audioManager.startBattleBgm()
     this.cameras.main.setBackgroundColor('#07090f')
@@ -99,7 +121,9 @@ export class StormScene extends Phaser.Scene {
 
     // 散落道具
     this.sandPickups = this.physics.add.group()
+    this.powerUps = this.physics.add.group()
     this.spawnInitialSands()
+    this.spawnInitialPowerUps()
 
     // 玩家（地图中心）
     this.player = this.physics.add.image(MAP_W / 2, MAP_H / 2, 'player_idle')
@@ -133,6 +157,15 @@ export class StormScene extends Phaser.Scene {
       this.sandText.setText(`时砂 ${this.totalSand}`)
     })
 
+    // 道具拾取
+    this.physics.add.overlap(this.player, this.powerUps, (_, p) => {
+      const pickup = p as Phaser.Physics.Arcade.Image
+      if (!pickup.active) return
+      const kind = pickup.getData('kind') as string
+      pickup.destroy()
+      this.applyPowerUp(kind)
+    })
+
     // 摄像机
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1)
     this.cameras.main.setZoom(0.82)
@@ -164,6 +197,27 @@ export class StormScene extends Phaser.Scene {
       },
       loop: true,
     })
+
+    // 周期补充道具（每 12-18s 1 件）
+    this.time.addEvent({
+      delay: 14000,
+      callback: () => {
+        const x = 120 + Math.random() * (MAP_W - 240)
+        const y = 120 + Math.random() * (MAP_H - 240)
+        this.spawnRandomPowerUp(x, y)
+      },
+      loop: true,
+    })
+
+    // 援军波次：每 35s 来 1 波（5+1*wave 个，速度+15%/波）
+    this.time.addEvent({
+      delay: 35000,
+      callback: () => this.spawnReinforcementWave(),
+      loop: true,
+    })
+
+    // 空格触发回响爆发
+    this.input.keyboard!.on('keydown-SPACE', () => this.tryEchoBurst())
   }
 
   // ───────────── 初始化 ─────────────
@@ -185,6 +239,175 @@ export class StormScene extends Phaser.Scene {
       this.sandPickups.add(p)
       this.tweens.add({ targets: p, y: p.y - 7, duration: 900, yoyo: true, repeat: -1 })
     }
+  }
+
+  // ───────────── 道具系统 ─────────────
+  private static readonly POWER_KINDS = [
+    { kind: 'speed',  tint: 0x40e0ff, label: '极速' },
+    { kind: 'shield', tint: 0xa0c0ff, label: '护盾' },
+    { kind: 'rage',   tint: 0xff6040, label: '撕裂' },
+    { kind: 'sand',   tint: 0xffe060, label: '时砂' },
+    { kind: 'echo',   tint: 0xc080ff, label: '回响爆发' },
+  ]
+
+  private spawnInitialPowerUps() {
+    for (let i = 0; i < 8; i++) {
+      const x = 200 + Math.random() * (MAP_W - 400)
+      const y = 200 + Math.random() * (MAP_H - 400)
+      this.spawnRandomPowerUp(x, y)
+    }
+  }
+
+  private spawnRandomPowerUp(x: number, y: number) {
+    const def = StormScene.POWER_KINDS[Math.floor(Math.random() * StormScene.POWER_KINDS.length)]
+    const p = this.physics.add.image(x, y, 'effect_echo_ring').setScale(0.7).setDepth(9)
+    p.setTint(def.tint)
+    p.setData('kind', def.kind)
+    ;(p.body as Phaser.Physics.Arcade.Body).allowGravity = false
+    this.powerUps.add(p)
+    // 浮动 + 旋转
+    this.tweens.add({ targets: p, scaleX: 0.85, scaleY: 0.85, duration: 700, yoyo: true, repeat: -1 })
+    this.tweens.add({ targets: p, angle: 360, duration: 4000, repeat: -1 })
+    // 标签
+    const lbl = this.add.text(x, y - 22, def.label, {
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '9px', color: '#' + def.tint.toString(16).padStart(6, '0'),
+    }).setOrigin(0.5).setDepth(10)
+    p.setData('label', lbl)
+    p.on('destroy', () => lbl.destroy())
+  }
+
+  private applyPowerUp(kind: string) {
+    const now = this.time.now
+    switch (kind) {
+      case 'speed':
+        this.speedBoostUntil = now + 6000
+        this.flashHud('⚡ 极速 +45%（6s）', '#40e0ff')
+        break
+      case 'shield':
+        this.shieldHits = Math.min(5, this.shieldHits + 3)
+        this.flashHud(`✦ 护盾 ×${this.shieldHits}`, '#a0c0ff')
+        break
+      case 'rage':
+        this.damageBoostUntil = now + 5000
+        this.flashHud('☄ 撕裂 ×1.6（5s）', '#ff6040')
+        break
+      case 'sand': {
+        const gain = 60
+        this.playerStability = Math.min(this.playerMaxStability, this.playerStability + gain)
+        this.totalSand += gain
+        addTimeSand(gain)
+        this.sandText.setText(`时砂 ${this.totalSand}`)
+        this.flashHud(`✦ 时砂 +${gain}`, '#ffe060')
+        break
+      }
+      case 'echo':
+        this.echoBurstReady = true
+        this.flashHud('★ 回响爆发就绪！按 [空格] 释放', '#c080ff')
+        break
+    }
+    audioManager.playPickup()
+  }
+
+  private flashHud(text: string, color: string) {
+    const { width } = this.scale
+    const t = this.add.text(width / 2, 38, text, {
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '14px', color,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(82)
+    this.tweens.add({
+      targets: t, alpha: 0, y: 22, duration: 1600, delay: 400,
+      onComplete: () => t.destroy(),
+    })
+  }
+
+  private tryEchoBurst() {
+    if (!this.echoBurstReady || !this.playerAlive || this.finished) return
+    this.echoBurstReady = false
+    const px = this.player.x, py = this.player.y
+    // 3 层扩散环
+    for (let r = 0; r < 3; r++) {
+      this.time.delayedCall(r * 80, () => {
+        const ring = this.add.graphics().setDepth(60)
+        ring.lineStyle(3 - r, 0xc080ff, 0.85 - r * 0.2)
+        ring.strokeCircle(px, py, 8)
+        this.tweens.add({
+          targets: ring, scaleX: 12 + r * 4, scaleY: 12 + r * 4, alpha: 0,
+          duration: 520 + r * 80, ease: 'Quad.Out',
+          onComplete: () => ring.destroy(),
+        })
+      })
+    }
+    // 范围 360 内 AI 直接掉血 60 + 击退
+    const RADIUS = 360
+    this.aiList.forEach(ai => {
+      if (!ai.isAlive) return
+      const d = Phaser.Math.Distance.Between(px, py, ai.sprite.x, ai.sprite.y)
+      if (d < RADIUS) {
+        const ang = Math.atan2(ai.sprite.y - py, ai.sprite.x - px)
+        ai.sprite.setVelocity(Math.cos(ang) * 480, Math.sin(ang) * 480)
+        ai.stability -= 60
+        if (ai.stability <= 0) this.killAI(ai)
+      }
+    })
+    this.cameras.main.shake(220, 0.012)
+    audioManager.playEnemyDeath()
+  }
+
+  private spawnReinforcementWave() {
+    if (this.finished) return
+    this.waveCount++
+    const count = 4 + this.waveCount
+    const speedMul = 1 + this.waveCount * 0.12
+    const stabMul = 1 + this.waveCount * 0.15
+    const spritePool = ['enemy_basic', 'enemy_drone', 'enemy_hunter', 'enemy_wraith', 'enemy_heavy']
+    const tintPool = [0xff8040, 0xff40a0, 0x40e0ff, 0xa040ff, 0xffff40, 0x40ff80]
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2
+      const r = this.voidRadius * 0.85
+      const x = Phaser.Math.Clamp(this.VOID_CX + Math.cos(angle) * r, 60, MAP_W - 60)
+      const y = Phaser.Math.Clamp(this.VOID_CY + Math.sin(angle) * r, 60, MAP_H - 60)
+      const sprite = this.physics.add.image(x, y, spritePool[i % spritePool.length])
+      sprite.setScale(2.2).setDepth(16).setTint(tintPool[i % tintPool.length])
+      sprite.setCollideWorldBounds(true)
+      sprite.setDrag(900, 900)
+      sprite.setMaxVelocity(160 * speedMul, 160 * speedMul)
+      ;(sprite.body as Phaser.Physics.Arcade.Body).allowGravity = false
+      const barBg = this.add.rectangle(x, y - 24, 32, 5, 0x200010).setDepth(17)
+      const barFill = this.add.rectangle(x - 16, y - 24, 32, 5, 0xff5050).setOrigin(0, 0.5).setDepth(18)
+      const ai: AIPlayer = {
+        sprite, hpBarBg: barBg, hpBarFill: barFill,
+        stability: (55 + Math.floor(Math.random() * 45)) * stabMul,
+        maxStability: 100 * stabMul,
+        isAlive: true,
+        speed: (75 + Math.random() * 65) * speedMul,
+        lastTargetAt: 0,
+        targetX: x, targetY: y,
+      }
+      this.aiList.push(ai)
+      this.physics.add.overlap(this.player, ai.sprite, () => {
+        if (!ai.isAlive || !this.playerAlive || this.finished) return
+        const dmgMul = this.time.now < this.damageBoostUntil ? 1.6 : 1
+        const recvMul = this.time.now < this.damageBoostUntil ? 0.6 : 1
+        if (this.shieldHits > 0) {
+          this.shieldHits--
+        } else {
+          this.playerStability -= 8 * recvMul
+        }
+        ai.stability -= 14 * dmgMul
+        const dx = this.player.x - ai.sprite.x
+        const dy = this.player.y - ai.sprite.y
+        const len = Math.sqrt(dx * dx + dy * dy) || 1
+        this.player.setVelocity((dx / len) * 200, (dy / len) * 200)
+        ai.sprite.setVelocity(-(dx / len) * 170, -(dy / len) * 170)
+        this.cameras.main.shake(60, 0.005)
+        if (ai.stability <= 0) this.killAI(ai)
+      })
+    }
+    // 提示
+    const { width } = this.scale
+    const txt = this.add.text(width / 2, 80, `⚠ 第 ${this.waveCount} 波援军 — ${count} 名敌人 (强度 +${Math.round((speedMul - 1) * 100)}%)`, {
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '15px', color: '#ff5040',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(82)
+    this.tweens.add({ targets: txt, alpha: 0, duration: 2200, delay: 1500, onComplete: () => txt.destroy() })
   }
 
   private spawnAI() {
@@ -265,9 +488,14 @@ export class StormScene extends Phaser.Scene {
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(81)
 
     // 操作提示
-    this.add.text(14, height - 28, 'WASD 移动  ·  接触对手消耗稳定度  ·  收集时砂恢复', {
+    this.add.text(14, height - 28, 'WASD 移动  ·  接触损耗  ·  拾取道具  ·  [空格] 回响爆发', {
       fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#28323a',
     }).setScrollFactor(0).setDepth(81)
+
+    // 援军波次提示
+    this.waveText = this.add.text(width - 14, 32, '援军 35s', {
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#806060',
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(81)
 
     const backTxt = this.add.text(width - 14, height - 12, '返回 →', {
       fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: '#304050',
@@ -301,6 +529,20 @@ export class StormScene extends Phaser.Scene {
 
     audioManager.playEnemyDeath()
     this.cameras.main.shake(90, 0.006)
+
+    // 击杀连击：3s 内连续击杀加成
+    const now = this.time.now
+    if (now - this.lastKillAt < 3000) this.killStreak++
+    else this.killStreak = 1
+    this.lastKillAt = now
+    if (this.killStreak >= 2) {
+      const bonus = this.killStreak * 12
+      this.totalSand += bonus
+      addTimeSand(bonus)
+      this.playerStability = Math.min(this.playerMaxStability, this.playerStability + this.killStreak * 5)
+      this.sandText.setText(`时砂 ${this.totalSand}`)
+      this.flashHud(`★ ${this.killStreak} 连击！+${bonus} 时砂`, '#ffd060')
+    }
 
     // 检查胜利
     if (this.aiList.every(a => !a.isAlive) && !this.finished) {
@@ -355,9 +597,10 @@ export class StormScene extends Phaser.Scene {
     const dt = delta / 1000
     const now = _time
 
-    // 玩家移动
-    const vx = this.keys.a.isDown ? -210 : this.keys.d.isDown ? 210 : 0
-    const vy = this.keys.w.isDown ? -210 : this.keys.s.isDown ? 210 : 0
+    // 玩家移动（道具加成）
+    const speedMul = this.time.now < this.speedBoostUntil ? 1.45 : 1
+    const vx = this.keys.a.isDown ? -210 * speedMul : this.keys.d.isDown ? 210 * speedMul : 0
+    const vy = this.keys.w.isDown ? -210 * speedMul : this.keys.s.isDown ? 210 * speedMul : 0
     this.player.setVelocity(vx, vy)
 
     // 虚空稳定度消耗
@@ -393,7 +636,12 @@ export class StormScene extends Phaser.Scene {
 
     // HUD 更新
     const aliveAI = this.aiList.filter(a => a.isAlive).length
-    this.aliveText.setText(`存活 ${aliveAI + 1}/21`)
+    const total = this.aiList.length + 1
+    this.aliveText.setText(`存活 ${aliveAI + 1}/${total}`)
+    // 援军倒计时
+    const sinceStart = (Date.now() - this.startTime) / 1000
+    const nextWaveSec = Math.max(0, Math.ceil(35 - (sinceStart % 35)))
+    if (this.waveText) this.waveText.setText(`援军 ${nextWaveSec}s`)
     if (inVoid) {
       this.voidWarningText.setText('⚠ 虚空侵蚀中！稳定度急剧消耗').setColor('#ff2020')
     } else {
