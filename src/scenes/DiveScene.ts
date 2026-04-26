@@ -568,7 +568,10 @@ export class DiveScene extends Phaser.Scene {
         enemyType = 'ancient_guardian'
       } else if (isElite) {
         const r = this.seededRandom()
-        enemyType = r < 0.33 ? 'time_construct_heavy' : r < 0.66 ? 'echo_hunter' : 'void_sniper'
+        // 第1波精英不出远程型
+        enemyType = this.waveNumber <= 1
+          ? (r < 0.5 ? 'time_construct_heavy' : 'echo_hunter')
+          : r < 0.33 ? 'time_construct_heavy' : r < 0.66 ? 'echo_hunter' : 'void_sniper'
       } else {
         // 波次2+开始混入远程敌人；波次4+开始混入狙击者
         const pool = [...enemyTypes]
