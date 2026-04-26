@@ -3124,6 +3124,11 @@ export class DiveScene extends Phaser.Scene {
     this.equippedWeapon = weapon
     // 换武器保留所有配件（配件按槽位类型绑定，不受武器限制）
 
+    // 旧武器掉落到地上，不丢失
+    if (old) {
+      this.spawnWeaponDrop(old, x + (Math.random() - 0.5) * 40, y + (Math.random() - 0.5) * 30)
+    }
+
     audioManager.playPickup()
     const msg = old
       ? `换装：${old.name} → ${weapon.name}  [${RARITY_NAMES[weapon.rarity]}]`
