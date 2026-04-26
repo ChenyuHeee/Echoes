@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { FRAGMENT_OPTIONS, FRAGMENT_THEMES, type FragmentId } from '../config/fragments'
-import { closeRoom, closeRoomBeacon, createRoom, getCurrentUser, joinRoom } from '../lib/supabase'
+import { closeRoom, closeRoomBeacon, createRoom, getCurrentUser, joinRoom, leaveRoom } from '../lib/supabase'
 import { supabase } from '../lib/supabase'
 import { getRuntimeState, setRoom, setSelectedFragment } from '../state/gameState'
 import { audioManager } from '../systems/AudioManager'
@@ -477,8 +477,11 @@ export class LobbyScene extends Phaser.Scene {
   private dissolveRoom() {
     audioManager.playClick()
     void this.lobbyChannel?.send({ type: 'broadcast', event: 'dissolve', payload: {} })
-    this.cleanupAll()
-    this.scene.start('SanctuaryScene')
+    // 延迟 250ms 让广播有时间传播到所有客户端（同 game_start 的做法）
+    this.time.delayedCall(250, () => {
+      this.cleanupAll()
+      this.scene.start('SanctuaryScene')
+    })
   }
 
   private remindReady() {
@@ -904,6 +907,15 @@ export class LobbyScene extends Phaser.Scene {
     if (this.createdRoomId && !this.startingGame) {
       void closeRoom(this.createdRoomId)
       this.createdRoomId = null
+    }
+    // 清除本地房间状态，防止下次进入时读到旧数据
+    if (!this.startingGame) {
+      const { room, player } = getRuntimeState()
+      if (room && !this.isHost) {
+        // 非房主离开时从 room_players 表移除记录
+        void leaveRoom(room.id, player.id)
+      }
+      setRoom(null)
     }
   }
 
