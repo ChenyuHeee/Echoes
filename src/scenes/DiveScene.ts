@@ -1509,7 +1509,7 @@ export class DiveScene extends Phaser.Scene {
       case 'void_drone':
         return frame === 'a' ? 'enemy_drone_a' : 'enemy_drone_b'
       case 'void_sniper':
-        return frame === 'a' ? 'enemy_drone_a' : 'enemy_drone_b'
+        return frame === 'a' ? 'enemy_sniper_a' : 'enemy_sniper_b'
       case 'echo_hunter':
         return frame === 'a' ? 'enemy_hunter_a' : 'enemy_hunter_b'
       case 'time_wraith':

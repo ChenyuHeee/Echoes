@@ -107,7 +107,7 @@ export const ENEMY_DEFINITIONS: Record<EnemyType, EnemyDefinition> = {
     aggroRange: 520,
     attackRange: 480,
     attackCooldown: 2800,
-    spriteKey: 'enemy_drone',
+    spriteKey: 'enemy_sniper',
     isBoss: false,
     dropTable: [
       { itemType: 'time_sand', amount: 20, chance: 1.0 },
