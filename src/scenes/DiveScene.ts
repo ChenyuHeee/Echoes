@@ -2146,61 +2146,66 @@ export class DiveScene extends Phaser.Scene {
       this.emitHud('✦ 精英水晶')
     }
 
+    // 掉落物由 Host（或离线玩家）统一生成并广播
+    this.spawnEnemyDrops(dropX, dropY, isBoss, isElite)
+  }
+
+  /** 生成敌人掉落物（仅 Host 或离线执行，并广播给非 Host） */
+  private spawnEnemyDrops(dropX: number, dropY: number, isBoss: boolean, isElite: boolean) {
+    if (!this.offline && !this.isHost) return
+
     const dropChance = isBoss ? 1 : isElite ? 0.9 : 0.55
-    // 多人模式：只有 Host 生成掉落物（并广播给所有人），避免各自独立随机
-    if (this.offline || this.isHost) {
-      const netDrops: NetDropSpawn[] = []
+    const netDrops: NetDropSpawn[] = []
 
-      if (Math.random() < dropChance) {
-        const dropCount = isBoss ? 3 : isElite ? 2 : 1
-        const baseValue = isBoss
-          ? 80 + Math.floor(Math.random() * 20)
-          : isElite
-            ? 35 + Math.floor(Math.random() * 15)
-            : 18 + Math.floor(Math.random() * 12)
-        for (let i = 0; i < dropCount; i++) {
-          const ox = (Math.random() - 0.5) * 60
-          const oy = (Math.random() - 0.5) * 60
-          const sid = crypto.randomUUID()
-          const p = this.physics.add.image(dropX + ox, dropY + oy, 'pickup')
-          p.setScale(isBoss ? 2.2 : isElite ? 1.8 : 1.5)
-          p.setData('sandValue', baseValue)
-          p.setData('dropId', sid)
-          this.pickups.add(p)
-          this.dropRegistry.set(sid, p)
-          const shine = this.add.image(dropX + ox, dropY + oy, 'effect_pickup_shine').setScale(isBoss ? 1.8 : 1.1)
-          this.tweens.add({ targets: shine, alpha: 0, duration: 550, onComplete: () => shine.destroy() })
-          this.tweens.add({ targets: p, y: p.y - 6, duration: 700, yoyo: true, repeat: -1 })
-          if (!this.offline) netDrops.push({ dropId: sid, type: 'sand', refId: '', sandValue: baseValue, x: dropX + ox, y: dropY + oy })
-        }
+    if (Math.random() < dropChance) {
+      const dropCount = isBoss ? 3 : isElite ? 2 : 1
+      const baseValue = isBoss
+        ? 80 + Math.floor(Math.random() * 20)
+        : isElite
+          ? 35 + Math.floor(Math.random() * 15)
+          : 18 + Math.floor(Math.random() * 12)
+      for (let i = 0; i < dropCount; i++) {
+        const ox = (Math.random() - 0.5) * 60
+        const oy = (Math.random() - 0.5) * 60
+        const sid = crypto.randomUUID()
+        const p = this.physics.add.image(dropX + ox, dropY + oy, 'pickup')
+        p.setScale(isBoss ? 2.2 : isElite ? 1.8 : 1.5)
+        p.setData('sandValue', baseValue)
+        p.setData('dropId', sid)
+        this.pickups.add(p)
+        this.dropRegistry.set(sid, p)
+        const shine = this.add.image(dropX + ox, dropY + oy, 'effect_pickup_shine').setScale(isBoss ? 1.8 : 1.1)
+        this.tweens.add({ targets: shine, alpha: 0, duration: 550, onComplete: () => shine.destroy() })
+        this.tweens.add({ targets: p, y: p.y - 6, duration: 700, yoyo: true, repeat: -1 })
+        if (!this.offline) netDrops.push({ dropId: sid, type: 'sand', refId: '', sandValue: baseValue, x: dropX + ox, y: dropY + oy })
       }
+    }
 
-      // ─── 掉落：物品 / 武器 / 配件 ─────────────────────
-      const itemDef = rollItemDrop(isBoss, isElite)
-      if (itemDef) {
-        const ix = dropX + (Math.random() - 0.5) * 40, iy = dropY + (Math.random() - 0.5) * 40
-        const did = crypto.randomUUID()
-        this.spawnItemDrop(itemDef, ix, iy, did)
-        if (!this.offline) netDrops.push({ dropId: did, type: 'item', refId: itemDef.id, x: ix, y: iy })
-      }
-      const weaponDef = rollWeaponDrop(isBoss, isElite)
-      if (weaponDef) {
-        const wx = dropX + 30, wy = dropY + (Math.random() - 0.5) * 30
-        const did = crypto.randomUUID()
-        this.spawnWeaponDrop(weaponDef, wx, wy, did)
-        if (!this.offline) netDrops.push({ dropId: did, type: 'weapon', refId: weaponDef.id, x: wx, y: wy })
-      }
-      const attDef = rollAttachmentDrop(isBoss, isElite)
-      if (attDef) {
-        const ax = dropX - 30, ay = dropY + (Math.random() - 0.5) * 30
-        const did = crypto.randomUUID()
-        this.spawnAttachmentDrop(attDef, ax, ay, did)
-        if (!this.offline) netDrops.push({ dropId: did, type: 'attachment', refId: attDef.id, x: ax, y: ay })
-      }
+    // ─── 掉落：物品 / 武器 / 配件 ─────────────────────
+    const itemDef = rollItemDrop(isBoss, isElite)
+    if (itemDef) {
+      const ix = dropX + (Math.random() - 0.5) * 40, iy = dropY + (Math.random() - 0.5) * 40
+      const did = crypto.randomUUID()
+      this.spawnItemDrop(itemDef, ix, iy, did)
+      if (!this.offline) netDrops.push({ dropId: did, type: 'item', refId: itemDef.id, x: ix, y: iy })
+    }
+    const weaponDef = rollWeaponDrop(isBoss, isElite)
+    if (weaponDef) {
+      const wx = dropX + 30, wy = dropY + (Math.random() - 0.5) * 30
+      const did = crypto.randomUUID()
+      this.spawnWeaponDrop(weaponDef, wx, wy, did)
+      if (!this.offline) netDrops.push({ dropId: did, type: 'weapon', refId: weaponDef.id, x: wx, y: wy })
+    }
+    const attDef = rollAttachmentDrop(isBoss, isElite)
+    if (attDef) {
+      const ax = dropX - 30, ay = dropY + (Math.random() - 0.5) * 30
+      const did = crypto.randomUUID()
+      this.spawnAttachmentDrop(attDef, ax, ay, did)
+      if (!this.offline) netDrops.push({ dropId: did, type: 'attachment', refId: attDef.id, x: ax, y: ay })
+    }
 
-      if (!this.offline && netDrops.length > 0) {
-        this.roomRealtime?.sendDropSpawn(netDrops)
-      }
+    if (!this.offline && netDrops.length > 0) {
+      this.roomRealtime?.sendDropSpawn(netDrops)
     }
   }
 
@@ -2340,6 +2345,8 @@ export class DiveScene extends Phaser.Scene {
         this.enemies.children.each(child => {
           const e = child as EnemyBody
           if (e.active && (e.getData('enemyId') as number) === enemyId) {
+            // Host: 为远程击杀生成掉落物（非 Host 击杀 → Host 负责掉落）
+            this.spawnEnemyDrops(e.x, e.y, e.getData('isBoss') === true, e.getData('isElite') === true)
             const fx = this.add.circle(e.x, e.y, 18, 0xff6040, 0.5)
             this.tweens.add({ targets: fx, alpha: 0, scaleX: 2.5, scaleY: 2.5, duration: 300, onComplete: () => fx.destroy() })
             e.destroy()
