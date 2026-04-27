@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { audioManager } from '../systems/AudioManager'
+import { COMMUNITY_MAPS } from '../config/communityMaps'
 
 interface ModeCard {
   title: string
@@ -111,7 +112,7 @@ export class ModeSelectScene extends Phaser.Scene {
         bg: 'bg_forest',
         tag: '新',
         locked: false,
-        action: () => this.scene.start('PuzzleScene', { community: true, mapIdx: 0 }),
+        action: () => this.openCommunityMapSelect(),
       },
       {
         title: '限定回响召唤',
@@ -236,6 +237,53 @@ export class ModeSelectScene extends Phaser.Scene {
     cancel.on('pointerdown', () => {
       audioManager.playClick()
       created.forEach(o => (o as Phaser.GameObjects.GameObject).destroy())
+      cancel.destroy()
+    })
+    created.push(cancel)
+  }
+
+  private openCommunityMapSelect() {
+    const { width, height } = this.scale
+    const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.82).setDepth(200).setInteractive()
+    const panelH  = Math.min(440, 110 + COMMUNITY_MAPS.length * 64)
+    const panel   = this.add.rectangle(width / 2, height / 2, 620, panelH, 0x07101c, 0.98).setDepth(201).setStrokeStyle(2, 0xf0c060, 0.8)
+    const title   = this.add.text(width / 2, height / 2 - panelH / 2 + 26, '社区地图 · 选择关卡', {
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '20px', color: '#f0c060',
+    }).setOrigin(0.5).setDepth(202)
+    const created: Phaser.GameObjects.GameObject[] = [overlay, panel, title]
+
+    COMMUNITY_MAPS.forEach((map, idx) => {
+      const cy   = height / 2 - panelH / 2 + 64 + idx * 64
+      const btn  = this.add.rectangle(width / 2, cy, 560, 56, 0x10202c, 1).setDepth(202).setStrokeStyle(1, 0xf0c060, 0.4).setInteractive({ useHandCursor: true })
+      const idxT = this.add.text(width / 2 - 260, cy, `${idx + 1}.`, {
+        fontFamily: '"Noto Sans SC", monospace', fontSize: '18px', color: '#f0c060',
+      }).setOrigin(0, 0.5).setDepth(203)
+      const stars = '★'.repeat(map.difficulty) + '☆'.repeat(Math.max(0, 5 - map.difficulty))
+      const nameT = this.add.text(width / 2 - 230, cy - 12, `${map.name}`, {
+        fontFamily: '"Noto Sans SC", monospace', fontSize: '15px', color: '#e8d8a0',
+      }).setOrigin(0, 0.5).setDepth(203)
+      const metaT = this.add.text(width / 2 - 230, cy + 8, `作者 ${map.author}  ·  难度 ${stars}  ·  时砥 +${map.sandReward}`, {
+        fontFamily: '"Noto Sans SC", monospace', fontSize: '11px', color: '#90a0c0',
+      }).setOrigin(0, 0.5).setDepth(203)
+      const descT = this.add.text(width / 2 + 250, cy, map.description, {
+        fontFamily: '"Noto Sans SC", monospace', fontSize: '10px', color: '#7080a0', wordWrap: { width: 220 },
+      }).setOrigin(1, 0.5).setDepth(203)
+      btn.on('pointerover', () => btn.setFillStyle(0x1a3040))
+      btn.on('pointerout',  () => btn.setFillStyle(0x10202c))
+      btn.on('pointerdown', () => {
+        audioManager.playClick()
+        created.forEach(o => o.destroy())
+        this.scene.start('PuzzleScene', { community: true, mapIdx: idx })
+      })
+      created.push(btn, idxT, nameT, metaT, descT)
+    })
+
+    const cancel = this.add.text(width / 2, height / 2 + panelH / 2 - 18, '[ 取消 ]', {
+      fontFamily: '"Noto Sans SC", monospace', fontSize: '12px', color: '#506070',
+    }).setOrigin(0.5).setDepth(202).setInteractive({ useHandCursor: true })
+    cancel.on('pointerdown', () => {
+      audioManager.playClick()
+      created.forEach(o => o.destroy())
       cancel.destroy()
     })
     created.push(cancel)

@@ -547,7 +547,8 @@ export class PuzzleScene extends Phaser.Scene {
     const sprite = this.physics.add.sprite(x, y, 'cm_box') as Phaser.Physics.Arcade.Sprite
     sprite.setDisplaySize(w, h).setDepth(15)
     ;(sprite.body as Phaser.Physics.Arcade.Body).allowGravity = false
-    sprite.setDrag(700, 700).setMaxVelocity(160, 160)
+    // 降低箱子最大速度（原 160），增大阻尼，便于精细控制推到压力板上
+    sprite.setDrag(1100, 1100).setMaxVelocity(80, 80)
     this.boxGroup.add(sprite)
     this.boxObjs.push({ sprite, id, w, h })
   }

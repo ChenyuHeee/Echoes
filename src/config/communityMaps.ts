@@ -22,26 +22,23 @@ const MAP_MAZE_ECHO: CommunityMap = {
   exit: { x: 895, y: 160 },
   elements: [
     // ── 迷宫外墙（T字分隔结构）───────────────────────────────
-    // 中央纵向隔墙（上半段）
+    // 中央纵向隔墙（上半段，y=30-260）
     { type: 'wall', x: 470, y: 145, w: 16, h: 230, color: '#1e3040' },
-    // 中央纵向隔墙（下半段）
+    // 中央纵向隔墙（下半段，y=310-490）
     { type: 'wall', x: 470, y: 400, w: 16, h: 180, color: '#1e3040' },
-    // 中央通道（y=260-280，60px 缺口，玩家能过）
+    // → 中央通道缺口 y=260-310，玩家可从中央穿过
 
-    // 上半横向隔断（左室）
-    { type: 'wall', x: 240, y: 240, w: 300, h: 16, color: '#1e3040' },
-    // 上半横向隔断留缺口：x=100-140
-    // 实现：分两段
-    { type: 'wall', x: 315, y: 240, w: 150, h: 16, color: '#1e3040' },
-    { type: 'wall', x: 100, y: 240, w: 140, h: 16, color: '#1e3040' },
-    // → 缺口在 x=170 ±20（玩家能从上层走到下层）
+    // 上半横向隔断（左室）：分两段，留出 x=170-220 的缺口
+    { type: 'wall', x: 100, y: 240, w: 140, h: 16, color: '#1e3040' },  // x: 30-170
+    { type: 'wall', x: 305, y: 240, w: 170, h: 16, color: '#1e3040' },  // x: 220-390
+    // → 缺口在 x=170-220（玩家能从此处上到 A 区域）
 
-    // 右室横向分隔（让 B 在特定区域）
-    { type: 'wall', x: 720, y: 320, w: 280, h: 16, color: '#1e3040' },
-    // 缺口在右端 x=860
-    { type: 'wall', x: 680, y: 320, w: 200, h: 16, color: '#1e3040' },
+    // 右室横向隔断（让 B 在上区）：分两段，留 x=820-870 的缺口
+    { type: 'wall', x: 640, y: 320, w: 290, h: 16, color: '#1e3040' },  // x: 495-785
+    { type: 'wall', x: 905, y: 320, w: 60,  h: 16, color: '#1e3040' },  // x: 875-935
+    // → 缺口在 x=785-875（玩家能从下区上来到出口）
 
-    // 左下走廊封堵（强迫玩家绕行）
+    // 左下走廊封堵（强迫玩家绕行陷阱）
     { type: 'wall', x: 330, y: 350, w: 16, h: 120, color: '#1e3040' },
 
     // ── 踏板 ─────────────────────────────────────────────────
@@ -87,99 +84,56 @@ const MAP_GEAR_MOMENT: CommunityMap = {
   name: '齿轮时刻',
   author: '官方示例',
   description: '借助平台、传送带与木箱，让机关在正确的时刻同步',
-  hint: '把箱子推到压力板上 · 时控门节奏是线索 · 开关能关闭陷阱',
+  hint: '把两个木箱分别推到两块黄色压力板上 · 同时激活后中央通道开启 · 开关可临时关闭刺坑',
   difficulty: 3,
   coop: false,
   sandReward: 40,
-  spawn: { x: 60, y: 440 },
-  exit: { x: 895, y: 160 },
+  spawn: { x: 60, y: 270 },
+  exit: { x: 480, y: 90 },
   elements: [
-    // ── 地台结构 ──────────────────────────────────────────────
-    // 下层地板（主层）
-    { type: 'wall', x: 480, y: 480, w: 960, h: 16, color: '#182030' },
-    // 中层平台（左侧）
-    { type: 'wall', x: 200, y: 330, w: 200, h: 16, color: '#182030' },
-    // 中层平台（右侧，高一点）
-    { type: 'wall', x: 720, y: 290, w: 200, h: 16, color: '#182030' },
-    // 上层通道
-    { type: 'wall', x: 480, y: 190, w: 960, h: 16, color: '#182030' },
-    // 左侧墙
-    { type: 'wall', x: 14, y: 340, w: 16, h: 280, color: '#182030' },
-    // 右侧墙
-    { type: 'wall', x: 946, y: 340, w: 16, h: 280, color: '#182030' },
-    // 中间立柱
-    { type: 'wall', x: 480, y: 340, w: 16, h: 300, color: '#182030' },
+    // ── 房间外墙（俯视图）────────────────────────────────────────
+    { type: 'wall', x: 480, y: 50,  w: 920, h: 16, color: '#182030' },  // 顶
+    { type: 'wall', x: 480, y: 490, w: 920, h: 16, color: '#182030' },  // 底
+    { type: 'wall', x: 24,  y: 270, w: 16,  h: 460, color: '#182030' },  // 左
+    { type: 'wall', x: 936, y: 270, w: 16,  h: 460, color: '#182030' },  // 右
 
-    // ── 木箱（两个，需要推到各自的压力板上）────────────────────
-    { type: 'box', id: 'box_a', x: 120, y: 450 },
-    { type: 'box', id: 'box_b', x: 820, y: 450 },
+    // ── 把房间纵向分成 3 区：左推箱区 / 中过道 / 右推箱区 ──
+    // 左隔墙（y=140-340 阻挡，下方 y=340-490 完全开放，让玩家通过）
+    { type: 'wall', x: 320, y: 240, w: 16, h: 200, color: '#1e3040' },
+    // 右隔墙
+    { type: 'wall', x: 640, y: 240, w: 16, h: 200, color: '#1e3040' },
 
-    // ── 压力板 ────────────────────────────────────────────────
-    // 左侧压力板 → 开启左门
-    { type: 'pressure_plate', id: 'pp_left',  x: 300, y: 465, linksTo: ['left_gate'],  color: '#ff9040' },
-    // 右侧压力板 → 开启右门
-    { type: 'pressure_plate', id: 'pp_right', x: 660, y: 465, linksTo: ['right_gate'], color: '#ff9040' },
-    // 两块都激活才能开启中央通道门（requireAll:true）
-    { type: 'pressure_plate', id: 'pp_sync_l', x: 300, y: 465, linksTo: ['center_gate'], color: '#ffe060', requireAll: true },
-    { type: 'pressure_plate', id: 'pp_sync_r', x: 660, y: 465, linksTo: ['center_gate'], color: '#ffe060', requireAll: true },
+    // ── 顶部「中央门」墙段（位于中过道上方，挡住通往出口的最后一段）
+    // 该墙段挂在 center_gate id 上，被两块压力板同时激活后消失
+    { type: 'door', id: 'center_gate', x: 480, y: 140, w: 220, h: 16, requires: [], windowMs: 99999 },
 
-    // ── 门 ────────────────────────────────────────────────────
-    // 左侧通道门（被 pp_left 压力板开启）
-    { type: 'door', id: 'left_gate',   x: 200, y: 420, w: 16, h: 100, requires: [], windowMs: 99999 },
-    // 右侧通道门
-    { type: 'door', id: 'right_gate',  x: 720, y: 360, w: 16, h: 100, requires: [], windowMs: 99999 },
-    // 中央大门（需左右同步）
-    { type: 'door', id: 'center_gate', x: 480, y: 145, w: 16, h: 90,  requires: [], windowMs: 99999 },
+    // ── 木箱（左右各一）────────────────────────────────────────
+    { type: 'box', id: 'box_a', x: 140, y: 400 },
+    { type: 'box', id: 'box_b', x: 820, y: 400 },
 
-    // ── 移动平台（电梯）──────────────────────────────────────
-    // 左侧电梯：从地面上到中层平台
+    // ── 压力板（黄色：两块同时激活才能打开 center_gate）───────
+    { type: 'pressure_plate', id: 'pp_sync_l', x: 200, y: 200, linksTo: ['center_gate'], color: '#ffe060', requireAll: true },
+    { type: 'pressure_plate', id: 'pp_sync_r', x: 760, y: 200, linksTo: ['center_gate'], color: '#ffe060', requireAll: true },
+
+    // ── 中过道里的巡逻平台（增加难度，玩家要等空隙穿过）────
     {
-      type: 'elevator', id: 'elev_l', x: 100, y: 460, w: 80, h: 16,
-      path: [{ x: 100, y: 460 }, { x: 100, y: 310 }],
-      speed: 90, waitMs: 800,
-    },
-    // 右侧电梯
-    {
-      type: 'elevator', id: 'elev_r', x: 860, y: 460, w: 80, h: 16,
-      path: [{ x: 860, y: 460 }, { x: 860, y: 270 }],
-      speed: 90, waitMs: 800,
-    },
-    // 中部横向电梯（连接两个中层平台）
-    {
-      type: 'elevator', id: 'elev_mid', x: 340, y: 310, w: 100, h: 16,
-      path: [{ x: 340, y: 310 }, { x: 620, y: 270 }],
-      speed: 70, waitMs: 1200,
+      type: 'elevator', id: 'elev_mid_v', x: 480, y: 260, w: 60, h: 16,
+      path: [{ x: 480, y: 260 }, { x: 480, y: 400 }],
+      speed: 50, waitMs: 700,
     },
 
-    // ── 传送带 ────────────────────────────────────────────────
-    // 上层通道左侧传送带（向右）
-    { type: 'conveyor', x: 260, y: 198, w: 200, h: 14, vx: 120, vy: 0, color: '#203848' },
-    // 上层通道右侧传送带（向左，对抗玩家！）
-    { type: 'conveyor', x: 700, y: 198, w: 200, h: 14, vx: -120, vy: 0, color: '#382028' },
-
-    // ── 时控门 ────────────────────────────────────────────────
-    // 封锁上层出口的时控门（开 2s 关 3s，需要踩准时机通过）
-    { type: 'timed_door', id: 'timed_exit', x: 830, y: 145, w: 120, h: 14,
-      openMs: 2000, closeMs: 3000, initialState: 'closed', phaseOffset: 0 },
-    // 右侧中层路上的另一扇（相位错开）
-    { type: 'timed_door', x: 580, y: 290, w: 16, h: 80,
-      openMs: 1500, closeMs: 2500, initialState: 'open', phaseOffset: 800 },
-
-    // ── 开关 ──────────────────────────────────────────────────
-    // 开关：关闭下层陷阱
-    { type: 'switch', x: 400, y: 460, linksTo: ['trap_mid'], color: '#c0e040' },
-
-    // ── 陷阱 ──────────────────────────────────────────────────
-    // 下层中央陷阱（开关关闭后可以安全通过）
-    { type: 'trap', id: 'trap_mid', x: 480, y: 470, w: 100, h: 14, trapType: 'spike', active: true },
-    // 上层右侧激光陷阱
-    { type: 'trap', x: 720, y: 155, w: 14, h: 50, trapType: 'laser', active: true },
+    // ── 中过道的刺坑（开关可暂时关闭）────────────────────────
+    { type: 'switch', x: 420, y: 460, linksTo: ['trap_mid'], color: '#c0e040' },
+    { type: 'trap', id: 'trap_mid', x: 540, y: 460, w: 100, h: 16, trapType: 'spike', active: true },
 
     // ── 文字提示 ──────────────────────────────────────────────
-    { type: 'label', x: 300, y: 495, text: '压力板', color: '#806030', fontSize: 10 },
-    { type: 'label', x: 660, y: 495, text: '压力板', color: '#806030', fontSize: 10 },
-    { type: 'label', x: 400, y: 495, text: '⚡开关', color: '#608030', fontSize: 10 },
-    { type: 'label', x: 100, y: 300, text: '电梯↑', color: '#405060', fontSize: 10 },
+    { type: 'label', x: 140, y: 360, text: '推→', color: '#405060', fontSize: 11 },
+    { type: 'label', x: 820, y: 360, text: '←推', color: '#405060', fontSize: 11 },
+    { type: 'label', x: 200, y: 168, text: '黄·压力板', color: '#806030', fontSize: 10 },
+    { type: 'label', x: 760, y: 168, text: '黄·压力板', color: '#806030', fontSize: 10 },
+    { type: 'label', x: 420, y: 442, text: '⚡开关', color: '#608030', fontSize: 10 },
+    { type: 'label', x: 540, y: 442, text: '⚠ 刺', color: '#803030', fontSize: 10 },
+    { type: 'label', x: 480, y: 110, text: '中央门（双压力板同时激活）', color: '#807030', fontSize: 10 },
   ],
 }
 
